@@ -1,133 +1,82 @@
-# 📔 Manual de la API Administrativa y Soporte Forense 🛡️
+# 📔 Manual de la API Administrativa y Soporte Forense 🛡️ (Edición Global 2026)
 
-Este manual explica cómo utilizar la nueva infraestructura de administración y monitoreo del Sistema de Ventas Multi-Caja. Esta herramienta está diseñada tanto para el personal técnico que opera el backend como para el personal administrativo que supervisa la salud del negocio.
-
----
-
-## 1. Conceptos Básicos (Para todo el equipo)
-
-### ¿Qué es la API Administrativa?
-
-Es un "cerebro" de seguridad que vive en el servidor (backend). Su función es realizar tareas de mantenimiento crítico (como borrar ventas viejas o liberar licencias) de forma segura, rápida y, sobre todo, **registrada**.
-
-### La Regla de Oro: Auditoría Forense
-
-Cada vez que se toca un botón en esta herramienta o se hace una petición a la API, el sistema guarda una "huella digital" (Log) que incluye:
-
-- **Qué** se hizo (Reset de ventas, limpieza de terminales, etc.).
-- **Cuándo** se hizo (Fecha y hora exacta).
-- **Desde dónde** (Dirección IP y tipo de dispositivo).
+Este manual explica cómo utilizar la infraestructura de administración y monitoreo del Sistema de Ventas Multi-Caja. El sistema ahora cuenta con un modelo **Híbrido** que permite el soporte tanto local como remoto mediante la nube.
 
 ---
 
-## 2. Acceso y Seguridad 🔑
+## 1. Arquitectura de Soporte (Local vs Global) 🌍
 
-El acceso está restringido por un **PIN Maestro**. Sin este código, la API rechazará cualquier intento de conexión.
+El sistema de administración opera bajo dos modalidades automáticas:
 
-- **PIN Maestro por defecto:** `2026SOP`
-- **URL Base Local:** `http://localhost:3001/api/admin`
-
-### Cómo acceder desde el Sistema (No técnico)
-
-1. Inicie sesión como Administrador en el POS.
-2. Navegue a la URL especial: `#/soporte-tecnico-especializado-foxsolid`.
-3. Ingrese el PIN Maestro cuando se le solicite.
-4. Verá el **Monitor de Salud** y la **Tabla de Auditoría**.
+- **API Local:** Se utiliza cuando estás físicamente en el negocio. Se comunica con el servidor local para tareas que afectan directamente a la PC del cliente.
+- **API Global (Supabase):** Permite el soporte remoto desde cualquier lugar del mundo. Se comunica con la nube de Supabase para gestionar los datos maestros del negocio.
 
 ---
 
-## 3. Guía de Funciones (Qué hace cada cosa) 🛠️
+## 2. Monitor de Salud (Health Check) 🩺
 
-### A. Monitor de Salud (Health Check)
+En la interfaz de mantenimiento, ahora encontrarás tres indicadores de estado:
 
-Verifica si el sistema está "vivo".
-
-- **API Local:** Indica si el servidor de soporte está respondiendo.
-- **Base de Datos:** Indica si el sistema puede leer y escribir datos.
-- **Uso Técnico:** `GET /api/admin/health`
-
-### B. Registro de Auditoría (Logs)
-
-Muestra la lista de acciones críticas realizadas recientemente.
-
-- **Uso:** Sirve para deslindar responsabilidades si algo falla.
-- **Uso Técnico:** `GET /api/admin/logs`
-
-### C. Resetear Dispositivos
-
-Libera las terminales (computadoras/tablets) registradas.
-
-- **Cuándo usar:** Si un cliente cambió de computadora y el sistema dice "Límite de dispositivos alcanzado".
-- **Uso Técnico:** `POST /api/admin/reset/devices`
-
-### D. Limpiar Transacciones
-
-Borra el historial de ventas y cortes de caja, pero **mantiene todos los productos e inventario intactos**.
-
-- **Cuándo usar:** Limpieza de fin de año o inicio de operaciones.
-- **Uso Técnico:** `POST /api/admin/reset/sales`
-
-### E. Reset de Fábrica (Nuclear)
-
-Borra **TODO**: productos, ventas, usuarios y terminales. El sistema queda como nuevo.
-
-- **Cuándo usar:** Baja de cliente o desinstalación completa.
-- **Uso Técnico:** `POST /api/admin/reset/factory`
+1.  **API Local:**
+    - `ONLINE`: El servidor local en la tienda está activo.
+    - `OFFLINE`: El servidor local está apagado (Normal si estás accediendo desde la nube/Vercel).
+2.  **API Global:**
+    - `CONECTADA`: La nube de Supabase está lista para recibir órdenes de soporte.
+    - `INACTIVA`: Hay un problema de conexión con la infraestructura web.
+3.  **Base de Datos:**
+    - `VINCULADA`: La conexión con los datos del cliente es exitosa.
 
 ---
 
-## 4. Guía para Desarrolladores / Técnicos (Postman/Curl) 🚀
+## 3. Acceso y Seguridad �
 
-Para realizar peticiones manuales a la API, debe incluir el PIN de seguridad.
+El acceso está blindado por una **Triple Capa de Seguridad**:
 
-### Ejemplo de Petición (GET)
+- **Capa 1 (Auth):** Solo los usuarios con perfil `Administrador` pueden ver la ruta de soporte.
+- **Capa 2 (PIN Maestro):** Se requiere el código `2026SOP` (o el configurado en `.env`) para desbloquear las acciones.
+- **Capa 3 (Edge Security):** Las llamadas globales están protegidas por la API KEY de Supabase.
 
-Puede enviarlo por la URL:
-`http://localhost:3001/api/admin/health?masterPin=2026SOP`
+### Acceso a la Interfaz
 
-### Ejemplo de Petición (POST)
-
-En el cuerpo (BODY) de la petición JSON:
-
-```json
-{
-  "masterPin": "2026SOP"
-}
-```
-
-O mediante el Header personalizado:
-`x-master-pin: 2026SOP`
-
-### Respuesta Exitosa (200 OK)
-
-```json
-{
-  "success": true,
-  "status": "Operational",
-  "database": "Connected",
-  "version": "1.0.0-admin-alpha"
-}
-```
+Ruta global: `https://[tu-app].vercel.app/#/soporte-tecnico-especializado-foxsolid`
 
 ---
 
-## 5. Solución de Problemas (Troubleshooting) ❓
+## 4. Auditoría Forense 🕵️‍♂️
 
-**1. El navegador dice "ERR_CONNECTION_REFUSED"**
+Todas las acciones (Resets, Cambios, Limpiezas) se guardan en una tabla inmutable de **System Logs**.
 
-- **Causa:** El servidor backend está apagado.
-- **Solución:** Ve a la carpeta `backend` y ejecuta `npm run dev`.
-
-**2. Error "Acceso Denegado" (403 Forbidden)**
-
-- **Causa:** El PIN Maestro es incorrecto o no se envió.
-- **Solución:** Verifique que está escribiendo `2026SOP` en mayúsculas.
-
-**3. El sistema no guarda los cambios (Logs)**
-
-- **Causa:** La base de datos SQLite puede estar bloqueada o el archivo carece de permisos de escritura.
-- **Solución:** Reinicie el backend o verifique los permisos de la carpeta `data`.
+- **Consulta:** La tabla de logs se puede consultar al final del panel de mantenimiento.
+- **Evidencia:** Cada log incluye la acción realizada, detalles técnicos, fecha y la IP real del técnico que ejecutó el comando.
 
 ---
 
-_Manual generado el 23 de Enero, 2026 - Auditoría y Soporte FoxSolid_
+## 5. Funciones de Mantenimiento 🛠️
+
+| Función                   | Impacto                                     | Recomendación                       |
+| :------------------------ | :------------------------------------------ | :---------------------------------- |
+| **Resetear Dispositivos** | Libera licencias de terminales registradas. | Usar al cambiar de PC o tablet.     |
+| **Limpiar Transacciones** | Borra ventas, sesiones y cortes.            | Usar para cierres anuales.          |
+| **Reset Usuarios**        | Borra cajeros, mantiene al Admin.           | Usar al cambiar de personal.        |
+| **Reset de Fábrica**      | Borra PRODUCTOS, VENTAS y USUARIOS.         | **EXTREMO:** Solo bajas de cliente. |
+
+---
+
+## 6. Configuración Técnica (Developers) 🚀
+
+### Despliegue de la Edge Function
+
+La lógica global vive en Supabase Functions bajo el nombre `admin-service`.
+
+- **Configuración Crítica:** En el panel de Supabase -> Edge Functions -> admin-service -> Settings, la opción **"Verify JWT"** debe estar **OFF** (Desactivada) para permitir la validación por PIN Maestro.
+
+### Variables de Entorno Requeridas
+
+En el archivo `.env` del frontend:
+
+- `VITE_SUPABASE_URL`: URL del proyecto.
+- `VITE_SUPABASE_ANON_KEY`: Llave pública para la API Global.
+
+---
+
+_Actualizado el 23 de Enero, 2026 - Auditoría y Soporte FoxSolid (Versión 1.2.0)_
