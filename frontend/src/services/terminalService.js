@@ -98,8 +98,9 @@ export const terminalService = {
         
         console.log(`[TerminalService] Validando terminal: ${terminalName} (${terminalId})`);
         
-        if (!terminalId) {
-            console.log('[TerminalService] No hay terminal configurada localmente.');
+        if (!terminalId || terminalId === 'undefined' || terminalId === 'null') {
+            console.log('[TerminalService] No hay terminal válida configurada localmente.');
+            this.resetLocalTerminal();
             return false;
         }
 
@@ -126,8 +127,8 @@ export const terminalService = {
                 return false;
             }
 
-            console.log(`[TerminalService] Terminal validada con éxito: ${data.name}`);
-            return true;
+            console.log(`[TerminalService] Resultado validación:`, data);
+            return !!data;
         } catch (err) {
             console.error('[TerminalService] Error crítico en validación:', err);
             return true; // No borrar en caso de error desconocido

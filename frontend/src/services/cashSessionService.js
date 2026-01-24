@@ -17,16 +17,13 @@ export const cashSessionService = {
             .eq('terminal_id', terminalId)
             .order('opened_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
              if (!isAbortError(error)) {
                 console.error('Error obteniendo sesión activa:', error);
              }
-             // Si es abort, podríamos retornar null o re-lanzar, pero para getActiveSession
-             // suele ser mejor devolver null si se canceló la carga.
              if (isAbortError(error)) return null;
-             
              throw error;
         }
 
@@ -40,11 +37,6 @@ export const cashSessionService = {
         const terminalId = terminalService.getTerminalId();
         if (!terminalId) throw new Error("Terminal no configurada");
 
-        // NOTA: Se ha eliminado el cierre forzoso de sesiones previas al abrir una nueva.
-        // En multicaja, si dos dispositivos comparten el mismo ID de terminal (mismo nombre),
-        // abrir uno cerraría el otro. Es responsabilidad del sistema manejar sesiones colgadas de otra forma.
-
-        // 2. Abrir la nueva sesión
         const { data, error } = await supabase
             .from('cash_sessions')
             .insert([{
@@ -70,9 +62,6 @@ export const cashSessionService = {
      * Cierra la sesión de caja actual
      */
     async closeSession(sessionId) {
-        const terminalId = terminalService.getTerminalId();
-
-        // Primero intentamos cerrar la sesión específica
         const { data, error } = await supabase
             .from('cash_sessions')
             .update({
@@ -83,11 +72,6 @@ export const cashSessionService = {
             .select()
             .single();
 
-        // NOTA: Hemos eliminado la limpieza agresiva que cerraba TODAS las sesiones del usuario en la terminal.
-        // En un entorno multicaja, esto causaba que al cerrar una caja se cerraran todas las demás 
-        // si compartían el mismo usuario o nombre de terminal.
-        // La sesión específica ya se cerró arriba mediante su ID único.
-
         if (error) {
             console.error('Error cerrando sesión de caja:', error);
             throw error;
@@ -97,9 +81,7 @@ export const cashSessionService = {
     },
 
     /**
-     * Obtiene el historial de sesiones de caja (filtrado por terminal opcionalmente, 
-     * pero generalmente el historial muestra todo, aunque para reportes locales quizás solo terminal)
-     * Por ahora mostramos todo para el admin, o filtrado por usuario si es cajero.
+     * Obtiene el historial de sesiones de caja
      */
     async getSessionHistory(limit = 10) {
         const { data, error } = await supabase

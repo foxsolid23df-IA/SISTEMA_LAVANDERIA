@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import './CashFundModal.css';
 
 export const CashFundModal = ({ staffName, staffId, onSessionCreated }) => {
-    const { openCashSession } = useAuth();
+    const { openCashSession, isAdmin } = useAuth();
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -155,7 +155,7 @@ export const CashFundModal = ({ staffName, staffId, onSessionCreated }) => {
                 </button>
 
                 {/* Opción para administradores: Ver sistema sin abrir caja */}
-                {(useAuth().isAdmin) && (
+                {isAdmin && (
                     <button 
                         className="cash-fund-skip-btn"
                         onClick={() => window.location.hash = '#/inventario'}

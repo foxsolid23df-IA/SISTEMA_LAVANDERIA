@@ -12,6 +12,11 @@ export const useProducts = () => {
     return context;
 };
 
+// Alias para compatibilidad mientras se limpia el código
+export const useProductsContext = useProducts;
+
+// Alias ya definido arriba
+
 export const ProductProvider = ({ children }) => {
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);

@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 import { staffService } from '../services/staffService';
 import { cashSessionService } from '../services/cashSessionService';
 
+const isAbortError = (error) => error?.name === 'AbortError' || error?.message?.includes('aborted');
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -116,25 +118,20 @@ export const AuthProvider = ({ children }) => {
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
             password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    store_name: storeName
+                }
+            }
         });
+        
         if (authError) throw authError;
 
         if (authData.user) {
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([
-                    {
-                        id: authData.user.id,
-                        store_name: storeName,
-                        full_name: fullName,
-                        role: 'admin'
-                    }
-                ]);
-
-            if (profileError) {
-                console.error('Error creating profile:', profileError);
-                throw new Error('Error creating user profile: ' + profileError.message);
-            }
+            // Ya no insertamos manualmente en 'profiles'. 
+            // El trigger 'on_auth_user_created' en el servidor se encarga de esto
+            // de forma segura y evita errores de RLS durante el registro.
 
             // Marcar el código de invitación como usado después del registro exitoso
             if (invitationCodeId && authData.user.id) {
@@ -143,9 +140,7 @@ export const AuthProvider = ({ children }) => {
                     const invitationService = (await import('../services/invitationService')).invitationService;
                     await invitationService.markAsUsed(invitationCodeId, authData.user.id);
                 } catch (codeError) {
-                    // Si falla marcar como usado, registrar pero no bloquear el registro
                     console.error('Error marcando código de invitación como usado:', codeError);
-                    // No lanzamos el error para no bloquear el registro exitoso
                 }
             }
         }
