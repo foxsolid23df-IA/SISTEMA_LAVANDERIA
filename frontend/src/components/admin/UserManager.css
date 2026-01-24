@@ -83,6 +83,21 @@
     color: white;
 }
 
+.btn-edit {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+}
+
+.btn-edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
 /* MODAL GLASS */
 .modal-overlay {
     background: rgba(15, 23, 42, 0.8);

@@ -27,6 +27,45 @@ export const ClientRegistrationModal = ({ isOpen, onClose, onClientRegistered })
 
         setLoading(true);
         try {
+            // Verificar duplicados
+            const duplicates = await customerService.checkDuplicate(formData.name.trim(), formData.phone.trim());
+            
+            if (duplicates && duplicates.length > 0) {
+                // Filtrar duplicado exacto para mostrar mensaje específico
+                const nameMatch = duplicates.find(d => d.name.toLowerCase() === formData.name.trim().toLowerCase());
+                const phoneMatch = formData.phone.trim() ? duplicates.find(d => d.phone === formData.phone.trim()) : null;
+
+                let errorMsg = 'Ya existe un cliente con estos datos.';
+                if (nameMatch && phoneMatch) errorMsg = 'Ya existe un cliente con ese nombre y teléfono.';
+                else if (nameMatch) errorMsg = `Ya existe un cliente con el nombre "${nameMatch.name}".`;
+                else if (phoneMatch) errorMsg = `Ya existe un cliente con el teléfono "${phoneMatch.phone}".`;
+
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Cliente Duplicado',
+                    text: errorMsg,
+                    showCancelButton: true,
+                    confirmButtonText: 'Registrar de todos modos',
+                    cancelButtonText: 'Cancelar'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                       proceedRegistration();
+                    }
+                });
+                setLoading(false);
+                return;
+            }
+
+            await proceedRegistration();
+        } catch (error) {
+            console.error('Error creating customer:', error);
+            Swal.fire('Error', 'No se pudo registrar el cliente', 'error');
+            setLoading(false);
+        }
+    };
+
+    const proceedRegistration = async () => {
+        try {
             const newClient = await customerService.createCustomer(formData);
             Swal.fire({
                 icon: 'success',
@@ -39,10 +78,7 @@ export const ClientRegistrationModal = ({ isOpen, onClose, onClientRegistered })
             onClose();
             setFormData({ name: '', phone: '', address: '' });
         } catch (error) {
-            console.error('Error creating customer:', error);
-            Swal.fire('Error', 'No se pudo registrar el cliente', 'error');
-        } finally {
-            setLoading(false);
+             throw error; // Re-throw to be caught by outer catch if called directly, or handle here
         }
     };
 

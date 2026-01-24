@@ -13,6 +13,7 @@ import Suppliers from "../components/suppliers/Suppliers"
 import { AuthProvider, useAuth } from "../hooks/useAuth"
 import { TerminalSetup } from "../components/config/TerminalSetup";
 import { Orders } from "../components/sales/Orders";
+import { ClientManager } from "../components/admin/ClientManager";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
 import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
 import { PriceConfiguration } from "../components/admin/PriceConfiguration";
@@ -143,6 +144,7 @@ export const Routing = () => {
                                 <Route path="/historial" element={<PrivateLayout><Historial /></PrivateLayout>} />
                                 <Route path="/ordenes" element={<PrivateLayout><Orders /></PrivateLayout>} />
                                 <Route path="/estadisticas" element={<PrivateLayout><Stats /></PrivateLayout>} />
+                                <Route path="/clientes" element={<PrivateLayout><ClientManager /></PrivateLayout>} />
                                 
                                 {/* Gestión de Usuarios solo para Admin */}
                                 <Route path="/usuarios" element={
