@@ -1,0 +1,109 @@
+
+.ticket-config-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: var(--card-bg, #fff); /* Fallback to white */
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: var(--text-primary);
+}
+
+.ticket-config-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.ticket-config-header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #1a202c; /* More specific dark color (slate-900) */
+}
+
+.ticket-config-header p {
+    color: #4a5568; /* darker grey (slate-600) */
+    font-weight: 500;
+}
+
+.ticket-config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group-config {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group-config label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2d3748; /* slate-800 */
+    margin-bottom: 0.25rem;
+}
+
+.form-group-config input,
+.form-group-config textarea {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--bg-secondary, #f8fafc);
+    color: var(--text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group-config input:focus,
+.form-group-config textarea:focus {
+    outline: none;
+    border-color: var(--primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group-config textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.preview-logo {
+    margin-top: 1rem;
+    text-align: center;
+    padding: 1rem;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+}
+
+.preview-logo img {
+    max-height: 150px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.save-config-btn {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--primary-color, #3b82f6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.save-config-btn:hover:not(:disabled) {
+    background-color: var(--primary-hover, #2563eb);
+}
+
+.save-config-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

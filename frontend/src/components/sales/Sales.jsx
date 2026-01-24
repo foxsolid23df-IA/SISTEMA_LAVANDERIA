@@ -6,6 +6,7 @@ import { useApi } from "../../hooks/useApi";
 import { customerService } from "../../services/customerService";
 import { orderService } from "../../services/orderService";
 import { productService } from "../../services/productService";
+import { businessSettingsService } from "../../services/businessSettingsService";
 import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
@@ -62,6 +63,16 @@ export const Sales = () => {
             return matchesSearch && matchesCategory;
         });
     }, [productos, searchTerm, filterCategory]);
+
+    // Estados de configuración
+    const [businessSettings, setBusinessSettings] = useState(null);
+
+    // Cargar configuración al iniciar
+    useEffect(() => {
+        businessSettingsService.getSettings()
+            .then(setBusinessSettings)
+            .catch(err => console.error("Error loading business settings:", err));
+    }, []);
 
     // Búsqueda de clientes
     useEffect(() => {
@@ -423,7 +434,7 @@ export const Sales = () => {
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
                     <div className="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
                         <div id="printable-ticket" className="overflow-hidden">
-                             <TicketVenta venta={ventaCompletada} ref={ticketRef} />
+                             <TicketVenta venta={ventaCompletada} settings={businessSettings} ref={ticketRef} />
                         </div>
                         <div className="mt-8 space-y-3">
                             <button 

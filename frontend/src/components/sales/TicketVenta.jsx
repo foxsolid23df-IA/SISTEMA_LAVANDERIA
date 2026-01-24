@@ -3,7 +3,7 @@ import { formatearDinero, formatearFechaHora } from '../../utils';
 import './TicketVenta.css';
 
 // Componente para mostrar el ticket de venta (simple y profesional)
-const TicketVenta = forwardRef(({ venta }, ref) => {
+const TicketVenta = forwardRef(({ venta, settings }, ref) => {
     if (!venta) return null;
 
     const saldoPendiente = venta.total - (venta.paid_amount || 0);
@@ -11,6 +11,36 @@ const TicketVenta = forwardRef(({ venta }, ref) => {
     return (
         <div ref={ref} className="ticket-venta">
             <div className="ticket-header">
+                {/* Logo del negocio */}
+                {settings?.logo_url && (
+                    <div style={{ marginBottom: '10px' }}>
+                        <img 
+                            src={settings.logo_url} 
+                            alt="Logo" 
+                            style={{ 
+                                maxWidth: '100px', 
+                                maxHeight: '80px', 
+                                objectFit: 'contain',
+                                margin: '0 auto' 
+                            }} 
+                        />
+                    </div>
+                )}
+
+                {/* Info del Negocio */}
+                {settings?.name && (
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {settings.name}
+                    </div>
+                )}
+                
+                {(settings?.address || settings?.phone) && (
+                    <div style={{ fontSize: '11px', marginBottom: '10px', whiteSpace: 'pre-wrap' }}>
+                        {settings?.address && <div>{settings.address}</div>}
+                        {settings?.phone && <div>Tel: {settings.phone}</div>}
+                    </div>
+                )}
+
                 <div className="ticket-title">COMPROBANTE DE RECEPCIÓN</div>
                 <div className="ticket-orden">ORDEN #{venta.id.toString().slice(-6).toUpperCase()}</div>
                 <div className="ticket-fecha">{formatearFechaHora(new Date())}</div>
@@ -75,8 +105,14 @@ const TicketVenta = forwardRef(({ venta }, ref) => {
 
             <div className="ticket-linea" />
             <div className="ticket-footer">
-                ¡Gracias por su confianza!<br />
-                Favor de traer este ticket para su entrega.
+                {settings?.ticket_message ? (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{settings.ticket_message}</div>
+                ) : (
+                    <>
+                        ¡Gracias por su confianza!<br />
+                        Favor de traer este ticket para su entrega.
+                    </>
+                )}
             </div>
         </div>
     );

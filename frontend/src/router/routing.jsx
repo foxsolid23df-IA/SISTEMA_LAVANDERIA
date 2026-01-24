@@ -17,7 +17,7 @@ import { ClientManager } from "../components/admin/ClientManager";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
 import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
 import { PriceConfiguration } from "../components/admin/PriceConfiguration";
-import { terminalService } from "../services/terminalService";
+import { TicketConfiguration } from "../components/admin/TicketConfiguration";import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
@@ -164,6 +164,12 @@ export const Routing = () => {
                                 <Route path="/precios" element={
                                     <PrivateLayout>
                                         <PriceConfiguration />
+                                    </PrivateLayout>
+                                } />
+
+                                <Route path="/configuracion-ticket" element={
+                                    <PrivateLayout>
+                                        <TicketConfiguration />
                                     </PrivateLayout>
                                 } />
 
