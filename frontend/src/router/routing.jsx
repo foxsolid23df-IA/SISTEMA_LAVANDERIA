@@ -13,6 +13,8 @@ import Suppliers from "../components/suppliers/Suppliers"
 import { AuthProvider, useAuth } from "../hooks/useAuth"
 import { TerminalSetup } from "../components/config/TerminalSetup";
 import { Orders } from "../components/sales/Orders";
+import CustomerDisplay from "../components/customer/CustomerDisplay";
+import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
 import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
 import { ScrollToTop } from "../components/common/ScrollToTop";
