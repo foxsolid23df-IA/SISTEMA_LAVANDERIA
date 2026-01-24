@@ -10,6 +10,14 @@ export const ClientRegistrationModal = ({ isOpen, onClose, onClientRegistered })
     });
     const [loading, setLoading] = useState(false);
 
+    // Resetear formulario al abrir
+    React.useEffect(() => {
+        if (isOpen) {
+            setFormData({ name: '', phone: '', address: '' });
+            setLoading(false);
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const handleChange = (e) => {
@@ -49,12 +57,26 @@ export const ClientRegistrationModal = ({ isOpen, onClose, onClientRegistered })
                     cancelButtonText: 'Cancelar'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
-                       proceedRegistration();
+                       await proceedRegistration();
                     }
                 });
+                
+                // Si el usuario cancela o cierra el modal, aseguramos que loading sea false.
+                // Si confirmó, proceedRegistration ya se encargó de la lógica (éxito cierra modal, error lanza excepción caught below)
+                // Pero como proceedRegistration no lanza error si tiene éxito (solo cierra), necesitamos controlar el estado.
+                // En realidad, si proceedRegistration es llamado, él maneja el flujo.
+                // Solo si NO se llama (cancelar), debemos poner false.
+                
+                // NOTA: Si el usuario confirma, `proceedRegistration` se ejecuta y puede cerrar el modal.
+                // Si el usuario Cancela, el código sigue aquí.
+                
+                // Corrección: Como el `then` anterior espera a proceedRegistration, si llegamos aquí es que terminó.
+                // Si proceedRegistration tuvo éxito, el componente probablemente se desmontó (onClose).
+                // Pero es seguro poner false aquí.
                 setLoading(false);
                 return;
             }
+
 
             await proceedRegistration();
         } catch (error) {

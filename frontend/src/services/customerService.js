@@ -65,24 +65,45 @@ export const customerService = {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("No authenticated user");
 
-    let query = supabase
-      .from("customers")
-      .select("id, name, phone")
-      .eq("user_id", user.id);
+    // Realizar consultas independientes para evitar errores de sintaxis con caracteres especiales en .or()
+    const queries = [];
 
-    const conditions = [];
-    if (name) conditions.push(`name.eq.${name}`);
-    if (phone) conditions.push(`phone.eq.${phone}`);
-
-    if (conditions.length > 0) {
-      query = query.or(conditions.join(','));
-    } else {
-      return []; // Si no hay nombre ni teléfono, no hay duplicado que buscar
+    if (name) {
+      queries.push(
+        supabase
+          .from("customers")
+          .select("id, name, phone")
+          .eq("user_id", user.id)
+          .eq("name", name) // .eq maneja correctamente espacios y caracteres
+      );
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+    if (phone) {
+      queries.push(
+        supabase
+          .from("customers")
+          .select("id, name, phone")
+          .eq("user_id", user.id)
+          .eq("phone", phone)
+      );
+    }
+
+    if (queries.length === 0) return [];
+
+    const results = await Promise.all(queries);
+    
+    // Combinar resultados y eliminar duplicados (si el mismo cliente coincide en nombre y teléfono)
+    const allMatches = results.reduce((acc, result) => {
+        if (result.data) {
+            return [...acc, ...result.data];
+        }
+        return acc;
+    }, []);
+
+    // Desduplicar array de objetos por ID
+    const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
+
+    return uniqueMatches;
   },
 
   // Actualizar un cliente existente

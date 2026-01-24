@@ -2487,3 +2487,31 @@
 .text-red-500 {
   color: #ef4444;
 }
+
+/* DATE INPUT HIGHLIGHT */
+.date-input-highlight {
+    position: relative;
+    cursor: pointer;
+}
+
+
+
+.date-input-highlight::-webkit-calendar-picker-indicator {
+    display: block !important;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat center center;
+    background-size: contain;
+    width: 20px;
+    height: 20px;
+    opacity: 1 !important;
+    cursor: pointer;
+    margin-left: 8px;
+    filter: none; /* Remove filters to use the pure SVG black */
+    transform: scale(1.2);
+    transition: transform 0.2s ease;
+    padding: 0;
+}
+
+.date-input-highlight:hover::-webkit-calendar-picker-indicator {
+    transform: scale(1.6);
+    background-color: rgba(245, 158, 11, 0.1); /* light amber bg on hover */
+}

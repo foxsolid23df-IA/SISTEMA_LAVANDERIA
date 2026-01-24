@@ -112,6 +112,7 @@ export const Sales = () => {
                 payment_method: metodoPago,
                 promised_at: new Date(fechaEntrega).toISOString(),
                 notes: notas,
+                status: 'processing', // Auto-send to washing
                 cash_session_id: cashSession?.id
             };
 
@@ -301,7 +302,7 @@ export const Sales = () => {
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entrega</label>
                             <input 
                                 type="date" 
-                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white font-bold"
+                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
                                 value={fechaEntrega}
                                 onChange={(e) => setFechaEntrega(e.target.value)}
                             />
