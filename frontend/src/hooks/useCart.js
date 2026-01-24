@@ -13,7 +13,16 @@ export const useCart = (mostrarError) => {
             const productoExistente = carritoAnterior.find(item => item.id === producto.id)
             
             if (productoExistente) {
-                // Si ya existe, verificar stock antes de incrementar cantidad
+                // Si es un servicio (cobro por kg o unitario sin stock crítico), simplemente incrementamos
+                if (producto.category === 'service') {
+                    return carritoAnterior.map(item =>
+                        item.id === producto.id
+                            ? { ...item, quantity: item.quantity + 1 }
+                            : item
+                    )
+                }
+
+                // Si es producto físico, verificar stock
                 if (productoExistente.quantity < producto.stock) {
                     return carritoAnterior.map(item =>
                         item.id === producto.id
@@ -25,10 +34,9 @@ export const useCart = (mostrarError) => {
                     return carritoAnterior
                 }
             } else {
-                // Si no existe, verificar que tenga stock disponible
-                if (producto.stock > 0) {
+                // Si no existe, verificar si es servicio o tiene stock
+                if (producto.category === 'service' || producto.stock > 0) {
                     return [...carritoAnterior, {
-                        id: Date.now() + Math.random(),
                         ...producto,
                         quantity: 1
                     }]
@@ -40,7 +48,7 @@ export const useCart = (mostrarError) => {
         })
     }
 
-    // 4. FUNCIÓN PARA CAMBIAR LA CANTIDAD DE UN PRODUCTO
+    // 4. FUNCIÓN PARA CAMBIAR LA CANTIDAD DE UN PRODUCTO (Soporta decimales para kg)
     const cambiarCantidad = (idProducto, nuevaCantidad) => {
         // No permitir cantidades negativas
         if (nuevaCantidad < 0) return;
@@ -48,15 +56,20 @@ export const useCart = (mostrarError) => {
         setCarrito(carritoAnterior =>
             carritoAnterior.map(item => {
                 if (item.id === idProducto) {
+                    // Si es servicio, permitimos decimales y no hay tope de stock
+                    if (item.category === 'service') {
+                        return { ...item, quantity: parseFloat(nuevaCantidad) || 0 }
+                    }
+
+                    // Si es producto físico, aplicamos reglas normales
                     const cantidadMaxima = item.stock
                     const cantidadValida = Math.min(nuevaCantidad, cantidadMaxima)
                     
-                    // Mostrar error si intenta agregar más del stock disponible
                     if (nuevaCantidad > cantidadMaxima) {
                         mostrarError?.(`Máximo disponible: ${cantidadMaxima}`)
                     }
                     
-                    return { ...item, quantity: cantidadValida }
+                    return { ...item, quantity: Math.floor(cantidadValida) }
                 }
                 return item
             })

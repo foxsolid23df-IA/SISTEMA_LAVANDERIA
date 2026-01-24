@@ -14,7 +14,8 @@ import { useGlobalScanner } from "../../hooks/scanner";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { exchangeRateService } from "../../services/exchangeRateService";
 import { supabase } from "../../supabase";
-import { useProducts } from "../../contexts/ProductContext";
+import { customerService } from "../../services/customerService";
+import { orderService } from "../../services/orderService";
 import "./Sales.css";
 
 export const Sales = () => {
@@ -79,19 +80,23 @@ export const Sales = () => {
     });
   };
 
-  // ESTADOS LOCALES ADICIONALES
-  const [codigoEscaneado, setCodigoEscaneado] = useState("");
-  const [vendiendo, setVendiendo] = useState(false);
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [ventaCompletada, setVentaCompletada] = useState(null);
-  const [mostrarCameraScanner, setMostrarCameraScanner] = useState(false);
-  const [mostrarModalPago, setMostrarModalPago] = useState(false);
-  const [metodoPago, setMetodoPago] = useState("efectivo");
-  const [montoRecibido, setMontoRecibido] = useState("");
-  const [tipoCambio, setTipoCambio] = useState(null);
-  const [sugerencias, setSugerencias] = useState([]);
-  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
-  const [indexSugerencia, setIndexSugerencia] = useState(0);
+  // ESTADOS PARA LAVANDERÍA
+  const [clientes, setClientes] = useState([]);
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+  const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [mostrarSugerenciasClientes, setMostrarSugerenciasClientes] = useState(false);
+  const [fechaEntrega, setFechaEntrega] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1); // Por defecto mañana
+    return d.toISOString().split('T')[0];
+  });
+  const [notasOrden, setNotasOrden] = useState("");
+  const [anticipo, setAnticipo] = useState(0);
+
+  // ESTADO PARA NUEVO CLIENTE (MODAL)
+  const [mostrarModalNuevoCliente, setMostrarModalNuevoCliente] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState({ name: "", phone: "", address: "" });
+
   // ID temporal de transacción estable para el modal de pago
   const [transactionId, setTransactionId] = useState("");
   // Estado para evitar que el primer ENTER abra y el segundo cierre instantáneamente
@@ -183,29 +188,18 @@ export const Sales = () => {
     }
   }, [codigoEscaneado, productos]);
 
-  // SINCRONIZACIÓN CON PANTALLA DEL CLIENTE
+  // BUSCAR CLIENTES
   useEffect(() => {
-    let isMounted = true;
-
-    const syncCart = async () => {
-      if (user && !mostrarModalPago && isMounted) {
-        try {
-          await activeCartService.updateCart(carrito, total, cashSession?.id);
-        } catch (err) {
-          // Silenciar errores si el componente se desmontó
-          if (isMounted && err.name !== 'AbortError') {
-            console.error("Error sincronizando carrito:", err);
-          }
-        }
-      }
-    };
-
-    syncCart();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [carrito, total, user, cashSession, mostrarModalPago]);
+    if (busquedaCliente.length >= 2) {
+      customerService.searchCustomers(busquedaCliente)
+        .then(setClientes)
+        .catch(console.error);
+      setMostrarSugerenciasClientes(true);
+    } else {
+      setClientes([]);
+      setMostrarSugerenciasClientes(false);
+    }
+  }, [busquedaCliente]);
 
   // Sincronizar info de pago cuando cambia
   useEffect(() => {
@@ -236,6 +230,21 @@ export const Sales = () => {
       isMounted = false;
     };
   }, [metodoPago, montoRecibido, mostrarModalPago, user, total]);
+
+  const handleCrearCliente = async (e) => {
+    e.preventDefault();
+    if (!nuevoCliente.name) return;
+    try {
+      const creado = await customerService.createCustomer(nuevoCliente);
+      setClienteSeleccionado(creado);
+      setMostrarModalNuevoCliente(false);
+      setNuevoCliente({ name: "", phone: "", address: "" });
+      mostrarModalPersonalizado("Éxito", "Cliente creado y seleccionado.", "success");
+    } catch (error) {
+      console.error(error);
+      mostrarModalPersonalizado("Error", "No se pudo crear el cliente.", "error");
+    }
+  };
 
   // Seleccionar producto de las sugerencias
   const seleccionarProducto = (producto) => {
@@ -409,109 +418,54 @@ export const Sales = () => {
   };
 
   const finalizarVenta = async () => {
-    // Seguridad: Evitar que ENTER dispare finalizar si el modal acaba de abrirse
     if (!mostrarModalPago) return;
     if (carrito.length === 0) {
-      mostrarModalPersonalizado(
-        "Carrito vacío",
-        "No puedes finalizar una venta sin productos en el carrito.",
-        "warning",
-      );
+      mostrarModalPersonalizado("Carrito vacío", "Agrega servicios al carrito.", "warning");
       return;
     }
-
-    const montoActualStr = montoRecibidoRef.current || montoRecibido;
-    const montoActualNum = parseFloat(montoActualStr) || 0;
-
-    // Validar monto recibido si es efectivo
-    if (metodoPago === "efectivo") {
-      if (montoActualNum < total - 0.01) {
-        mostrarModalPersonalizado(
-          "Monto insuficiente",
-          `El monto recibido (${formatearDinero(montoActualNum)}) es menor al total (${formatearDinero(total)}).`,
-          "warning",
-        );
-        return;
-      }
-    }
-
-    // Validar monto si es dólares
-    if (metodoPago === "dolares") {
-      const totalEnPesos = montoActualNum * tipoCambio;
-      // TOLERANCIA DE REDONDEO: permitimos hasta 0.50 centavos de diferencia por redondeo de USD a MXN
-      if (!montoActualNum || totalEnPesos < total - 0.5) {
-        mostrarModalPersonalizado(
-          "Monto insuficiente",
-          `El pago en dólares (${montoActualNum} USD = $${totalEnPesos.toFixed(2)} MXN) no cubre el total de ${formatearDinero(total)}.`,
-          "error",
-        );
-        return;
-      }
+    if (!clienteSeleccionado) {
+      mostrarModalPersonalizado("Cliente requerido", "Debes seleccionar un cliente para la orden.", "warning");
+      return;
     }
 
     setVendiendo(true);
     cerrarModalPago();
 
     try {
-      // Preparar datos para Supabase
-      const ventaData = {
-        items: carrito
-          .filter((item) => item.quantity > 0)
-          .map((item) => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            stock: item.stock || 0,
-          })),
+      const orderData = {
+        customer_id: clienteSeleccionado.id,
         total: total,
-        metodoPago: metodoPago,
-        currency: metodoPago === "dolares" ? "USD" : "MXN",
-        exchange_rate: metodoPago === "dolares" ? tipoCambio : null,
-        amount_usd: metodoPago === "dolares" ? montoActualNum : null,
-        montoRecibido:
-          metodoPago === "efectivo" || metodoPago === "dolares"
-            ? montoActualNum
-            : total,
-        cambio: calcularCambio(),
+        paid_amount: parseFloat(anticipo) || 0,
+        status: 'received',
+        payment_status: anticipo >= total ? 'paid' : (anticipo > 0 ? 'partial' : 'pending'),
+        notes: notasOrden,
+        promised_at: fechaEntrega,
+        items: carrito
       };
 
-      // Crear venta en Supabase
-      const ventaCreada = await salesService.createSale(ventaData);
-
-      // Actualizar activeCartService para marcar como completado
-      try {
-        await activeCartService.clearCart('completed', cashSession?.id);
-      } catch (e) {
-        console.error(e);
-      }
+      const orderCreated = await orderService.createOrder(orderData);
 
       setVentaCompletada({
-        ...ventaCreada,
+        ...orderCreated,
         productos: carrito,
-        items: carrito, // Backup por si ticket usa items
-        metodoPago: metodoPago,
-        montoRecibido: ventaData.montoRecibido,
-        cambio: ventaData.cambio,
-        currency: ventaData.currency,
-        exchange_rate: ventaData.exchange_rate,
+        cliente: clienteSeleccionado,
+        anticipo: anticipo,
+        cambio: calcularCambio()
       });
 
-      // Recargar productos para actualizar stock globalmente
-      await cargarDatos(true);
-
       vaciarCarrito();
+      setClienteSeleccionado(null);
+      setBusquedaCliente("");
+      setAnticipo(0);
+      setNotasOrden("");
       setMostrarModal(true);
+      await cargarDatos(true);
     } catch (error) {
-      console.error("Error al crear venta:", error);
-      mostrarModalPersonalizado(
-        "Error al procesar venta",
-        "No se pudo completar la venta. Por favor, intenta nuevamente.",
-        "error",
-      );
+      console.error("Error al crear orden:", error);
+      mostrarModalPersonalizado("Error", "No se pudo crear la orden de lavandería.", "error");
+    } finally {
+      setVendiendo(false);
     }
-
-    setVendiendo(false);
   };
 
   const manejarCambioCodigo = (e) => {
@@ -938,9 +892,9 @@ export const Sales = () => {
           <div className="sales-area-header">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center w-full gap-4">
               <div>
-                <h1 className="sales-title">AREA DE COBRO</h1>
+                <h1 className="sales-title">RECEPCIÓN DE LAVANDERÍA</h1>
                 <p className="sales-subtitle">
-                  Gestiona y procesa tus ventas con precisión
+                  Registra prendas, pesa y asigna clientes a las órdenes
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -990,6 +944,103 @@ export const Sales = () => {
               </div>
             </div>
           </div>
+
+          {/* SECCIÓN DE CLIENTE */}
+          <div className="search-section-modern mb-4">
+            <label className="text-xs font-bold text-slate-500 mb-2 block">CLIENTE (OBLIGATORIO)</label>
+            <div className="search-input-wrapper">
+              <div className="search-input-container">
+                <div className="search-icon-wrapper">
+                  <span className="material-symbols-outlined">person_search</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente por nombre o teléfono..."
+                  value={clienteSeleccionado ? clienteSeleccionado.name : busquedaCliente}
+                  onChange={(e) => {
+                    setBusquedaCliente(e.target.value);
+                    if (clienteSeleccionado) setClienteSeleccionado(null);
+                  }}
+                  className="barcode-input-modern flex-grow"
+                />
+                {!clienteSeleccionado && (
+                  <button 
+                    onClick={() => setMostrarModalNuevoCliente(true)}
+                    className="ml-2 p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 shadow-sm transition-all"
+                    title="Nuevo Cliente"
+                  >
+                    <span className="material-symbols-outlined">person_add</span>
+                  </button>
+                )}
+              </div>
+              {clienteSeleccionado && (
+                <button 
+                  onClick={() => setClienteSeleccionado(null)}
+                  className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                >
+                  <span className="material-symbols-outlined">person_remove</span>
+                </button>
+              )}
+            </div>
+
+            {/* SUGERENCIAS DE CLIENTES */}
+            {mostrarSugerenciasClientes && clientes.length > 0 && (
+              <div className="suggestions-dropdown">
+                {clientes.map((c) => (
+                  <div
+                    key={c.id}
+                    className="suggestion-item"
+                    onClick={() => {
+                      setClienteSeleccionado(c);
+                      setMostrarSugerenciasClientes(false);
+                      setBusquedaCliente("");
+                    }}
+                  >
+                    <div className="suggestion-info">
+                      <span className="suggestion-name font-bold">{c.name}</span>
+                      <span className="suggestion-price text-xs opacity-70">{c.phone || 'Sin teléfono'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* DETALLES DE LA ORDEN */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="search-section-modern">
+               <label className="text-xs font-bold text-slate-500 mb-2 block">FECHA DE ENTREGA PROMETIDA</label>
+               <input 
+                 type="date" 
+                 value={fechaEntrega}
+                 onChange={(e) => setFechaEntrega(e.target.value)}
+                 className="barcode-input-modern w-full"
+               />
+            </div>
+            <div className="search-section-modern">
+               <label className="text-xs font-bold text-slate-500 mb-2 block">DETERMINAR ANTICIPO</label>
+               <input 
+                 type="number" 
+                 placeholder="Ej. 100.00"
+                 value={anticipo}
+                 onChange={(e) => setAnticipo(e.target.value)}
+                 className="barcode-input-modern w-full"
+               />
+            </div>
+          </div>
+
+          <div className="search-section-modern mb-4">
+            <label className="text-xs font-bold text-slate-500 mb-2 block">NOTAS / OBSERVACIONES (PRENDAS, MANCHAS, ETC.)</label>
+            <textarea 
+              value={notasOrden}
+              onChange={(e) => setNotasOrden(e.target.value)}
+              placeholder="Ej. Saco con mancha en cuello, cobija king size..."
+              className="barcode-input-modern w-full h-20 p-3"
+            />
+          </div>
+
+          <hr className="my-6 border-slate-200" />
+          <label className="text-xs font-bold text-slate-500 mb-2 block uppercase">Añadir Servicios / Productos</label>
 
           {/* SCANNER Y BÚSQUEDA */}
           <div
@@ -1175,38 +1226,23 @@ export const Sales = () => {
                     </button>
                     <input
                       type="number"
+                      step="0.01"
                       className="quantity-input-modern"
                       value={item.quantity === 0 ? "" : item.quantity}
                       onChange={(e) => {
-                        const inputVal = e.target.value;
-                        if (inputVal === "") {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val >= 0) {
+                          cambiarCantidad(item.id, val);
+                        } else if (e.target.value === "") {
                           cambiarCantidad(item.id, 0);
-                        } else {
-                          const val = parseInt(inputVal);
-                          if (!isNaN(val) && val >= 0) {
-                            cambiarCantidad(item.id, val);
-                          }
                         }
                       }}
                       onFocus={(e) => e.target.select()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          e.target.blur();
-                          if (item.quantity > 0) {
-                            setTimeout(() => {
-                              abrirModalPago();
-                            }, 150);
-                          }
-                        }
-                      }}
                       onBlur={(e) => {
-                        if (item.quantity < 1) {
+                        if (item.quantity <= 0) {
                           cambiarCantidad(item.id, 1);
                         }
                       }}
-                      min="1"
                     />
                     <button
                       className="qty-btn-modern"
@@ -1249,10 +1285,10 @@ export const Sales = () => {
             </div>
             <button
               onClick={abrirModalPago}
-              disabled={vendiendo || carrito.length === 0}
+              disabled={vendiendo || carrito.length === 0 || !clienteSeleccionado}
               className="btn-process-payment"
             >
-              Procesar Pago
+              {!clienteSeleccionado ? 'Selecciona un Cliente' : 'Registrar Orden'}
             </button>
           </div>
         </div>
@@ -1280,13 +1316,19 @@ export const Sales = () => {
                 <div className="payment-summary-header">
                   <h3 className="payment-summary-title">
                     <span className="material-symbols-outlined">
-                      receipt_long
+                      assignment
                     </span>
-                    Resumen
+                    Detalles de Orden
                   </h3>
                   <span className="payment-transaction-id">
                     #{transactionId}
                   </span>
+                </div>
+
+                <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                   <p className="text-xs font-bold text-slate-500 uppercase">Cliente</p>
+                   <p className="text-sm font-bold text-slate-900">{clienteSeleccionado?.name}</p>
+                   <p className="text-xs text-slate-500">Promrometido: {fechaEntrega}</p>
                 </div>
 
                 <div className="payment-items-list">
@@ -1390,14 +1432,17 @@ export const Sales = () => {
                     <div className="payment-amount-input-section">
                       <label className="payment-amount-label">
                         {metodoPago === "dolares"
-                          ? "MONTO RECIBIDO (USD)"
-                          : "MONTO RECIBIDO"}
+                          ? "ANTICIPO RECIBIDO (USD)"
+                          : "ANTICIPO RECIBIDO"}
                       </label>
                       <div className="payment-amount-display">
                         <span className="payment-amount-value">
-                          {metodoPago === "dolares" ? "$" : "$"}
-                          {formatearMontoRecibido()}
+                          ${formatearMontoRecibido()}
                         </span>
+                      </div>
+
+                      <div className="mt-4 p-2 bg-blue-50 text-blue-800 rounded text-center text-xs">
+                         <span className="font-bold">Saldo Pendiente:</span> {formatearDinero(total - (parseFloat(montoRecibido) || 0))}
                       </div>
 
                       {metodoPago === "dolares" && (
@@ -1463,12 +1508,9 @@ export const Sales = () => {
                   <button
                     className="payment-finalize-btn"
                     onClick={finalizarVenta}
-                    disabled={
-                      !modalReady || (metodoPago === "efectivo" &&
-                      (!montoRecibido || parseFloat(montoRecibido) < total))
-                    }
+                    disabled={!modalReady}
                   >
-                    Finalizar Venta
+                    Registrar Orden
                   </button>
                   <button
                     className="payment-cancel-btn"
@@ -1528,6 +1570,58 @@ export const Sales = () => {
                 Aceptar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL NUEVO CLIENTE */}
+      {mostrarModalNuevoCliente && (
+        <div className="modal-overlay" onClick={() => setMostrarModalNuevoCliente(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Registrar Nuevo Cliente</h3>
+              <button 
+                onClick={() => setMostrarModalNuevoCliente(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleCrearCliente} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">NOMBRE COMPLETO</label>
+                <input 
+                  type="text" 
+                  required
+                  className="barcode-input-modern w-full"
+                  value={nuevoCliente.name}
+                  onChange={(e) => setNuevoCliente({...nuevoCliente, name: e.target.value})}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">TELÉFONO</label>
+                <input 
+                  type="text" 
+                  className="barcode-input-modern w-full"
+                  value={nuevoCliente.phone}
+                  onChange={(e) => setNuevoCliente({...nuevoCliente, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">DIRECCIÓN</label>
+                <textarea 
+                  className="barcode-input-modern w-full h-20 p-2"
+                  value={nuevoCliente.address}
+                  onChange={(e) => setNuevoCliente({...nuevoCliente, address: e.target.value})}
+                ></textarea>
+              </div>
+              <div className="modal-footer pt-4">
+                <button type="submit" className="btn-modal-ok w-full bg-emerald-500">
+                  Guardar y Seleccionar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

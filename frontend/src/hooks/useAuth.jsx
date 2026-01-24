@@ -22,8 +22,19 @@ export const AuthProvider = ({ children }) => {
     const isLocked = !!session && !activeStaff;
 
     useEffect(() => {
+        console.log('[Auth] Inicializando AuthProvider...');
+        
+        // Timer de seguridad: si en 6 segundos no hay respuesta, forzar el fin del loading
+        const timeout = setTimeout(() => {
+            if (loading) {
+                console.warn('[Auth] Timeout de seguridad activado. Forzando carga.');
+                setLoading(false);
+            }
+        }, 6000);
+
         // 1. Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
+            console.log('[Auth] Sesión recuperada:', session ? 'Usuario logueado' : 'Sin sesión');
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
@@ -39,7 +50,12 @@ export const AuthProvider = ({ children }) => {
                 }
             } else {
                 setLoading(false);
+                clearTimeout(timeout);
             }
+        }).catch(err => {
+            console.error('[Auth] Error crítico en getSession:', err);
+            setLoading(false);
+            clearTimeout(timeout);
         });
 
         // 2. Listen for changes
@@ -51,12 +67,15 @@ export const AuthProvider = ({ children }) => {
             } else {
                 setProfile(null);
                 setActiveStaff(null);
-                localStorage.removeItem('activeStaff'); // Limpiar si se cierra sesión de supabase
+                localStorage.removeItem('activeStaff');
                 setLoading(false);
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(timeout);
+        };
     }, []);
 
     const fetchProfile = async (userId) => {

@@ -13,9 +13,14 @@
 }
 
 .ticket-venta .ticket-title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     margin-bottom: 2px;
+}
+
+.ticket-venta .ticket-orden {
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .ticket-venta .ticket-fecha {
@@ -26,6 +31,11 @@
 .ticket-venta .ticket-linea {
     border-top: 1px dashed #888;
     margin: 8px 0;
+}
+
+.ticket-venta .ticket-cliente-info {
+    text-align: left;
+    font-size: 12px;
 }
 
 .ticket-venta .ticket-producto {
@@ -41,15 +51,26 @@
     justify-content: space-between;
 }
 
-.ticket-venta .ticket-total {
-    font-size: 14px;
-    font-weight: bold;
-    text-align: right;
-    margin-top: 10px;
+.ticket-venta .ticket-summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.ticket-venta .ticket-pendente {
+    background: #f0f0f0;
+    padding: 4px;
+    border: 1px solid #ddd;
+}
+
+.ticket-venta .ticket-notes {
+    text-align: left;
+    font-size: 11px;
 }
 
 .ticket-venta .ticket-footer {
     text-align: center;
-    font-size: 11px;
+    font-size: 10px;
     margin-top: 10px;
+    line-height: 1.4;
 }
