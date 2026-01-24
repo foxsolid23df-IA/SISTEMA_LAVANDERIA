@@ -31,10 +31,12 @@ export const salesService = {
         // 2. Crear los items de la venta
         const saleItems = saleData.items.map(item => ({
             sale_id: sale.id,
+            product_id: item.id,
             product_name: item.name,
             quantity: item.quantity,
             price: item.price,
             total: item.price * item.quantity,
+            barcode: item.barcode || null,
             user_id: userData.user.id
         }));
 

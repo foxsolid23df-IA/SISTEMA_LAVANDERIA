@@ -28,8 +28,8 @@ export const orderService = {
     const items = orderData.items.map(item => ({
       order_id: order.id,
       user_id: user.id,
-      product_id: item.id && typeof item.id === 'number' ? item.id : null,
-      product_name: item.name,
+      product_id: item.product_id || null,
+      product_name: item.product_name || item.name,
       quantity: item.quantity,
       price: item.price,
       total: item.price * item.quantity

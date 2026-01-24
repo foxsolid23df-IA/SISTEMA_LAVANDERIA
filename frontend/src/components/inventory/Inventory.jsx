@@ -18,9 +18,10 @@ import {
     FiSave,
     FiUploadCloud,
     FiImage,
+    FiMoreVertical,
     FiFilter,
-    FiDownload,
-    FiMoreVertical
+    FiSettings, // Aseguramos que esté importado
+    FiDownload
 } from 'react-icons/fi';
 
 const Inventory = () => {
@@ -385,7 +386,7 @@ const Inventory = () => {
     });
 
     // Obtener categorías únicas (predefinidas + personalizadas + de productos existentes)
-    const predefinedCategories = ['Lácteos', 'Panadería', 'Bebidas', 'Frutas', 'Limpieza', 'General'];
+    const predefinedCategories = ['Lavandería', 'Cama y Hogar', 'Ventas Mostrador', 'General'];
     const existingCategories = products.map(p => p.category || getCategory(p.name).name);
     const allCategories = [...predefinedCategories, ...customCategories, ...existingCategories];
     const uniqueCategories = Array.from(new Set(allCategories)).sort();
@@ -412,11 +413,13 @@ const Inventory = () => {
     };
 
     const handleDeleteCategory = (categoryName) => {
+        /* Permite borrar cualquier categoría, incluso las del sistema si el usuario lo desea
         // No permitir eliminar categorías predefinidas
         if (predefinedCategories.includes(categoryName)) {
             Swal.fire('Error', 'No se pueden eliminar las categorías predefinidas del sistema', 'warning');
             return;
         }
+        */
 
         Swal.fire({
             title: '¿Estás seguro?',
@@ -476,47 +479,92 @@ const Inventory = () => {
     // Función para exportar productos a Excel
     const handleExport = () => {
         try {
-            // Preparar los datos para el Excel
-            const data = filteredProducts.map(p => {
-                const productCategory = p.category || getCategory(p.name).name;
-                return {
-                    'Producto': p.name,
-                    'Categoría': productCategory,
-                    'SKU': getSKU(p),
-                    'Precio': parseFloat(p.price),
+            let data = [];
+            
+            if (filteredProducts.length > 0) {
+                // Si hay productos, los exportamos normalmente
+                data = filteredProducts.map(p => ({
+                    'Nombre': p.name,
+                    'Categoría': p.category || 'General',
+                    'Tipo_Cobro': p.pricing_type || 'unit',
+                    'Precio_Venta': parseFloat(p.price),
+                    'Precio_Costo': parseFloat(p.cost_price || 0),
                     'Existencia': p.stock,
-                    'Código de Barras': p.barcode || ''
-                };
-            });
+                    'Stock_Minimo': p.min_stock || 0,
+                    'Codigo_Barras': p.barcode || '',
+                    'Descripcion': p.description || ''
+                }));
+            } else {
+                // Si NO hay productos, generamos una plantilla con ejemplos de Lavandería
+                data = [
+                    {
+                        'Nombre': 'SERVICIO: Lavado por Kilo (Ropa Color)',
+                        'Categoría': 'Lavandería',
+                        'Tipo_Cobro': 'kg',
+                        'Precio_Venta': 45.00,
+                        'Precio_Costo': 15.00,
+                        'Existencia': 9999,
+                        'Stock_Minimo': 0,
+                        'Codigo_Barras': '',
+                        'Descripcion': 'Lavado básico incluye detergente y suavizante'
+                    },
+                    {
+                        'Nombre': 'PRENDA: Edredón Matrimonial (Individual)',
+                        'Categoría': 'Cama y Hogar',
+                        'Tipo_Cobro': 'unit',
+                        'Precio_Venta': 180.00,
+                        'Precio_Costo': 40.00,
+                        'Existencia': 9999,
+                        'Stock_Minimo': 0,
+                        'Codigo_Barras': '',
+                        'Descripcion': 'Lavado y secado industrial'
+                    },
+                    {
+                        'Nombre': 'PRODUCTO: Suavizante de Telas 500ml',
+                        'Categoría': 'Ventas Mostrador',
+                        'Tipo_Cobro': 'unit',
+                        'Precio_Venta': 35.00,
+                        'Precio_Costo': 20.00,
+                        'Existencia': 15,
+                        'Stock_Minimo': 5,
+                        'Codigo_Barras': '750123456789',
+                        'Descripcion': 'Venta para uso externo'
+                    }
+                ];
+            }
 
             // Crear un libro de trabajo
             const wb = XLSX.utils.book_new();
-
-            // Crear una hoja de cálculo desde los datos
             const ws = XLSX.utils.json_to_sheet(data);
 
-            // Ajustar el ancho de las columnas
+            // Ajustar el ancho de las columnas para que se vea profesional
             const columnWidths = [
-                { wch: 30 }, // Producto
+                { wch: 40 }, // Nombre
                 { wch: 15 }, // Categoría
-                { wch: 15 }, // SKU
-                { wch: 12 }, // Precio
+                { wch: 12 }, // Tipo_Cobro
+                { wch: 15 }, // Precio_Venta
+                { wch: 15 }, // Precio_Costo
                 { wch: 12 }, // Existencia
-                { wch: 20 }  // Código de Barras
+                { wch: 12 }, // Stock_Minimo
+                { wch: 20 }, // Codigo_Barras
+                { wch: 40 }  // Descripcion
             ];
             ws['!cols'] = columnWidths;
 
-            // Agregar la hoja al libro
-            XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+            XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Inventario');
 
-            // Generar el archivo Excel
-            const fileName = `inventario_${new Date().toISOString().split('T')[0]}.xlsx`;
+            const title = filteredProducts.length > 0 ? 'inventario' : 'plantilla_lavanderia';
+            const fileName = `${title}_${new Date().toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
 
-            Swal.fire('Éxito', 'Inventario exportado correctamente en formato Excel', 'success');
+            const msg = filteredProducts.length > 0 
+                ? 'Inventario exportado correctamente' 
+                : 'Se descargó una plantilla con ejemplos de lavandería para que puedas llenarla';
+                
+            Swal.fire('¡Listo!', msg, 'success');
         } catch (error) {
             console.error('Error al exportar:', error);
-            Swal.fire('Error', 'No se pudo exportar el inventario', 'error');
+            Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error');
         }
     };
 
@@ -851,16 +899,14 @@ const Inventory = () => {
                                             </label>
                                             <button
                                                 type="button"
-                                                className="new-product-manage-categories-btn"
+                                                className="text-xs text-blue-500 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors"
                                                 onClick={(e) => {
                                                     e.preventDefault();
                                                     setShowCategoriesModal(true);
                                                 }}
-                                                title="Gestionar categorías"
+                                                title="Agregar o quitar categorías"
                                             >
-                                                <svg className="new-product-manage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                                                </svg>
+                                                <FiSettings size={14} /> Gestionar
                                             </button>
                                         </div>
                                         <div className="new-product-select-wrapper">
@@ -1104,7 +1150,16 @@ const Inventory = () => {
                                     {predefinedCategories.map(cat => (
                                         <div key={cat} className="categories-item predefined">
                                             <span className="categories-item-name">{cat}</span>
-                                            <span className="categories-item-badge">Sistema</span>
+                                            {/* Permitir borrar también las del sistema visualmente si se desea ocultar */}
+                                            {/* <span className="categories-item-badge">Sistema</span> */}
+                                             <button
+                                                type="button"
+                                                className="categories-delete-btn"
+                                                onClick={() => handleDeleteCategory(cat)}
+                                                title="Ocultar categoría del sistema"
+                                            >
+                                                <FiTrash2 />
+                                            </button>
                                         </div>
                                     ))}
                                 </div>

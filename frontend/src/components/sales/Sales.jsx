@@ -10,6 +10,7 @@ import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
 import Modal from "../common/Modal";
+import { ClientRegistrationModal } from "./ClientRegistrationModal";
 import "./Sales.css";
 
 // Componente de Punto de Venta específico para Lavandería
@@ -33,6 +34,7 @@ export const Sales = () => {
     const [busquedaCliente, setBusquedaCliente] = useState("");
     const [clientes, setClientes] = useState([]);
     const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+    const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [fechaEntrega, setFechaEntrega] = useState(() => {
         const d = new Date();
         d.setDate(d.getDate() + 1);
@@ -46,6 +48,7 @@ export const Sales = () => {
     const [metodoPago, setMetodoPago] = useState("cash");
     const [ventaCompletada, setVentaCompletada] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [montoRecibido, setMontoRecibido] = useState(""); /* State for Change Calculator */
     
     // Referencias
     const ticketRef = useRef(null);
@@ -71,6 +74,12 @@ export const Sales = () => {
         }
     }, [busquedaCliente]);
 
+    const handleClientRegistered = (newClient) => {
+        setClienteSeleccionado(newClient);
+        setBusquedaCliente(newClient.name);
+        setIsClientModalOpen(false);
+    };
+
     // Procesar Orden
     const handleProcessOrder = async () => {
         if (carrito.length === 0) {
@@ -81,6 +90,8 @@ export const Sales = () => {
             Swal.fire('Cliente requerido', 'Selecciona un cliente para la orden', 'warning');
             return;
         }
+
+        setMontoRecibido(""); // Reset change calculator
         setIsPaymentModalOpen(true);
     };
 
@@ -197,6 +208,54 @@ export const Sales = () => {
                     </h2>
                 </div>
 
+
+
+                {/* SECCIÓN CLIENTE (Movido arriba) */}
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-20">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cliente (OBLIGATORIO)</label>
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <input 
+                                    type="text"
+                                    className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white font-bold placeholder:text-slate-400"
+                                    placeholder="Nombre o teléfono..."
+                                    value={clienteSeleccionado ? clienteSeleccionado.name : busquedaCliente}
+                                    onChange={(e) => {
+                                        setBusquedaCliente(e.target.value);
+                                        if (clienteSeleccionado) setClienteSeleccionado(null);
+                                    }}
+                                />
+                                {clientes.length > 0 && !clienteSeleccionado && (
+                                    <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden mt-1">
+                                        {clientes.map(c => (
+                                            <button 
+                                                key={c.id} 
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:text-white border-b last:border-0 border-slate-100 dark:border-slate-800"
+                                                onClick={() => {
+                                                    setClienteSeleccionado(c);
+                                                    setBusquedaCliente(c.name);
+                                                    setClientes([]);
+                                                }}
+                                            >
+                                                <span className="font-bold text-slate-900 dark:text-white">{c.name}</span>
+                                                <span className="ml-2 text-xs text-slate-400">{c.phone}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <button 
+                                onClick={() => setIsClientModalOpen(true)}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl w-10 h-10 flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+                                title="Registrar Nuevo Cliente"
+                            >
+                                <span className="material-symbols-outlined">person_add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Lista de Carrito */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                     {carrito.length === 0 ? (
@@ -216,7 +275,7 @@ export const Sales = () => {
                                 </button>
                                 <input 
                                     type="number" 
-                                    className="w-12 text-center bg-transparent font-bold text-sm dark:text-white border-none focus:ring-0"
+                                    className="w-12 text-center bg-transparent font-bold text-sm text-slate-900 dark:text-white border-none focus:ring-0"
                                     value={item.quantity}
                                     onChange={(e) => cambiarCantidad(item.id, parseFloat(e.target.value) || 0)}
                                 />
@@ -234,37 +293,7 @@ export const Sales = () => {
                 {/* Detalles de la Orden */}
                 <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-4">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cliente</label>
-                        <div className="relative">
-                            <input 
-                                type="text"
-                                className="w-full px-4 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
-                                placeholder="Nombre o teléfono..."
-                                value={clienteSeleccionado ? clienteSeleccionado.name : busquedaCliente}
-                                onChange={(e) => {
-                                    setBusquedaCliente(e.target.value);
-                                    if (clienteSeleccionado) setClienteSeleccionado(null);
-                                }}
-                            />
-                            {clientes.length > 0 && !clienteSeleccionado && (
-                                <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden mb-1">
-                                    {clientes.map(c => (
-                                        <button 
-                                            key={c.id} 
-                                            className="w-full text-left px-4 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:text-white border-b last:border-0 border-slate-100 dark:border-slate-800"
-                                            onClick={() => {
-                                                setClienteSeleccionado(c);
-                                                setBusquedaCliente(c.name);
-                                                setClientes([]);
-                                            }}
-                                        >
-                                            <span className="font-bold">{c.name}</span>
-                                            <span className="ml-2 text-xs text-slate-400">{c.phone}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {/* Cliente movido hacia arriba */}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -272,7 +301,7 @@ export const Sales = () => {
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entrega</label>
                             <input 
                                 type="date" 
-                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white font-bold"
                                 value={fechaEntrega}
                                 onChange={(e) => setFechaEntrega(e.target.value)}
                             />
@@ -334,6 +363,34 @@ export const Sales = () => {
                                 </button>
                             </div>
 
+                            {/* CALCULADORA DE CAMBIO (Solo Efectivo) */}
+                            {metodoPago === 'cash' && (
+                                <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
+                                    <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 block">
+                                        Dinero Recibido
+                                    </label>
+                                    <div className="flex gap-4 items-center">
+                                        <div className="relative flex-1">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">$</span>
+                                            <input 
+                                                type="number" 
+                                                className="w-full pl-8 pr-4 py-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-500/30 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xl font-bold text-slate-900 dark:text-white"
+                                                value={montoRecibido}
+                                                onChange={(e) => setMontoRecibido(e.target.value)}
+                                                placeholder="0.00"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Cambio</p>
+                                            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {formatearDinero(Math.max(0, (parseFloat(montoRecibido) || 0) - parseFloat(anticipo || 0)))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500">Anticipo recibido:</span>
@@ -385,6 +442,13 @@ export const Sales = () => {
                     </div>
                 </div>
             )}
+
+            {/* MODAL NUEVO CLIENTE */}
+            <ClientRegistrationModal 
+                isOpen={isClientModalOpen}
+                onClose={() => setIsClientModalOpen(false)}
+                onClientRegistered={handleClientRegistered}
+            />
         </div>
     );
 };

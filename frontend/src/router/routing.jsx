@@ -15,6 +15,7 @@ import { TerminalSetup } from "../components/config/TerminalSetup";
 import { Orders } from "../components/sales/Orders";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
 import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
+import { PriceConfiguration } from "../components/admin/PriceConfiguration";
 import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
 import { ScrollToTop } from "../components/common/ScrollToTop";
@@ -155,6 +156,12 @@ export const Routing = () => {
                                 <Route path="/configuracion-dolares" element={
                                     <PrivateLayout>
                                         <ExchangeRateSettings />
+                                    </PrivateLayout>
+                                } />
+
+                                <Route path="/precios" element={
+                                    <PrivateLayout>
+                                        <PriceConfiguration />
                                     </PrivateLayout>
                                 } />
 

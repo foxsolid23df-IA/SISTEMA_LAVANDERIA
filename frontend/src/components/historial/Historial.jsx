@@ -427,7 +427,7 @@ export const Historial = () => {
                         <div className="grid grid-cols-2 gap-4 mb-8">
                             <div className="bg-slate-50 dark:bg-white/5 p-4 rounded-xl border border-slate-100 dark:border-white/5">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Fecha y Hora</p>
-                                <p className="text-sm font-bold dark:text-white">{ventaSeleccionada && formatearFechaHora(ventaSeleccionada.createdAt)}</p>
+                                <p className="text-sm font-bold text-slate-700 dark:text-white">{ventaSeleccionada && formatearFechaHora(ventaSeleccionada.createdAt)}</p>
                             </div>
                             <div className="bg-primary dark:bg-white p-4 rounded-xl shadow-lg shadow-black/10 dark:shadow-white/5">
                                 <p className="text-[9px] font-bold text-slate-300 dark:text-slate-500 uppercase tracking-widest mb-1">Monto Total</p>
@@ -453,7 +453,7 @@ export const Historial = () => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                                         {ventaSeleccionada && ventaSeleccionada.items.map((item, index) => (
-                                            <tr key={index} className="dark:text-white">
+                                            <tr key={index} className="text-slate-700 dark:text-white">
                                                 <td className="px-5 py-4">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold">{item.productName || item.name}</span>

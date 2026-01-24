@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
 	plugins: [react()],
 	base: './',
-    envDir: '../', // Busca las variables .env en la raíz del proyecto
+    envDir: './', // Busca las variables .env en la carpeta frontend
 	build: {
 		outDir: 'dist',
 		emptyOutDir: true

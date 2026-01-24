@@ -15,27 +15,28 @@ const BulkImportModal = ({ onClose, onSuccess }) => {
 
     // Expected columns based on user template
     const EXPECTED_COLUMNS = [
-        'Codigo', 'Descripcion', 'Precio Costo', 'Precio Venta', 
-        'Precio Mayoreo', 'Existencia', 'Inv. Minimo', 'Departamento'
+        'Nombre', 'Categoría', 'Tipo_Cobro', 'Precio_Venta', 
+        'Precio_Costo', 'Existencia', 'Stock_Minimo'
     ];
 
     // Download template
     const handleDownloadTemplate = () => {
         const ws = XLSX.utils.json_to_sheet([
             {
-                'Codigo': 'PRUEBA01',
-                'Descripcion': 'Producto de Ejemplo',
-                'Precio Costo': 10.00,
-                'Precio Venta': 15.00,
-                'Precio Mayoreo': 12.50,
-                'Existencia': 10,
-                'Inv. Minimo': 5,
-                'Departamento': 'General'
+                'Nombre': 'Servicio Ejemplo',
+                'Categoría': 'Lavandería',
+                'Tipo_Cobro': 'kg',
+                'Precio_Venta': 20.00,
+                'Precio_Costo': 5.00,
+                'Existencia': 100,
+                'Stock_Minimo': 10,
+                'Codigo_Barras': '',
+                'Descripcion': 'Ejemplo de servicio'
             }
         ]);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
-        XLSX.writeFile(wb, "plantilla_inventario.xlsx");
+        XLSX.writeFile(wb, "plantilla_lavanderia.xlsx");
     };
 
     // Handle File Selection
@@ -120,21 +121,30 @@ const BulkImportModal = ({ onClose, onSuccess }) => {
         try {
             // Map Excel data to DB schema
             const mappedProducts = previewData.map(row => {
-                // Helper to safely get value case-insensitively
-                const getVal = (key) => {
-                    const foundKey = Object.keys(row).find(k => k.trim().toLowerCase() === key.toLowerCase());
-                    return foundKey ? row[foundKey] : null;
+                // Helper to safely get value case-insensitively and handle spaces/underscores
+                const getVal = (keys) => {
+                    const normalizedKeys = Array.isArray(keys) ? keys : [keys];
+                    for (const key of normalizedKeys) {
+                        const foundKey = Object.keys(row).find(k => 
+                            k.trim().toLowerCase().replace(/_/g, ' ') === key.toLowerCase().replace(/_/g, ' ') ||
+                            k.trim().toLowerCase() === key.toLowerCase()
+                        );
+                        if (foundKey) return row[foundKey];
+                    }
+                    return null;
                 };
 
                 return {
-                    barcode: getVal('Codigo') ? String(getVal('Codigo')) : null,
-                    name: getVal('Descripcion') || 'Producto Sin Nombre',
-                    cost_price: parseFloat(getVal('Precio Costo') || 0),
-                    price: parseFloat(getVal('Precio Venta') || 0),
-                    wholesale_price: parseFloat(getVal('Precio Mayoreo') || 0),
-                    stock: parseInt(getVal('Existencia') || 0),
-                    min_stock: parseInt(getVal('Inv. Minimo') || 0),
-                    category: getVal('Departamento') || 'General'
+                    barcode: getVal(['Codigo_Barras', 'Codigo', 'Barcode']) ? String(getVal(['Codigo_Barras', 'Codigo', 'Barcode'])) : null,
+                    name: getVal(['Nombre', 'Producto', 'Descripcion']) || 'Producto Sin Nombre',
+                    cost_price: parseFloat(getVal(['Precio_Costo', 'Precio Costo', 'Costo']) || 0),
+                    price: parseFloat(getVal(['Precio_Venta', 'Precio Venta', 'Precio']) || 0),
+                    wholesale_price: parseFloat(getVal(['Precio_Mayoreo', 'Precio Mayoreo', 'Mayoreo']) || 0),
+                    stock: parseInt(getVal(['Existencia', 'Stock', 'Cantidad']) || 0),
+                    min_stock: parseInt(getVal(['Stock_Minimo', 'Inv. Minimo', 'Minimo']) || 0),
+                    category: getVal(['Categoría', 'Categoria', 'Departamento']) || 'General',
+                    pricing_type: getVal(['Tipo_Cobro', 'Unidad']) || 'unit', // kg o unit
+                    description: getVal(['Descripcion', 'Notas']) || ''
                 };
             }).filter(p => p.name && p.price >= 0); // Basic filter
 
