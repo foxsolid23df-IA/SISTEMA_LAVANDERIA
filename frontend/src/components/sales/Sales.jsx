@@ -13,10 +13,13 @@ import TicketVenta from "./TicketVenta";
 import Modal from "../common/Modal";
 import { ClientRegistrationModal } from "./ClientRegistrationModal";
 import "./Sales.css";
+import { useScale } from "../../hooks/useScale";
 
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
     const { user, cashSession } = useAuth();
+    const { weight, isConnected: isScaleConnected, connect: connectScale, error: scaleError } = useScale();
+
     const { productos, loading: loadingProducts } = useProducts();
     const { 
         carrito, 
@@ -177,6 +180,27 @@ export const Sales = () => {
         <div className="pos-container flex flex-col h-[calc(100vh-64px)] lg:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950">
             {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
+                <div className="flex justify-between items-center mb-2">
+                     <h3 className="font-bold text-slate-900 dark:text-white">Productos</h3>
+                     <button
+                        onClick={connectScale}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            isScaleConnected 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                            : 'bg-slate-100 text-slate-900 border border-slate-300 hover:bg-slate-200'
+                        }`}
+                        title={isScaleConnected ? "Báscula Conectada" : "Conectar Báscula USB"}
+                    >
+                        <span className="material-symbols-outlined text-sm">
+                            {isScaleConnected ? 'scale' : 'link_off'}
+                        </span>
+                        {isScaleConnected 
+                            ? `Conectado: ${weight}kg` 
+                            : 'Conectar Báscula'}
+                    </button>
+                </div>
+                {scaleError && <div className="text-xs text-red-600 font-bold mb-2">{scaleError}</div>}
+
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="relative flex-1">
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
@@ -225,7 +249,7 @@ export const Sales = () => {
                 {/* SECCIÓN CLIENTE (Movido arriba) */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-20">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cliente (OBLIGATORIO)</label>
+                        <label className="text-[10px] font-bold text-black uppercase tracking-widest">Cliente (OBLIGATORIO)</label>
                         <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <input 
@@ -295,6 +319,16 @@ export const Sales = () => {
                                     <span className="material-symbols-outlined text-lg">add</span>
                                 </button>
                             </div>
+
+                            {isScaleConnected && item.pricing_type === 'kg' && (
+                                <button 
+                                    onClick={() => cambiarCantidad(item.id, parseFloat(weight) || 0)}
+                                    className="w-8 h-8 flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors"
+                                    title="Usar peso de báscula"
+                                >
+                                    <span className="material-symbols-outlined text-lg">scale</span>
+                                </button>
+                            )}
                             <button onClick={() => quitarProducto(item.id)} className="text-rose-400 hover:text-rose-600">
                                 <span className="material-symbols-outlined">delete</span>
                             </button>
@@ -310,7 +344,7 @@ export const Sales = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entrega</label>
+                            <label className="text-[10px] font-bold text-black uppercase tracking-widest">Entrega</label>
                             <input 
                                 type="date" 
                                 className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
@@ -319,7 +353,7 @@ export const Sales = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Anticipo</label>
+                            <label className="text-[10px] font-bold text-black uppercase tracking-widest">Anticipo</label>
                             <input 
                                 type="number" 
                                 className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white font-bold text-emerald-600"
@@ -354,7 +388,7 @@ export const Sales = () => {
                         </div>
                         <div className="p-6 space-y-6">
                             <div className="text-center">
-                                <p className="text-slate-500 text-sm mb-1 uppercase tracking-tighter font-bold">Monto Total</p>
+                                <p className="text-black text-sm mb-1 uppercase tracking-tighter font-bold">Monto Total</p>
                                 <h4 className="text-4xl font-black text-slate-900 dark:text-white">{formatearDinero(total)}</h4>
                             </div>
 
@@ -405,11 +439,11 @@ export const Sales = () => {
 
                             <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl space-y-2">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Anticipo recibido:</span>
+                                    <span className="text-black font-bold">Anticipo recibido:</span>
                                     <span className="font-bold text-emerald-600">{formatearDinero(anticipo || 0)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-slate-500">Saldo pendiente:</span>
+                                    <span className="text-black font-bold">Saldo pendiente:</span>
                                     <span className="font-bold text-rose-500">{formatearDinero(Math.max(0, total - anticipo))}</span>
                                 </div>
                             </div>

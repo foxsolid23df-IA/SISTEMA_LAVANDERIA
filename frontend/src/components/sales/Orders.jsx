@@ -214,7 +214,7 @@ export const Orders = () => {
                     <h3 className="text-sm font-bold mt-2 text-slate-800 dark:text-white uppercase">#{order.id.toString().slice(-6)} - {order.customers?.name}</h3>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-slate-400">Promrometido</p>
+                    <p className="text-[10px] text-slate-400">Prometido</p>
                     <p className={`text-xs font-bold ${new Date(order.promised_at) < new Date() && order.status !== 'delivered' ? 'text-red-500' : 'text-slate-600 dark:text-slate-300'}`}>
                       {new Date(order.promised_at).toLocaleDateString()}
                     </p>
