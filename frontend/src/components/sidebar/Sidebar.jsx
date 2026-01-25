@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useConnectivity } from "../../hooks/useConnectivity";
 import { terminalService } from "../../services/terminalService";
+import { productService } from "../../services/productService";
+import { salesService } from "../../services/salesService";
 import { CashCut } from "../cashcut/CashCut";
+import Swal from "sweetalert2";
 import "./Sidebar.css";
 
 export const Sidebar = () => {
@@ -18,6 +22,8 @@ export const Sidebar = () => {
 
   const [showCashCut, setShowCashCut] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const isOnline = useConnectivity();
 
   // Determinar el nombre a mostrar
   const displayName = activeStaff?.name || "Usuario";
@@ -32,6 +38,38 @@ export const Sidebar = () => {
     // Persistir preferencia
     const isDark = document.documentElement.classList.contains("dark");
     localStorage.setItem("theme", isDark ? "dark" : "light");
+  };
+
+  const handleManualSync = async () => {
+    if (!isOnline) {
+      Swal.fire("Sin Conexión", "Por favor conecte el equipo a internet para sincronizar.", "warning");
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // 1. Sincronizar Inventario (Nube -> Local)
+      const invResult = await productService.syncWithLocal();
+      
+      // 2. Subir Ventas Pendientes (Local -> Nube)
+      const salesResult = await salesService.syncPendingSales();
+
+      Swal.fire({
+        title: "Sincronización Exitosa",
+        html: `
+          <ul style="text-align: left;">
+            <li>Inventario: ${invResult.created} nuevos, ${invResult.updated} actualizados.</li>
+            <li>Ventas subidas: ${salesResult.count} pendientes procesadas.</li>
+          </ul>
+        `,
+        icon: "success"
+      });
+    } catch (error) {
+      console.error("[Sidebar] Error en sincronización:", error);
+      Swal.fire("Error", "Ocurrió un fallo durante la sincronización.", "error");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -349,11 +387,29 @@ export const Sidebar = () => {
             {isAdmin && (
               <div className="space-y-1">
                 <button
-                  onClick={() => {
-                    if (window.confirm("¿Estás seguro de desvincular esta PC? Deberás configurar la caja de nuevo al iniciar sesión.")) {
+                  onClick={async () => {
+                    const { value: password } = await Swal.fire({
+                      title: 'Código de Seguridad',
+                      text: 'Ingrese el código para reiniciar la caja:',
+                      input: 'password',
+                      inputPlaceholder: 'Código...',
+                      inputAttributes: {
+                        autocapitalize: 'off',
+                        autocorrect: 'off'
+                      },
+                      showCancelButton: true,
+                      confirmButtonText: 'Confirmar',
+                      cancelButtonText: 'Cancelar',
+                      confirmButtonColor: '#0f172a'
+                    });
+
+                    if (password === '2026SOP') {
                       terminalService.resetLocalTerminal();
                       logout();
                       setIsOpen(false);
+                      Swal.fire('Éxito', 'Caja reiniciada correctamente', 'success');
+                    } else if (password !== undefined) {
+                      Swal.fire('Error', 'Código incorrecto', 'error');
                     }
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
@@ -383,7 +439,38 @@ export const Sidebar = () => {
         </nav>
 
         {/* Footer Controls */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-black/20">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-black/20 space-y-2">
+          {/* Sync Status & Action */}
+          <div className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
+            isOnline 
+              ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20" 
+              : "bg-rose-50/50 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/20"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  {isOnline ? "En Línea" : "Sin Conexión"}
+                </span>
+              </div>
+              {isOnline && (
+                <button 
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  className={`text-slate-400 hover:text-primary transition-all ${isSyncing ? "animate-spin" : ""}`}
+                  title="Sincronizar Ahora"
+                >
+                  <span className="material-icons-outlined text-[18px]">sync</span>
+                </button>
+              )}
+            </div>
+            {!isOnline && (
+              <p className="text-[9px] text-rose-600 dark:text-rose-400 font-medium leading-tight">
+                Las ventas se guardarán localmente y se sincronizarán al recuperar conexión.
+              </p>
+            )}
+          </div>
+
           <button
             className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-white transition-all group"
             onClick={toggleDarkMode}

@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
 import { isAbortError } from '../utils/supabaseErrorHandler';
+import { config } from '../config';
+
+const LOCAL_API_URL = config.api.baseUrl + '/api/products';
 
 // Variables de caché en memoria (Desactivadas temporalmente para asegurar sincronización multicaja)
 let productsCache = null;
@@ -44,61 +47,82 @@ export const productService = {
             .subscribe();
     },
 
-    // Obtener todos los productos (con caché)
+    // Obtener todos los productos (con caché y fallback local)
     getProducts: async ({ forceRefresh = false } = {}) => {
         const now = Date.now();
 
-        // Si hay caché válido y no se fuerza refresco, devolver caché
+        // 1. Si hay caché válido y no se fuerza refresco
         if (!forceRefresh && productsCache && (now - lastFetchTime < CACHE_DURATION)) {
-            console.log('[ProductService] Retornando productos desde caché', { count: productsCache.length });
-            // Devolvemos una copia para evitar mutaciones accidentales fuera del servicio
             return [...productsCache];
         }
-        console.log('[ProductService] Obteniendo productos desde Supabase...', { forceRefresh });
 
+        console.log('[ProductService] Obteniendo productos...');
+
+        // 2. Intentar Supabase (Nube)
         try {
             const { data, error } = await supabase
                 .from('products')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('name', { ascending: true });
 
-            if (error) {
-                if (!isAbortError(error)) {
-                    console.error('[ProductService] Error fetching products:', error);
-                }
-                
-                // Si hay error pero tenemos caché (aunque sea viejo), devolverlo
-                if (productsCache && productsCache.length > 0) {
-                    console.warn('[ProductService] Using stale cache due to fetch error', { count: productsCache.length });
-                    return [...productsCache];
-                }
-                
-                if (isAbortError(error)) throw error; // Relanzar para que catch lo maneje (o ignore)
-
-                // Si no hay caché, retornar array vacío en lugar de lanzar error
-                console.error('[ProductService] No cache available, returning empty array');
-                return [];
+            if (!error && data) {
+                productsCache = data;
+                lastFetchTime = now;
+                return data;
             }
-
-            // ... (procesamiento exitoso)
-            const validData = Array.isArray(data) ? data : [];
-            productsCache = validData;
-            lastFetchTime = now;
-            console.log('[ProductService] Productos obtenidos exitosamente', { count: validData.length });
-            return validData;
-
+            
+            if (error) console.warn('[ProductService] Error en Supabase, intentando local...', error.message);
         } catch (error) {
-            // Si es un error de abort/cancelación, lo relanzamos para que quien llamó lo maneje (o lo ignore)
-            if (isAbortError(error)) {
-                throw error;
-            }
+            console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
+        }
 
-            console.error('[ProductService] Exception in getProducts:', error);
-            // ... (resto del catch)
-            if (productsCache && productsCache.length > 0) {
-                 return [...productsCache]; 
+        // 3. Fallback: Intentar API Local (SQLite)
+        try {
+            console.log('[ProductService] Consultando SQLite local...');
+            const response = await fetch(LOCAL_API_URL);
+            if (response.ok) {
+                const localData = await response.json();
+                // Normalizar datos de SQLite a formato Supabase si es necesario
+                const normalized = (localData.productos || localData).map(p => ({
+                    ...p,
+                    image_url: p.image // Mapear image de SQLite a image_url
+                }));
+                productsCache = normalized;
+                lastFetchTime = now;
+                return normalized;
             }
-            return [];
+        } catch (localError) {
+            console.error('[ProductService] Error crítico: Ni Supabase ni API Local responden.');
+        }
+
+        return productsCache || [];
+    },
+
+    /**
+     * Sincroniza el inventario de Supabase hacia la base de datos local (SQLite)
+     */
+    syncWithLocal: async () => {
+        try {
+            // 1. Obtener datos frescos de la nube
+            const { data: cloudProducts, error } = await supabase.from('products').select('*');
+            if (error) throw error;
+
+            // 2. Enviar al backend local para persistencia con PIN por URL para evitar bloqueos CORS
+            const response = await fetch(`${config.api.baseUrl}/api/admin/sync/products?masterPin=2026SOP`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ products: cloudProducts })
+            });
+
+            if (!response.ok) throw new Error('Error al guardar en base de datos local');
+            
+            const result = await response.json();
+            return { success: true, ...result.result };
+        } catch (error) {
+            console.error('[ProductService] Error en sincronización:', error);
+            throw error;
         }
     },
 

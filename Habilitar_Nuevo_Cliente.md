@@ -1,68 +1,76 @@
-# 🎫 Manual de Control de Licencias y Alta de Lavanderías
+# 🎫 Manual de Control de Licencias y Alta de Lavanderías (Versión Offline-First 2026)
 
-Este documento explica cómo habilitar el sistema para **Nuevas Lavanderías** (Clientes B2B) y cómo tener el control de sus licencias.
-
-## 1. Arquitectura del Sistema (SaaS)
-
-El sistema está construido como una plataforma de **Software como Servicio (SaaS)**. Esto significa que:
-
-- Solo necesitas desplegar la aplicación **UNA VEZ** en un servidor (Vercel, Netlify, etc.).
-- Cada dueño de lavandería que se registre tendrá su propio "entorno aislado" con sus propios clientes, precios y órdenes.
-- El control de acceso se basa en **Códigos de Invitación** que tú generas.
-
-## 2. Procedimiento para Habilitar un Nuevo Cliente (Lavandería)
-
-Cuando vendes una licencia a una nueva lavandería, debes seguir estos pasos:
-
-### Paso A: Generar el Código de Invitación (Licencia)
-
-Entra a tu panel de **Supabase -> SQL Editor** y ejecuta:
-
-```sql
-INSERT INTO public.invitation_codes (code, expires_at, notes)
-VALUES ('LAV-PREMIUM-2026', now() + interval '7 days', 'Licencia para Lavandería El Sol');
-```
-
-_Este código expirará en 7 días si el cliente no lo usa para registrarse._
-
-### Paso B: Registro del Cliente
-
-Envía al cliente el enlace de registro con su código:
-`https://tu-sistema-lavanderia.com/#/register/LAV-PREMIUM-2026`
-
-El cliente completará su nombre, correo y contraseña. Al terminar, el sistema lo marcará como el **Dueño/Administrador** de su propia sucursal.
-
-## 3. Control y Gestión de Licencias
-
-Desde tu base de datos (o una futura pantalla de admin), puedes controlar el estatus de cada negocio:
-
-### Activar una Licencia (Después del Pago)
-
-Cuando el cliente te paga su mensualidad o anualidad, debes actualizar su perfil:
-
-```sql
-UPDATE public.profiles
-SET
-  license_status = 'active',
-  license_type = 'monthly',
-  expiration_date = now() + interval '30 days'
-WHERE id = 'ID-DEL-USUARIO-LAVANDERIA';
-```
-
-### Suspender un Servicio
-
-Si un cliente deja de pagar, puedes bloquear su acceso sin borrar sus datos:
-
-```sql
-UPDATE public.profiles SET license_status = 'suspended' WHERE id = '...';
-```
-
-## 4. Próximos Pasos Recomendados
-
-Para un control total, se puede implementar una **"Muro de Pago" (License Wall)** en el frontend:
-
-- Si el `license_status` no es `active`, el sistema redirige automáticamente a una pantalla de "Servicio Suspendido" pidiendo que contacten al administrador.
+Este documento explica cómo habilitar el sistema para **Nuevas Lavanderías** (Clientes B2B) y cómo gestionar sus licencias integrando la nueva capacidad de uso sin conexión (.exe).
 
 ---
 
-_Este sistema garantiza que tú seas el único con el poder de "Habilitar" nuevas instancias del programa y cobrar por ellas._
+## 1. Arquitectura del Sistema (SaaS Híbrido)
+
+El sistema funciona bajo un modelo de Software como Servicio (SaaS) con soporte offline:
+
+- **Nube (Supabase/Vercel)**: Centraliza la base de datos maestra, usuarios y control de licencias global.
+- **Local (App .exe)**: Cada sucursal corre un motor local que permite vender sin internet y valida la licencia de forma autónoma.
+
+---
+
+## 2. Procedimiento para Habilitar un Nuevo Cliente
+
+### Paso A: Generar el Código de Invitación
+
+Entra a **Supabase -> SQL Editor** y genera un código único para el cliente:
+
+```sql
+INSERT INTO public.invitation_codes (code, expires_at, notes)
+VALUES ('CODIGO-CLIENTE-2026', now() + interval '7 days', 'Licencia Lavandería X');
+```
+
+### Paso B: Registro y Configuración Inicial
+
+1. Envíale al cliente el enlace de registro: `https://tu-sistema.vercel.app/#/register/CODIGO-CLIENTE-2026`
+2. El cliente crea su cuenta (Dueño).
+3. **Entrega del Software**: Envíale el instalador **`.exe`** generado con `build-installer.bat`.
+
+### Paso C: Activación en Sucursal (Crítico)
+
+Para que el modo offline funcione y la licencia se valide:
+
+1. El cliente instala el `.exe` e inicia sesión con internet.
+2. Debe ir a la barra lateral (Sidebar) y hacer clic en **Sincronizar** 🔄.
+3. El sistema descargará la fecha de licencia y el inventario. **Este paso "activa" la PC para trabajar offline.**
+
+---
+
+## 3. Gestión y Renovación de Licencias
+
+El control se realiza mediante la columna `license_expires_at` en la tabla `profiles`.
+
+### Actualizar/Renovar Licencia (Después del Pago)
+
+Cuando el cliente pague su mensualidad, actualiza su fecha de vencimiento:
+
+```sql
+UPDATE public.profiles
+SET license_expires_at = '2026-12-31 23:59:59+00' -- Cambiar por la fecha deseada
+WHERE id = 'ID-DEL-USUARIO';
+```
+
+> **Nota**: El cliente no verá el cambio instantáneamente si está offline. Debe conectarse a internet y **Sincronizar** para que su equipo local "se entere" de la nueva fecha.
+
+### Suspender Servicio
+
+Puedes bloquear el acceso de inmediato cambiando la fecha al pasado o eliminándola:
+
+```sql
+UPDATE public.profiles SET license_expires_at = now() - interval '1 day' WHERE id = '...';
+```
+
+---
+
+## 4. Diferencias de Validación (Web vs App)
+
+- **En la Web (Vercel)**: La validación es flexible. Permite supervisar ventas aunque no detecte el motor local.
+- **En la App (.exe)**: La validación es estricta. Si la fecha grabada localmente ha vencido y no hay internet para renovar, el sistema **bloquea las ventas** por seguridad.
+
+---
+
+_Soporte Técnico Especializado FoxSolid 2026_

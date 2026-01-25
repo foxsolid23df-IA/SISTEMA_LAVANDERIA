@@ -26,4 +26,18 @@ router.post('/users/reset-secondary', authAdmin, adminController.resetSecondaryU
 // Reset de Fábrica (Borrar todo)
 router.post('/reset/factory', authAdmin, adminController.factoryReset);
 
+// --- RUTAS DE SINCRONIZACIÓN (SINCLA) ---
+
+// Sincronizar productos (Pull desde la nube)
+router.post('/sync/products', authAdmin, adminController.syncProducts);
+
+// Marcar venta como sincronizada
+router.post('/sync/sales/mark-synced', authAdmin, adminController.markSaleSynced);
+
+// Actualizar licencia local
+router.post('/sync/license', authAdmin, adminController.updateLicense);
+
+// Obtener ventas pendientes de subir
+router.get('/sync/sales/pending', authAdmin, adminController.getPendingSales);
+
 module.exports = router;

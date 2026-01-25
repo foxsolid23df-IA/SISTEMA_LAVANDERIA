@@ -33,6 +33,5 @@ backend/data/
 # Vercel
 .vercel/
 
-# Cache
-.cache/
-.vercel
+# Build
+release/

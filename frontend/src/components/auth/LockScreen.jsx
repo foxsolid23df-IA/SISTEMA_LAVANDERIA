@@ -145,18 +145,37 @@ export const LockScreen = () => {
     };
 
     const handleLogout = async () => {
-        const result = await Swal.fire({
-            title: '¿Cerrar sesión de la tienda?',
-            text: 'Esto desvinculará este dispositivo. Necesitarás email y contraseña para volver a iniciar sesión.',
-            icon: 'warning',
+        // Pedir contraseña para confirmar cierre de sesión maestro
+        const { value: password } = await Swal.fire({
+            title: '🚪 Cerrar Sesión Maestra',
+            text: 'Para desvincular este dispositivo, ingresa tu contraseña de Propietario.',
+            input: 'password',
+            inputPlaceholder: 'Tu contraseña de cuenta',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Sí, cerrar sesión',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Confirmar Cierre',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ef4444'
         });
 
-        if (result.isConfirmed) {
+        if (!password) return;
+
+        Swal.fire({ title: 'Cerrando sesión...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: user?.email,
+                password: password
+            });
+
+            if (error) {
+                Swal.fire('Error', 'Contraseña incorrecta. No se puede cerrar la sesión maestra.', 'error');
+                return;
+            }
+
             logout();
+            Swal.fire({ title: 'Sesión Finalizada', icon: 'success', timer: 1500, showConfirmButton: false });
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo verificar la identidad.', 'error');
         }
     };
 

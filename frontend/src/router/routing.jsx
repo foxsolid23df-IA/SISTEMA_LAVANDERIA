@@ -22,6 +22,7 @@ import Maintenance from "../components/admin/Maintenance";
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
+import { LicenseGuard } from "../components/common/LicenseGuard";
 
 const PrivateLayout = ({ children }) => {
     const {
@@ -108,7 +109,9 @@ const PrivateLayout = ({ children }) => {
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                {children}
+                <LicenseGuard>
+                    {children}
+                </LicenseGuard>
                 <ScrollTopButton />
             </main>
         </div>

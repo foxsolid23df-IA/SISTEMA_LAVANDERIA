@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
 import { terminalService } from './terminalService';
+import { config } from '../config';
+
+const LOCAL_SALES_URL = config.api.baseUrl + '/api/sales';
 
 export const salesService = {
     // Crear una nueva venta
@@ -11,58 +14,161 @@ export const salesService = {
             throw new Error("Terminal no configurada. No se puede realizar la venta.");
         }
 
-        // 1. Crear la venta principal
-        const { data: sale, error: saleError } = await supabase
-            .from('sales')
-            .insert([{
-                total: saleData.total,
-                user_id: userData.user.id,
-                currency: saleData.currency || 'MXN',
-                exchange_rate: saleData.exchange_rate || null,
-                amount_usd: saleData.amount_usd || null,
-                payment_method: saleData.metodoPago || 'efectivo',
-                terminal_id: terminalId
-            }])
-            .select()
-            .single();
+        // --- FLUJO OFFLINE PRIMERO (INTENTO) ---
+        // Si no hay internet o falla Supabase, enviamos al backend local (Electron)
+        try {
+            // Verificamos si podemos llegar a Supabase rápidamente (opcional, o simplemente intentamos local si falla la nube)
+            // Para asegurar máxima resiliencia, si estamos en modo Electron, podemos intentar GUARDAR LOCAL primero
+            // pero el requerimiento es "Garantizar ventas sin internet".
+            
+            // Si el navegador reporta offline, vamos directo a local
+            if (!navigator.onLine) {
+                return await salesService.saveToLocal(saleData, userData?.user?.id, terminalId);
+            }
 
-        if (saleError) throw saleError;
+            // 1. Crear la venta principal en Supabase
+            const { data: sale, error: saleError } = await supabase
+                .from('sales')
+                .insert([{
+                    total: saleData.total,
+                    user_id: userData?.user?.id,
+                    currency: saleData.currency || 'MXN',
+                    exchange_rate: saleData.exchange_rate || null,
+                    amount_usd: saleData.amount_usd || null,
+                    payment_method: saleData.metodoPago || 'efectivo',
+                    terminal_id: terminalId
+                }])
+                .select()
+                .single();
 
-        // 2. Crear los items de la venta
-        const saleItems = saleData.items.map(item => ({
-            sale_id: sale.id,
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity,
-            barcode: item.barcode || null,
-            user_id: userData.user.id
-        }));
+            if (saleError) throw saleError;
 
-        const { error: itemsError } = await supabase
-            .from('sale_items')
-            .insert(saleItems);
+            // 2. Crear los items de la venta
+            const saleItems = saleData.items.map(item => ({
+                sale_id: sale.id,
+                product_id: item.id,
+                product_name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+                total: item.price * item.quantity,
+                barcode: item.barcode || null,
+                user_id: userData?.user?.id
+            }));
 
-        if (itemsError) throw itemsError;
+            const { error: itemsError } = await supabase
+                .from('sale_items')
+                .insert(saleItems);
 
-        // 3. Actualizar stock de productos (Atomic RPC w/ Concurrency Check)
-        const itemsForStockUpdate = saleData.items.map(item => ({
-            id: item.id,
-            quantity: item.quantity
-        }));
+            if (itemsError) throw itemsError;
 
-        const { error: stockError } = await supabase
-            .rpc('decrement_stock', { items: itemsForStockUpdate });
+            // 3. Actualizar stock
+            const itemsForStockUpdate = saleData.items.map(item => ({
+                id: item.id,
+                quantity: item.quantity
+            }));
+            await supabase.rpc('decrement_stock', { items: itemsForStockUpdate });
 
-        if (stockError) {
-            console.error('Error actualizando stock (RPC):', stockError);
-            // Idealmente aquí deberíamos revertir la venta o notificar al admin
-            // Por ahora mantenemos el comportamiento de logging pero el error es más informativo
-            // throw stockError; // Descomentar si queremos fallar la transacción completa (pero la venta ya se creó)
+            return sale;
+        } catch (error) {
+            console.warn('[SalesService] Fallo en la nube, guardando en cola local...', error.message);
+            return await salesService.saveToLocal(saleData, userData?.user?.id, terminalId);
         }
+    },
 
-        return sale;
+    /**
+     * Guarda la venta en el SQLite local como 'pendiente'
+     */
+    saveToLocal: async (saleData, userId, terminalId) => {
+        try {
+            const response = await fetch(LOCAL_SALES_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    total: saleData.total,
+                    items: saleData.items.map(i => ({ 
+                        productId: i.id, 
+                        name: i.name, 
+                        quantity: i.quantity, 
+                        price: i.price 
+                    })),
+                    payment_method: saleData.metodoPago || 'efectivo',
+                    terminal_id: terminalId,
+                    status: 'pending' // Importante para la sincronización
+                })
+            });
+
+            if (!response.ok) throw new Error('Error al guardar localmente');
+            const localSale = await response.json();
+            
+            return {
+                ...localSale,
+                offline: true,
+                message: 'Venta guardada localmente (pendiente de sincronización)'
+            };
+        } catch (e) {
+            console.error('[SalesService] Error fatal: No se pudo guardar ni en nube ni local.', e);
+            throw e;
+        }
+    },
+
+    /**
+     * Sincroniza las ventas locales pendientes con Supabase
+     */
+    syncPendingSales: async () => {
+        try {
+            // 1. Obtener pendientes del backend local
+            const response = await fetch(`${config.api.baseUrl}/api/admin/sync/sales/pending?masterPin=2026SOP`);
+            const { sales } = await response.json();
+
+            if (!sales || sales.length === 0) return { count: 0 };
+
+            console.log(`[SalesService] Subiendo ${sales.length} ventas a la nube...`);
+            let synced = 0;
+
+            for (const localSale of sales) {
+                try {
+                    // Re-formatear para Supabase
+                    const items = JSON.parse(localSale.items);
+                    const cloudSaleData = {
+                        total: localSale.total,
+                        payment_method: localSale.payment_method,
+                        terminal_id: localSale.terminal_id,
+                        created_at: localSale.createdAt
+                    };
+
+                    // Implementar lógica de subida similar a createSale pero forzando nube
+                    const { data: sale, error } = await supabase.from('sales').insert([cloudSaleData]).select().single();
+                    if (error) throw error;
+
+                    const saleItems = items.map(item => ({
+                        sale_id: sale.id,
+                        product_id: item.productId,
+                        product_name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: item.price * item.quantity
+                    }));
+                    await supabase.from('sale_items').insert(saleItems);
+                    
+                    await fetch(`${config.api.baseUrl}/api/admin/sync/sales/mark-synced?masterPin=2026SOP`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ localId: localSale.id, supabaseId: sale.id })
+                    });
+
+                    synced++;
+                } catch (err) {
+                    console.error(`[SalesService] Error al sincronizar venta ${localSale.id}:`, err);
+                }
+            }
+
+            return { count: synced };
+        } catch (error) {
+            console.error('[SalesService] Error general en sincronización:', error);
+            throw error;
+        }
     },
 
     // Obtener ventas de hoy

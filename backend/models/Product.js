@@ -5,11 +5,16 @@ const sequelize = require('../db/conexion');
 const Product = sequelize.define('Product', {
     name: { type: DataTypes.STRING, allowNull: false },      // Nombre del producto
     price: { type: DataTypes.FLOAT, allowNull: false },      // Precio del producto
+    cost_price: { type: DataTypes.FLOAT, defaultValue: 0 },  // Precio de costo
+    wholesale_price: { type: DataTypes.FLOAT, defaultValue: 0 }, // Precio al por mayor
     stock: { type: DataTypes.INTEGER, allowNull: false },    // Stock disponible
+    min_stock: { type: DataTypes.INTEGER, defaultValue: 0 }, // Stock mínimo para alertas
+    category: { type: DataTypes.STRING },                    // Categoría
     barcode: { type: DataTypes.STRING, unique: true },       // Código de barras único
-    image: { type: DataTypes.TEXT }                        // URL o Base64 de imagen (opcional)
+    image: { type: DataTypes.TEXT },                         // URL o Base64 de imagen (opcional)
+    supabase_id: { type: DataTypes.BIGINT, unique: true }     // ID de referencia en Supabase
 }, {
-    timestamps: false,           // No agrega columnas createdAt/updatedAt automáticamente
+    timestamps: true,            // Habilitamos para rastrear modificaciones locales
     freezeTableName: true        // Usa el nombre 'Product' tal cual, sin pluralizar
 });
 

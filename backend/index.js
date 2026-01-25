@@ -14,6 +14,7 @@ require('./models/Sale');
 const User = require('./models/User');
 require('./models/SystemLog');
 require('./models/Terminal'); // <--- Registro de terminales
+require('./models/StoreSetting'); // <--- Registro de configuración y licencia
 
 // Crear la app de Express
 const app = express();
@@ -25,12 +26,13 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 
-// En modo Electron, permitir todas las conexiones locales
-if (process.env.NODE_ENV === 'production') {
-    app.use(cors());
-} else {
-    app.use(cors(corsOptions));
-}
+// En modo Electron, permitir todas las conexiones locales y encabezados necesarios
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-master-pin'],
+    credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 // Importar y usar rutas
@@ -45,8 +47,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes); // <--- Nueva ruta
 
 // Puerto y host configurables por variable de entorno
-const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = 3001; // Forzamos 3001 para Electron
+const HOST = '127.0.0.1'; // Localhost puro
 
 async function startServer() {
     try {
@@ -65,12 +67,15 @@ async function startServer() {
         }
 
         // Iniciar servidor
-        app.listen(PORT, () => {
+        app.listen(PORT, HOST, () => {
             console.log(`✅ Backend escuchando en http://${HOST}:${PORT}`);
         });
     } catch (err) {
         console.error('❌ Error al sincronizar la base de datos:', err.message);
-        process.exit(1);
+        // No cerramos el proceso, intentamos seguir para que al menos la API responda errores
+        app.listen(PORT, HOST, () => {
+            console.log(`⚠️ Backend en modo degradado (DB Error) en puerto ${PORT}`);
+        });
     }
 }
 

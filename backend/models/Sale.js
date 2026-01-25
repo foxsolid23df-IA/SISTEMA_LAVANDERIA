@@ -5,13 +5,20 @@ const sequelize = require('../db/conexion');
 const Sale = sequelize.define('Sale', {
     total: { type: DataTypes.FLOAT, allowNull: false },      // Monto total de la venta
     items: { type: DataTypes.TEXT, allowNull: false },       // Detalle de productos vendidos (JSON string)
-    createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }    // Fecha y hora de la venta
+    payment_method: { type: DataTypes.STRING, defaultValue: 'efectivo' },
+    terminal_id: { type: DataTypes.UUID },                   // Terminal que realizó la venta
+    status: { type: DataTypes.STRING, defaultValue: 'pending' }, // 'pending' | 'synced'
+    supabase_id: { type: DataTypes.BIGINT, unique: true },   // ID en Supabase tras sincronizar
+    createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, {
-    timestamps: false,           // No agrega columnas createdAt/updatedAt automáticamente
+    timestamps: true,            // Habilitamos para auditoría local
     freezeTableName: true,       // Usa el nombre 'Sale' tal cual, sin pluralizar
     indexes: [
         {
             fields: ['createdAt']  // Índice para optimizar consultas por fecha
+        },
+        {
+            fields: ['status']     // Índice para buscar ventas pendientes de sincronizar
         }
     ]
 });

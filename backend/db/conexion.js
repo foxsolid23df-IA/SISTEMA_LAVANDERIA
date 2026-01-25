@@ -4,7 +4,19 @@ const { Sequelize } = require('sequelize');
 const path = require('path');
 
 // Configuración con SQLite
-const dbPath = path.join(__dirname, '..', 'data', 'sistema-pos.db');
+// En producción (Electron), usamos AppData para evitar problemas de permisos de escritura
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.APPDATA;
+const dbDir = isProd 
+    ? path.join(process.env.APPDATA || process.env.HOME, 'sistema-ventas-lavanderia', 'data')
+    : path.join(__dirname, '..', 'data');
+
+// Asegurar que la carpeta exista
+const fs = require('fs');
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const dbPath = path.join(dbDir, 'sistema-pos.db');
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: dbPath,

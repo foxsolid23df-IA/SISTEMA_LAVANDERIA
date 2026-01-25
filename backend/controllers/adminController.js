@@ -7,6 +7,7 @@ const { Sale } = require('../models/Sale');
 const { Product } = require('../models/Product');
 const User = require('../models/User');
 const Terminal = require('../models/Terminal');
+const syncService = require('../services/syncService');
 
 exports.getHealth = async (req, res) => {
     try {
@@ -20,10 +21,13 @@ exports.getHealth = async (req, res) => {
 
         await sequelize.authenticate();
         
+        const licenseExpiry = await syncService.getLicenseExpiry();
+        
         res.json({
             success: true,
             status: 'Operational',
             database: 'Connected',
+            license_expires_at: licenseExpiry,
             timestamp: new Date().toISOString(),
             version: '1.0.0-admin-alpha'
         });
@@ -180,6 +184,88 @@ exports.factoryReset = async (req, res) => {
         res.json({ success: true, message: "El sistema ha sido reseteado a valores de fábrica. Todo el historial y productos han sido eliminados." });
     } catch (error) {
         await t.rollback();
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * SINCRONIZAR PRODUCTOS (Recibe lista de Supabase)
+ */
+exports.syncProducts = async (req, res) => {
+    try {
+        const { products } = req.body;
+        if (!Array.isArray(products)) {
+            return res.status(400).json({ success: false, message: 'Se requiere una lista de productos.' });
+        }
+
+        const result = await syncService.pullProducts(products);
+
+        await SystemLog.create({
+            action: 'SYNC_PRODUCTS',
+            module: 'SYNC_API',
+            details: `Sincronizados ${products.length} productos (Nuevos: ${result.created}, Actualizados: ${result.updated})`,
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
+        res.json({ success: true, result });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * OBTENER VENTAS PENDIENTES
+ */
+exports.getPendingSales = async (req, res) => {
+    try {
+        const sales = await syncService.getPendingSales();
+        res.json({ success: true, sales });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * MARCAR VENTA COMO SINCRONIZADA
+ */
+exports.markSaleSynced = async (req, res) => {
+    try {
+        const { localId, supabaseId } = req.body;
+        const success = await syncService.markSaleAsSynced(localId, supabaseId);
+        
+        if (success) {
+            res.json({ success: true });
+        } else {
+            res.status(404).json({ success: false, message: 'Venta local no encontrada.' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+/**
+ * ACTUALIZAR LICENCIA (Sincronización)
+ */
+exports.updateLicense = async (req, res) => {
+    try {
+        const { expiresAt } = req.body;
+        if (!expiresAt) {
+            return res.status(400).json({ success: false, message: 'Fecha de expiración requerida.' });
+        }
+
+        await syncService.updateLicenseExpiry(expiresAt);
+
+        await SystemLog.create({
+            action: 'SYNC_LICENSE',
+            module: 'SYNC_API',
+            details: `Licencia sincronizada. Nueva expiración: ${expiresAt}`,
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
+        res.json({ success: true });
+    } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };

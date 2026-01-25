@@ -2,8 +2,8 @@
 
 export const config = {
     api: {
-        // Usa la variable de entorno VITE_API_URL o por defecto http://localhost:3001
-        baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        // Usa la variable de entorno VITE_API_URL o por defecto http://127.0.0.1:3001
+        baseUrl: import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001'
     },
     app: {
         name: import.meta.env.VITE_APP_NAME || 'Sistema ventas',

@@ -7,7 +7,7 @@ export default defineConfig({
 	base: './',
     envDir: './', // Busca las variables .env en la carpeta frontend
 	build: {
-		outDir: 'dist',
+		outDir: '../dist',
 		emptyOutDir: true
 	}
 })
