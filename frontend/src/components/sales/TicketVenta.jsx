@@ -70,17 +70,17 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
             <div className="ticket-linea" />
 
             <div className="ticket-summary">
-                <div className="ticket-summary-row">
-                    <span>TOTAL:</span>
+                <div className="ticket-summary-row font-bold">
+                    <span>TOTAL A PAGAR:</span>
                     <span>{formatearDinero(venta.total)}</span>
                 </div>
                 <div className="ticket-summary-row">
                     <span>PAGADO (ANTICIPO):</span>
                     <span>{formatearDinero(venta.paid_amount || 0)}</span>
                 </div>
-                <div className={`ticket-summary-row font-bold ${saldoPendiente > 0 ? 'ticket-pendente' : ''}`}>
-                    <span>SALDO PENDIENTE:</span>
-                    <span>{formatearDinero(Math.max(0, saldoPendiente))}</span>
+                <div className={`ticket-summary-row font-bold ${saldoPendiente > 0 ? 'ticket-pendente' : 'text-emerald-600'}`}>
+                    <span>{saldoPendiente > 0 ? 'SALDO PENDIENTE:' : 'ORDEN PAGADA'}</span>
+                    <span>{saldoPendiente > 0 ? formatearDinero(Math.max(0, saldoPendiente)) : ''}</span>
                 </div>
             </div>
 

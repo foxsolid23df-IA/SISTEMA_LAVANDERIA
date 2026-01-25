@@ -124,6 +124,7 @@ export const Sales = () => {
                 total: total,
                 paid_amount: parseFloat(anticipo) || 0,
                 payment_method: metodoPago,
+                payment_status: (parseFloat(anticipo) || 0) >= total ? 'paid' : 'pending',
                 promised_at: new Date(fechaEntrega).toISOString(),
                 notes: notas,
                 status: 'processing', // Auto-send to washing
@@ -145,6 +146,7 @@ export const Sales = () => {
             setBusquedaCliente("");
             setNotas("");
             setAnticipo(0);
+            setMontoRecibido("");
         } catch (error) {
             console.error('Error al finalizar orden:', error);
             Swal.fire('Error', 'No se pudo registrar la orden', 'error');
@@ -353,7 +355,7 @@ export const Sales = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-black uppercase tracking-widest">Anticipo</label>
+                            <label className="text-[10px] font-bold text-black uppercase tracking-widest">Paga con (Anticipo)</label>
                             <input 
                                 type="number" 
                                 className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white font-bold text-emerald-600"
@@ -430,7 +432,7 @@ export const Sales = () => {
                                         <div className="text-right">
                                             <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Cambio</p>
                                             <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                                {formatearDinero(Math.max(0, (parseFloat(montoRecibido) || 0) - parseFloat(anticipo || 0)))}
+                                                {formatearDinero(Math.max(0, (parseFloat(montoRecibido) || 0) - (parseFloat(anticipo) || total)))}
                                             </p>
                                         </div>
                                     </div>

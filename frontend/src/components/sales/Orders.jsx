@@ -238,7 +238,9 @@ export const Orders = () => {
                    )}
 
                    <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-50 dark:border-slate-700">
-                      <span className="text-slate-500">Total: {formatearDinero(order.total)}</span>
+                      <div className="flex flex-col">
+                        <span className="text-slate-500">Total: {formatearDinero(order.total)}</span>
+                      </div>
                       <span className={`font-bold ${order.payment_status === 'paid' ? 'text-emerald-600' : 'text-orange-500'}`}>
                          {order.payment_status === 'paid' ? 'Pagado' : `Debe ${formatearDinero(order.total - order.paid_amount)}`}
                       </span>

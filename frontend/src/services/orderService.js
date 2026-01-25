@@ -14,6 +14,7 @@ export const orderService = {
         customer_id: orderData.customer_id,
         total: orderData.total,
         paid_amount: orderData.paid_amount || 0,
+        discount: orderData.discount || 0,
         status: orderData.status || 'received',
         payment_status: orderData.payment_status || 'pending',
         notes: orderData.notes,

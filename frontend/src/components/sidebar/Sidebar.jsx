@@ -43,7 +43,7 @@ export const Sidebar = () => {
             {isOpen ? "close" : "menu"}
           </span>
         </button>
-        <div className="flex items-center gap-2 font-bold text-lg tracking-tight dark:text-white">
+        <div className="flex items-center gap-2 font-bold text-lg tracking-tight text-black dark:text-white">
           <span className="bg-primary text-white p-1 rounded">
             <span className="material-icons-outlined block text-[18px]">
               point_of_sale
@@ -89,7 +89,7 @@ export const Sidebar = () => {
       >
         {/* Logo Section */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 font-bold text-xl tracking-tight dark:text-white">
+          <div className="flex items-center gap-3 font-bold text-xl tracking-tight text-black dark:text-white">
             <span className="bg-primary text-white p-2 rounded-lg shadow-lg shadow-black/10">
               <span className="material-icons-outlined block text-[24px]">
                 point_of_sale
@@ -97,7 +97,7 @@ export const Sidebar = () => {
             </span>
             <div className="flex flex-col">
               <span className="leading-none">{storeName || "POS Store"}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              <span className="text-[10px] font-bold text-black dark:text-slate-400 uppercase tracking-widest mt-1">
                 Premium Retail
               </span>
             </div>
