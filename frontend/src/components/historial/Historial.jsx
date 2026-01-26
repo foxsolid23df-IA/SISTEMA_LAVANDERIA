@@ -11,7 +11,9 @@ import { formatearDinero, formatearFechaHora, contarProductos } from '../../util
 import { exportToExcel } from '../../utils/exportToExcel'
 import { salesService } from '../../services/salesService'
 import { productService } from '../../services/productService'
+import { staffService } from '../../services/staffService'
 import Modal from '../common/Modal'
+import Swal from 'sweetalert2'
 
 export const Historial = () => {
     // 1. ESTADOS PRINCIPALES
@@ -153,6 +155,59 @@ export const Historial = () => {
     const cerrarModal = () => {
         setMostrarModal(false)
         setVentaSeleccionada(null)
+    }
+
+    // 10.b FUNCIÓN PARA ELIMINAR VENTA (Solo Admin/Dueño con Contraseña)
+    const eliminarVenta = async (saleId) => {
+        const { value: password } = await Swal.fire({
+            title: 'Seguridad de Administrador',
+            text: 'Para eliminar este reporte, ingresa el código de seguridad:',
+            input: 'password',
+            inputPlaceholder: 'Código de Seguridad',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar Registro',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#000000',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            }
+        });
+
+        if (password) {
+            const isValidAdmin = await staffService.validateAdminPin(password);
+
+            if (isValidAdmin) {
+                const confirm = await Swal.fire({
+                    title: '¿Estás completamente seguro?',
+                    text: "Esta acción no se puede deshacer y el registro se borrará permanentemente de la base de datos.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#000000',
+                    confirmButtonText: 'Sí, borrar definitivamente',
+                    cancelButtonText: 'No, cancelar'
+                });
+
+                if (confirm.isConfirmed) {
+                    try {
+                        await salesService.deleteSale(saleId);
+                        Swal.fire({
+                            title: 'Eliminado',
+                            text: 'El reporte de venta ha sido eliminado exitosamente.',
+                            icon: 'success',
+                            confirmButtonColor: '#000000'
+                        });
+                        // Recargar datos
+                        cargarVentasYProductos();
+                    } catch (error) {
+                        Swal.fire('Error', 'No se pudo eliminar el reporte: ' + error.message, 'error');
+                    }
+                }
+            } else {
+                Swal.fire('Error', 'PIN de administrador incorrecto. Solo el dueño o administrador puede realizar esta acción.', 'error');
+            }
+        }
     }
 
     // 11. FUNCIÓN PARA FILTRAR LAS VENTAS POR FECHAS
@@ -326,12 +381,19 @@ export const Historial = () => {
                                             <span className="text-primary dark:text-white font-black">{formatearDinero(venta.total)}</span>
                                         </p>
                                     </div>
-                                    <div className="w-32 flex justify-end">
+                                     <div className="w-32 flex justify-end gap-2">
                                         <button 
-                                            className="bg-primary dark:bg-white text-white dark:text-primary px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-full hover:opacity-80 transition-all transform active:scale-95"
+                                            className="bg-primary dark:bg-white text-black px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-full hover:opacity-80 transition-all transform active:scale-95 shadow-sm"
                                             onClick={() => verDetalles(venta)}
                                         >
                                             Ver Detalles
+                                        </button>
+                                        <button 
+                                            className="bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-black p-2 rounded-full transition-all active:scale-95"
+                                            onClick={() => eliminarVenta(venta.id)}
+                                            title="Eliminar Reporte"
+                                        >
+                                            <span className="material-icons-outlined text-[18px]">delete</span>
                                         </button>
                                     </div>
                                 </div>
@@ -473,7 +535,7 @@ export const Historial = () => {
 
                     <div className="px-8 py-6 bg-slate-50 dark:bg-white/5 flex justify-end">
                         <button 
-                            className="bg-primary dark:bg-white text-white dark:text-primary px-8 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95"
+                            className="bg-primary dark:bg-white text-black px-8 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95 shadow-lg"
                             onClick={cerrarModal}
                         >
                             Cerrar Detalles

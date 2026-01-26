@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { orderService } from '../../services/orderService';
+import { staffService } from '../../services/staffService';
 import { formatearDinero } from '../../utils';
 import * as XLSX from 'xlsx';
+import Swal from 'sweetalert2';
 import './Orders.css';
 
 export const Orders = () => {
@@ -37,6 +39,53 @@ export const Orders = () => {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     } catch (error) {
       alert('Error al actualizar estado');
+    }
+  };
+
+  const handleOrderDelete = async (orderId) => {
+    const { value: password } = await Swal.fire({
+      title: 'Seguridad del Sistema',
+      text: 'Ingresa la contraseña del administrador para eliminar esta orden:',
+      input: 'password',
+      inputPlaceholder: 'Contraseña de Seguridad',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar Eliminación',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#000000',
+    });
+
+    if (password) {
+      const isValidAdmin = await staffService.validateAdminPin(password);
+
+      if (isValidAdmin) {
+        const confirm = await Swal.fire({
+          title: '¿Eliminar orden permanentemente?',
+          text: "Esta acción borrará la orden y sus prendas del sistema. Esta acción es irreversible.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#000000',
+          confirmButtonText: 'Sí, eliminar',
+          cancelButtonText: 'Cancelar'
+        });
+
+        if (confirm.isConfirmed) {
+          try {
+            await orderService.deleteOrder(orderId);
+            setOrders(prev => prev.filter(o => o.id !== orderId));
+            Swal.fire({
+              title: 'Orden Eliminada',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          } catch (error) {
+            Swal.fire('Error', 'No se pudo eliminar la orden: ' + error.message, 'error');
+          }
+        }
+      } else {
+        Swal.fire('Error', 'PIN de administrador incorrecto', 'error');
+      }
     }
   };
 
@@ -251,7 +300,7 @@ export const Orders = () => {
                   {order.status === 'received' && (
                     <button 
                       onClick={() => handleStatusChange(order.id, 'processing')}
-                      className="flex-grow py-2 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-lg transition-colors"
+                      className="flex-grow py-2 bg-blue-500 hover:bg-blue-600 text-black text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Empezar Lavado
                     </button>
@@ -259,7 +308,7 @@ export const Orders = () => {
                   {order.status === 'processing' && (
                     <button 
                       onClick={() => handleStatusChange(order.id, 'ready')}
-                      className="flex-grow py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg transition-colors"
+                      className="flex-grow py-2 bg-emerald-500 hover:bg-emerald-600 text-black text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Marcar Listo
                     </button>
@@ -267,7 +316,7 @@ export const Orders = () => {
                   {order.status === 'ready' && (
                     <button 
                       onClick={() => handleStatusChange(order.id, 'delivered')}
-                      className="flex-grow py-2 bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-bold rounded-lg transition-colors"
+                      className="flex-grow py-2 bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Registrar Entrega
                     </button>
@@ -281,6 +330,13 @@ export const Orders = () => {
                       <span className="material-symbols-outlined text-sm">cancel</span>
                     </button>
                   )}
+                  <button 
+                    onClick={() => handleOrderDelete(order.id)}
+                    className="px-2 py-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                    title="Eliminar permanentemente"
+                  >
+                    <span className="material-symbols-outlined text-sm">delete</span>
+                  </button>
                 </div>
               </div>
             ))

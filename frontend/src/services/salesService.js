@@ -435,5 +435,23 @@ export const salesService = {
             fechaInicio: fechaInicio || 'Sin límite inicial',
             fechaFin: fechaFin || 'Sin límite final'
         };
+    },
+    
+    // Eliminar una venta (requiere permisos administrativos)
+    deleteSale: async (saleId) => {
+        const { error: itemsError } = await supabase
+            .from('sale_items')
+            .delete()
+            .eq('sale_id', saleId);
+
+        if (itemsError) throw itemsError;
+
+        const { error: saleError } = await supabase
+            .from('sales')
+            .delete()
+            .eq('id', saleId);
+
+        if (saleError) throw saleError;
+        return true;
     }
 };

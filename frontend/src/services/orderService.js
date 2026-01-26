@@ -93,5 +93,25 @@ export const orderService = {
 
     if (error) throw error;
     return true;
+  },
+
+  // Eliminar una orden (requiere permisos administrativos)
+  async deleteOrder(orderId) {
+    // Primero eliminar items
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (itemsError) throw itemsError;
+
+    // Luego eliminar orden
+    const { error: orderError } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (orderError) throw orderError;
+    return true;
   }
 };

@@ -20,8 +20,8 @@ El sistema utiliza una **Arquitectura Híbrida** diseñada para ofrecer robustez
 1. **Aislamiento Multi-tienda (Multi-tenancy)**: Gracias al uso de Supabase RLS (Row Level Security), los datos de cada cliente están aislados a nivel de base de datos, lo que permite escalar el sistema como un SaaS con alta seguridad.
 2. **Soporte Offline/Local Progresivo**: La inclusión de un backend local y SQLite permite una base para futuras capacidades offline y una gestión de terminales más granular que una simple aplicación web.
 3. **Tecnología de Vanguardia**: El uso de React 19 y Vite 7 posiciona al proyecto en el estado del arte del desarrollo frontend, facilitando el mantenimiento a largo plazo.
-4. **Seguridad y Auditoría**: El sistema cuenta con un módulo de "Soporte Forense" y logs administrativos que permiten rastrear acciones críticas y realizar resets seguros del sistema.
-5. **Experiencia de Usuario (UI/UX)**: Diseño premium orientado a la eficiencia en el punto de venta (escaneo de códigos de barras, búsqueda rápida, tickets).
+4. **Seguridad y Auditoría**: El sistema cuenta con un módulo de "Soporte Forense" y logs administrativos que permiten rastrear acciones críticas y realizar resets seguros del sistema. Además, incluye un sistema de eliminación de reportes y órdenes protegido por la validación del PIN individual del Administrador/Dueño, garantizando que solo el personal con nivel de acceso 'admin' pueda modificar registros históricos.
+5. **Experiencia de Usuario (UI/UX)**: Diseño premium orientado a la eficiencia en el punto de venta (escaneo de códigos de barras, búsqueda rápida, tickets). Se prioriza la legibilidad con botones de acción que utilizan tipografía negra de alta visibilidad.
 
 ---
 

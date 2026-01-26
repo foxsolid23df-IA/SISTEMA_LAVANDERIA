@@ -23,6 +23,7 @@ import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
+import { AdminPanel } from "../components/admin/AdminPanel";
 
 const PrivateLayout = ({ children }) => {
     const {
@@ -148,6 +149,15 @@ export const Routing = () => {
                                 <Route path="/ordenes" element={<PrivateLayout><Orders /></PrivateLayout>} />
                                 <Route path="/estadisticas" element={<PrivateLayout><Stats /></PrivateLayout>} />
                                 <Route path="/clientes" element={<PrivateLayout><ClientManager /></PrivateLayout>} />
+                                
+                                {/* Panel de Administración solo para Admin */}
+                                <Route path="/admin" element={
+                                    <PrivateLayout>
+                                        <AdminRoute>
+                                            <AdminPanel />
+                                        </AdminRoute>
+                                    </PrivateLayout>
+                                } />
                                 
                                 {/* Gestión de Usuarios solo para Admin */}
                                 <Route path="/usuarios" element={

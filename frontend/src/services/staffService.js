@@ -88,5 +88,21 @@ export const staffService = {
             throw new Error('PIN inválido o usuario inactivo');
         }
         return data;
+    },
+
+    // Validar si un PIN pertenece a un Administrador/Dueño
+    validateAdminPin: async (pin) => {
+        const { data, error } = await supabase
+            .from('staff')
+            .select('*')
+            .eq('pin', pin)
+            .eq('role', 'admin') // Solo administradores
+            .eq('active', true)
+            .single();
+
+        if (error || !data) {
+            return false;
+        }
+        return true;
     }
 };
