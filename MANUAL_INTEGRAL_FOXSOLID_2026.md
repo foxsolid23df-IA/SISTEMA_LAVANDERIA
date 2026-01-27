@@ -22,6 +22,7 @@ Bienvenido al manual unificado del sistema de gestión para Lavanderías y Tiend
 3.  [SECCIÓN C: SOPORTE TÉCNICO Y DESPLIEGUE](#sección-c-soporte-técnico-y-despliegue)
     - 3.1 Instalación (Local y Nube)
     - 3.2 Habilitar Nuevas Sucursales
+4.  [MANUAL DE CRISIS Y EMERGENCIAS](MANUAL_DE_CRISIS_FOXSOLID_2026.md)
 
 ---
 

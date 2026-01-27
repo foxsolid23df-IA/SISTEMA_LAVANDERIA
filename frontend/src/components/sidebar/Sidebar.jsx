@@ -285,6 +285,9 @@ export const Sidebar = () => {
                             `}
               onClick={() => setIsOpen(false)}
             >
+              <span className="material-icons-outlined text-[20px]">
+                people
+              </span>
               <span className="text-sm font-bold">Usuarios</span>
             </NavLink>
           )}
