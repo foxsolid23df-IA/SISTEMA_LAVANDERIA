@@ -731,68 +731,7 @@ html.dark .user-table tr:hover {
   background-color: var(--dm-hover-bg);
 }
 
-/* Suppliers Page Dark Mode */
-html.dark .suppliers-container {
-  background-color: var(--dm-bg-primary);
-}
 
-html.dark .suppliers-main {
-  background-color: var(--dm-bg-primary);
-}
-
-html.dark .suppliers-title {
-  color: var(--dm-text-primary);
-}
-
-html.dark .suppliers-kpi-card {
-  background-color: var(--dm-card-bg);
-  border-color: var(--dm-border);
-}
-
-html.dark .suppliers-kpi-label {
-  color: var(--dm-text-muted);
-}
-
-html.dark .suppliers-kpi-value {
-  color: var(--dm-text-primary);
-}
-
-html.dark .suppliers-table-container {
-  background-color: var(--dm-card-bg);
-  border-color: var(--dm-border);
-}
-
-html.dark .suppliers-table th {
-  background-color: var(--dm-bg-secondary);
-  color: var(--dm-text-secondary);
-  border-color: var(--dm-border);
-}
-
-html.dark .suppliers-table td {
-  color: var(--dm-text-primary);
-  border-color: var(--dm-border);
-}
-
-html.dark .suppliers-table tr:hover {
-  background-color: var(--dm-hover-bg);
-}
-
-html.dark .suppliers-search-input {
-  background-color: var(--dm-input-bg);
-  border-color: var(--dm-border);
-  color: var(--dm-text-primary);
-}
-
-html.dark .suppliers-filter-btn {
-  background-color: var(--dm-card-bg);
-  border-color: var(--dm-border);
-  color: var(--dm-text-secondary);
-}
-
-html.dark .suppliers-filter-btn.active {
-  background-color: var(--dm-text-primary);
-  color: var(--dm-bg-primary);
-}
 
 /* Payment Modal Dark Mode */
 html.dark .payment-modal-container {
@@ -911,7 +850,6 @@ body,
 .inventory-page,
 .stats-view,
 .user-manager-container,
-.suppliers-container,
 .lock-screen,
 .cart-sidebar,
 .table-container,

@@ -7,6 +7,7 @@ import { customerService } from "../../services/customerService";
 import { orderService } from "../../services/orderService";
 import { productService } from "../../services/productService";
 import { businessSettingsService } from "../../services/businessSettingsService";
+import { exchangeRateService } from "../../services/exchangeRateService";
 import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
@@ -53,6 +54,8 @@ export const Sales = () => {
     const [ventaCompletada, setVentaCompletada] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [montoRecibido, setMontoRecibido] = useState(""); /* State for Change Calculator */
+    const [montoRecibidoUSD, setMontoRecibidoUSD] = useState("");
+    const [usarUSD, setUsarUSD] = useState(false);
     
     // Referencias
     const ticketRef = useRef(null);
@@ -69,12 +72,21 @@ export const Sales = () => {
 
     // Estados de configuración
     const [businessSettings, setBusinessSettings] = useState(null);
+    const [exchangeRate, setExchangeRate] = useState(null);
 
     // Cargar configuración al iniciar
     useEffect(() => {
         businessSettingsService.getSettings()
             .then(setBusinessSettings)
             .catch(err => console.error("Error loading business settings:", err));
+        
+        exchangeRateService.getActiveRate()
+            .then(rate => {
+                if (rate && rate.is_active) {
+                    setExchangeRate(rate);
+                }
+            })
+            .catch(err => console.error("Error loading exchange rate:", err));
     }, []);
 
     // Búsqueda de clientes
@@ -106,6 +118,8 @@ export const Sales = () => {
         }
 
         setMontoRecibido(""); // Reset change calculator
+        setMontoRecibidoUSD("");
+        setUsarUSD(false);
         setIsPaymentModalOpen(true);
     };
 
@@ -123,7 +137,7 @@ export const Sales = () => {
                 })),
                 total: total,
                 paid_amount: parseFloat(anticipo) || 0,
-                payment_method: metodoPago,
+                payment_method: usarUSD ? 'usd_cash' : metodoPago,
                 payment_status: (parseFloat(anticipo) || 0) >= total ? 'paid' : 'pending',
                 promised_at: new Date(fechaEntrega).toISOString(),
                 notes: notas,
@@ -183,7 +197,7 @@ export const Sales = () => {
             {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
                 <div className="flex justify-between items-center mb-2">
-                     <h3 className="font-bold text-slate-900 dark:text-white">Productos</h3>
+                     <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider">Servicios y Productos</h3>
                      <button
                         onClick={connectScale}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -231,7 +245,7 @@ export const Sales = () => {
                                 <span className="material-symbols-outlined">{p.category === 'service' ? 'dry_cleaning' : 'inventory_2'}</span>
                             </div>
                             <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight mb-1">{p.name}</h3>
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatearDinero(p.price)} {p.pricing_type === 'kg' ? '/ kg' : ''}</p>
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatearDinero(p.price)} {p.pricing_type === 'kg' ? '/ kg' : '/ pza'}</p>
                         </button>
                     ))}
                 </div>
@@ -305,7 +319,7 @@ export const Sales = () => {
                         <div key={item.id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                             <div className="flex-1 min-w-0">
                                 <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</h4>
-                                <p className="text-xs font-bold text-emerald-600">{formatearDinero(item.price)}</p>
+                                <p className="text-xs font-bold text-emerald-600">{formatearDinero(item.price)} {item.pricing_type === 'kg' ? '/ kg' : '/ pza'}</p>
                             </div>
                             <div className="flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-1">
                                 <button onClick={() => cambiarCantidad(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-500">
@@ -396,46 +410,79 @@ export const Sales = () => {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <button 
-                                    onClick={() => setMetodoPago("cash")}
-                                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === 'cash' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                                    onClick={() => {setMetodoPago("cash"); setUsarUSD(false);}}
+                                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === 'cash' && !usarUSD ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
                                 >
                                     <span className="material-symbols-outlined text-3xl">payments</span>
                                     <span className="text-xs font-bold uppercase">Efectivo</span>
                                 </button>
                                 <button 
-                                    onClick={() => setMetodoPago("card")}
+                                    onClick={() => {setMetodoPago("card"); setUsarUSD(false);}}
                                     className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === 'card' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
                                 >
                                     <span className="material-symbols-outlined text-3xl">credit_card</span>
                                     <span className="text-xs font-bold uppercase">Tarjeta</span>
                                 </button>
+                                
+                                {exchangeRate && (
+                                    <button 
+                                        onClick={() => {setMetodoPago("cash"); setUsarUSD(true);}}
+                                        className={`col-span-2 flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${usarUSD ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-xl">currency_exchange</span>
+                                        <span className="text-xs font-bold uppercase">Pagar con Dólares (USD @ ${exchangeRate.rate})</span>
+                                    </button>
+                                )}
                             </div>
 
-                            {/* CALCULADORA DE CAMBIO (Solo Efectivo) */}
+                            {/* CALCULADORA DE CAMBIO (Solo Efectivo / USD) */}
                             {metodoPago === 'cash' && (
-                                <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-500/20">
-                                    <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 block">
-                                        Dinero Recibido
+                                <div className={`p-4 rounded-xl border ${usarUSD ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20'}`}>
+                                    <label className={`text-xs font-bold uppercase tracking-wider mb-2 block ${usarUSD ? 'text-blue-700 dark:text-blue-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                        {usarUSD ? 'Dólares Recibidos (USD)' : 'Dinero Recibido (MXN)'}
                                     </label>
+                                    
+                                    {usarUSD && (
+                                        <div className="mb-3 p-2 bg-blue-100/50 dark:bg-blue-500/20 rounded-lg border border-blue-200 dark:border-blue-500/30">
+                                            <p className="text-[11px] font-black text-blue-700 dark:text-blue-300 uppercase">
+                                                Cobrar al menos: <span className="text-sm">U$ {((parseFloat(anticipo) || total) / exchangeRate.rate).toFixed(2)}</span>
+                                            </p>
+                                            <p className="text-[9px] text-blue-500 font-bold uppercase mt-1">Para cubrir {formatearDinero(parseFloat(anticipo) || total)}</p>
+                                        </div>
+                                    )}
+
                                     <div className="flex gap-4 items-center">
                                         <div className="relative flex-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">$</span>
+                                            <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold ${usarUSD ? 'text-blue-600' : 'text-emerald-600'}`}>
+                                                {usarUSD ? 'U$' : '$'}
+                                            </span>
                                             <input 
                                                 type="number" 
-                                                className="w-full pl-8 pr-4 py-3 bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-500/30 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xl font-bold text-slate-900 dark:text-white"
-                                                value={montoRecibido}
-                                                onChange={(e) => setMontoRecibido(e.target.value)}
+                                                className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 text-xl font-bold text-slate-900 dark:text-white ${usarUSD ? 'border-blue-200 focus:ring-blue-500' : 'border-emerald-200 focus:ring-emerald-500'}`}
+                                                value={usarUSD ? montoRecibidoUSD : montoRecibido}
+                                                onChange={(e) => usarUSD ? setMontoRecibidoUSD(e.target.value) : setMontoRecibido(e.target.value)}
                                                 placeholder="0.00"
                                                 autoFocus
                                             />
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Cambio</p>
-                                            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                                {formatearDinero(Math.max(0, (parseFloat(montoRecibido) || 0) - (parseFloat(anticipo) || total)))}
+                                            <p className={`text-xs mb-1 ${usarUSD ? 'text-blue-600' : 'text-emerald-600'}`}>Cambio (MXN)</p>
+                                            <p className={`text-2xl font-black ${usarUSD ? 'text-blue-600' : 'text-blue-400'}`}>
+                                                {(() => {
+                                                    const recibidoMXN = usarUSD 
+                                                        ? (parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate 
+                                                        : (parseFloat(montoRecibido) || 0);
+                                                    const totalACobrar = parseFloat(anticipo) || total;
+                                                    return formatearDinero(Math.max(0, recibidoMXN - totalACobrar));
+                                                })()}
                                             </p>
                                         </div>
                                     </div>
+                                    {usarUSD && (
+                                        <p className="text-[10px] mt-2 font-bold text-blue-500 uppercase">
+                                            Equivalente: {formatearDinero((parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate)} MXN
+                                        </p>
+                                    )}
                                 </div>
                             )}
 

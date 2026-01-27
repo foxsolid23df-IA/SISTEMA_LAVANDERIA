@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { orderService } from '../../services/orderService';
 import { staffService } from '../../services/staffService';
+import { exchangeRateService } from '../../services/exchangeRateService';
+import { businessSettingsService } from '../../services/businessSettingsService';
+import TicketVenta from './TicketVenta';
 import { formatearDinero } from '../../utils';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
@@ -15,14 +18,37 @@ export const Orders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [showFilters, setShowFilters] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(null);
+
+  // Estados para liquidación de pago
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [orderToLiquidate, setOrderToLiquidate] = useState(null);
+  const [metodoPago, setMetodoPago] = useState("cash");
+  const [montoRecibido, setMontoRecibido] = useState("");
+  const [montoRecibidoUSD, setMontoRecibidoUSD] = useState("");
+  const [usarUSD, setUsarUSD] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Estados para reimpresión
+  const [businessSettings, setBusinessSettings] = useState(null);
+  const [orderToPrint, setOrderToPrint] = useState(null);
+  const ticketRef = useRef(null);
 
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const data = await orderService.getOrders();
-      setOrders(data);
+      const resp = await Promise.all([
+        orderService.getOrders(),
+        exchangeRateService.getActiveRate(),
+        businessSettingsService.getSettings()
+      ]);
+      setOrders(resp[0]);
+      if (resp[1] && resp[1].is_active) {
+        setExchangeRate(resp[1]);
+      }
+      setBusinessSettings(resp[2]);
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -32,13 +58,57 @@ export const Orders = () => {
     loadOrders();
   }, []);
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (order, newStatus) => {
+    const orderId = order.id;
+    const balance = order.total - (order.paid_amount || 0);
+    const isPaid = order.payment_status === 'paid' || balance <= 0;
+
+    if (newStatus === 'ready' || newStatus === 'delivered') {
+      const actionText = newStatus === 'ready' ? 'marcada como LISTA' : 'registrada como ENTREGADA';
+      
+      if (isPaid) {
+        Swal.fire({
+          title: 'Orden Pagada',
+          text: `La orden #${orderId.toString().slice(-6)} ha sido ${actionText}. El pago está completo.`,
+          icon: 'success',
+          timer: 3000,
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false
+        });
+      } else {
+        if (newStatus === 'delivered') {
+          const result = await Swal.fire({
+            title: '¡Saldo Pendiente!',
+            text: `La orden #${orderId.toString().slice(-6)} tiene un saldo de ${formatearDinero(balance)}. ¿Confirmar entrega sin liquidar?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, entregar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#f43f5e',
+          });
+          if (!result.isConfirmed) return;
+        } else {
+          Swal.fire({
+            title: 'Saldo Pendiente',
+            text: `Orden ${actionText}. Recordatorio: Falta cobrar ${formatearDinero(balance)}.`,
+            icon: 'warning',
+            timer: 4000,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false
+          });
+        }
+      }
+    }
+
     try {
       await orderService.updateOrderStatus(orderId, newStatus);
       // Actualizar estado localmente para rapidez
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     } catch (error) {
-      alert('Error al actualizar estado');
+      Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
     }
   };
 
@@ -86,6 +156,91 @@ export const Orders = () => {
       } else {
         Swal.fire('Error', 'PIN de administrador incorrecto', 'error');
       }
+    }
+  };
+  
+  const handleLiquidatePayment = (order) => {
+    setOrderToLiquidate(order);
+    setMetodoPago("cash");
+    setMontoRecibido("");
+    setMontoRecibidoUSD("");
+    setUsarUSD(false);
+    setIsPaymentModalOpen(true);
+  };
+
+  const finalizeLiquidation = async () => {
+    if (!orderToLiquidate) return;
+    
+    setIsProcessing(true);
+    try {
+      const finalMethod = usarUSD ? 'usd_cash' : metodoPago;
+      
+      await orderService.updateOrderPayment(orderToLiquidate.id, {
+        paid_amount: orderToLiquidate.total,
+        payment_status: 'paid',
+        payment_method: finalMethod
+      });
+      
+      setOrders(prev => prev.map(o => o.id === orderToLiquidate.id ? { 
+        ...o, 
+        paid_amount: o.total, 
+        payment_status: 'paid',
+        payment_method: finalMethod
+      } : o));
+      
+      Swal.fire({
+        title: '¡Pago Liquidado!',
+        text: `La orden #${orderToLiquidate.id.toString().slice(-6)} ha sido pagada totalmente.`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      
+      setIsPaymentModalOpen(false);
+      setOrderToLiquidate(null);
+    } catch (error) {
+      console.error('Error finalizing liquidation:', error);
+      Swal.fire('Error', 'No se pudo registrar el pago', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReprint = (order) => {
+    // Transformar los datos para que coincidan con lo que espera TicketVenta
+    const ventaData = {
+      ...order,
+      cliente: order.customers,
+      productos: order.order_items.map(i => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        price: i.price,
+        pricing_type: i.pricing_type
+      }))
+    };
+    setOrderToPrint(ventaData);
+  };
+
+  const imprimirTicket = () => {
+    if (ticketRef.current) {
+        const printContent = ticketRef.current.innerHTML;
+        const win = window.open('', '', 'width=800,height=600');
+        win.document.write(`
+            <html>
+                <head>
+                    <title>Reimpresión Ticket #${orderToPrint.id}</title>
+                    <style>
+                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; }
+                        .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
+                        .text-center { text-align: center; }
+                        .font-bold { font-weight: bold; }
+                    </style>
+                </head>
+                <body>${printContent}</body>
+            </html>
+        `);
+        win.document.close();
+        win.print();
     }
   };
 
@@ -290,16 +445,22 @@ export const Orders = () => {
                       <div className="flex flex-col">
                         <span className="text-slate-500">Total: {formatearDinero(order.total)}</span>
                       </div>
-                      <span className={`font-bold ${order.payment_status === 'paid' ? 'text-emerald-600' : 'text-orange-500'}`}>
-                         {order.payment_status === 'paid' ? 'Pagado' : `Debe ${formatearDinero(order.total - order.paid_amount)}`}
-                      </span>
+                      {(() => {
+                        const balance = order.total - (order.paid_amount || 0);
+                        const isPaid = order.payment_status === 'paid' || balance <= 0;
+                        return (
+                          <span className={`font-bold ${isPaid ? 'text-emerald-600' : 'text-orange-500'}`}>
+                             {isPaid ? 'Pagado' : `Debe ${formatearDinero(balance)}`}
+                          </span>
+                        );
+                      })()}
                    </div>
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 flex gap-2">
                   {order.status === 'received' && (
                     <button 
-                      onClick={() => handleStatusChange(order.id, 'processing')}
+                      onClick={() => handleStatusChange(order, 'processing')}
                       className="flex-grow py-2 bg-blue-500 hover:bg-blue-600 text-black text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Empezar Lavado
@@ -307,7 +468,7 @@ export const Orders = () => {
                   )}
                   {order.status === 'processing' && (
                     <button 
-                      onClick={() => handleStatusChange(order.id, 'ready')}
+                      onClick={() => handleStatusChange(order, 'ready')}
                       className="flex-grow py-2 bg-emerald-500 hover:bg-emerald-600 text-black text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Marcar Listo
@@ -315,7 +476,7 @@ export const Orders = () => {
                   )}
                   {order.status === 'ready' && (
                     <button 
-                      onClick={() => handleStatusChange(order.id, 'delivered')}
+                      onClick={() => handleStatusChange(order, 'delivered')}
                       className="flex-grow py-2 bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-black rounded-lg transition-colors shadow-sm"
                     >
                       Registrar Entrega
@@ -323,13 +484,29 @@ export const Orders = () => {
                   )}
                   {order.status !== 'delivered' && order.status !== 'cancelled' && (
                     <button 
-                      onClick={() => handleStatusChange(order.id, 'cancelled')}
+                      onClick={() => handleStatusChange(order, 'cancelled')}
                       className="px-2 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Cancelar"
                     >
                       <span className="material-symbols-outlined text-sm">cancel</span>
                     </button>
                   )}
+                  {(order.total - (order.paid_amount || 0)) > 0 && (
+                    <button 
+                      onClick={() => handleLiquidatePayment(order)}
+                      className="px-2 py-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Liquidar saldo pendiente"
+                    >
+                      <span className="material-symbols-outlined text-sm">payments</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => handleReprint(order)}
+                    className="px-2 py-2 text-slate-400 hover:text-emerald-500 rounded-lg transition-colors"
+                    title="Reimprimir Ticket"
+                  >
+                    <span className="material-symbols-outlined text-sm">print</span>
+                  </button>
                   <button 
                     onClick={() => handleOrderDelete(order.id)}
                     className="px-2 py-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
@@ -342,6 +519,135 @@ export const Orders = () => {
             ))
           )}
         </div>
+      )}
+
+      {/* MODAL DE PAGO (Liquidación) */}
+      {isPaymentModalOpen && orderToLiquidate && (
+        <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h3 className="font-bold text-lg dark:text-white uppercase tracking-tighter">Liquidar Saldo Pendiente</h3>
+                    <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined">close</span></button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div className="text-center">
+                        <p className="text-black text-[10px] mb-1 uppercase tracking-widest font-bold">Saldo a Cobrar</p>
+                        <h4 className="text-4xl font-black text-slate-900 dark:text-white">
+                          {formatearDinero(orderToLiquidate.total - orderToLiquidate.paid_amount)}
+                        </h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => {setMetodoPago("cash"); setUsarUSD(false);}}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === 'cash' && !usarUSD ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                        >
+                            <span className="material-symbols-outlined text-3xl">payments</span>
+                            <span className="text-xs font-bold uppercase">Efectivo</span>
+                        </button>
+                        <button 
+                            onClick={() => {setMetodoPago("card"); setUsarUSD(false);}}
+                            className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === 'card' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                        >
+                            <span className="material-symbols-outlined text-3xl">credit_card</span>
+                            <span className="text-xs font-bold uppercase">Tarjeta</span>
+                        </button>
+                        
+                        {exchangeRate && (
+                            <button 
+                                onClick={() => {setMetodoPago("cash"); setUsarUSD(true);}}
+                                className={`col-span-2 flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${usarUSD ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400'}`}
+                            >
+                                <span className="material-symbols-outlined text-xl">currency_exchange</span>
+                                <span className="text-xs font-bold uppercase">Pagar con Dólares (USD @ ${exchangeRate.rate})</span>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* CALCULADORA DE CAMBIO */}
+                    {metodoPago === 'cash' && (
+                        <div className={`p-4 rounded-xl border ${usarUSD ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20'}`}>
+                            <label className={`text-xs font-bold uppercase tracking-wider mb-2 block ${usarUSD ? 'text-blue-700 dark:text-blue-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                {usarUSD ? 'Dólares Recibidos (USD)' : 'Dinero Recibido (MXN)'}
+                            </label>
+
+                            {usarUSD && (
+                                <div className="mb-3 p-2 bg-blue-100/50 dark:bg-blue-500/20 rounded-lg border border-blue-200 dark:border-blue-500/30">
+                                    <p className="text-[11px] font-black text-blue-700 dark:text-blue-300 uppercase">
+                                        Cobrar al menos: <span className="text-sm">U$ {((orderToLiquidate.total - orderToLiquidate.paid_amount) / exchangeRate.rate).toFixed(2)}</span>
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-4 items-center">
+                                <div className="relative flex-1">
+                                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold ${usarUSD ? 'text-blue-600' : 'text-emerald-600'}`}>
+                                        {usarUSD ? 'U$' : '$'}
+                                    </span>
+                                    <input 
+                                        type="number" 
+                                        className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 text-xl font-bold text-slate-900 dark:text-white ${usarUSD ? 'border-blue-200 focus:ring-blue-500' : 'border-emerald-200 focus:ring-emerald-500'}`}
+                                        value={usarUSD ? montoRecibidoUSD : montoRecibido}
+                                        onChange={(e) => usarUSD ? setMontoRecibidoUSD(e.target.value) : setMontoRecibido(e.target.value)}
+                                        placeholder="0.00"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="text-right">
+                                    <p className={`text-xs mb-1 ${usarUSD ? 'text-blue-600' : 'text-emerald-600'}`}>Cambio (MXN)</p>
+                                    <p className={`text-2xl font-black ${usarUSD ? 'text-blue-600' : 'text-blue-400'}`}>
+                                        {(() => {
+                                            const saldoPendiente = orderToLiquidate.total - orderToLiquidate.paid_amount;
+                                            const recibidoMXN = usarUSD 
+                                                ? (parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate 
+                                                : (parseFloat(montoRecibido) || 0);
+                                            return formatearDinero(Math.max(0, recibidoMXN - saldoPendiente));
+                                        })()}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="p-6 bg-slate-50 dark:bg-slate-950 flex gap-3">
+                    <button onClick={() => setIsPaymentModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold">Cancelar</button>
+                    <button 
+                        onClick={finalizeLiquidation} 
+                        disabled={isProcessing}
+                        className="flex-[2] py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        {isProcessing && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                        LIQUIDAR PAGO
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* MODAL REIMPRESIÓN */}
+      {orderToPrint && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+              <div className="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
+                  <div id="printable-ticket" className="overflow-hidden">
+                        <TicketVenta venta={orderToPrint} settings={businessSettings} ref={ticketRef} />
+                  </div>
+                  <div className="mt-8 space-y-3">
+                      <button 
+                          onClick={imprimirTicket}
+                          className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all"
+                      >
+                          <span className="material-symbols-outlined">print</span>
+                          REIMPRIMIR TICKET
+                      </button>
+                      <button 
+                          onClick={() => setOrderToPrint(null)}
+                          className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors"
+                      >
+                          CERRAR
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );

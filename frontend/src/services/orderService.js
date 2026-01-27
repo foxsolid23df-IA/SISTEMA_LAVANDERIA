@@ -17,8 +17,10 @@ export const orderService = {
         discount: orderData.discount || 0,
         status: orderData.status || 'received',
         payment_status: orderData.payment_status || 'pending',
+        payment_method: orderData.payment_method || 'cash',
         notes: orderData.notes,
-        promised_at: orderData.promised_at
+        promised_at: orderData.promised_at,
+        cash_session_id: orderData.cash_session_id
       }])
       .select()
       .single();
@@ -33,6 +35,7 @@ export const orderService = {
       product_name: item.product_name || item.name,
       quantity: item.quantity,
       price: item.price,
+      pricing_type: item.pricing_type || 'unit',
       total: item.price * item.quantity
     }));
 
@@ -113,5 +116,73 @@ export const orderService = {
 
     if (orderError) throw orderError;
     return true;
+  },
+
+  // Actualizar pago de una orden
+  async updateOrderPayment(orderId, paymentData) {
+    const { error } = await supabase
+      .from('orders')
+      .update({
+        paid_amount: paymentData.paid_amount,
+        payment_status: paymentData.payment_status,
+        payment_method: paymentData.payment_method || 'cash'
+      })
+      .eq('id', orderId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  // Obtener órdenes de hoy
+  async getTodayOrders() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Obtener órdenes desde una fecha
+  async getOrdersSince(startTime, terminalId = null) {
+    if (!startTime) return [];
+    
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        customers (name, phone),
+        order_items (*)
+      `)
+      .gte('created_at', startTime)
+      .order('created_at', { ascending: false });
+
+    const { data: orders, error } = await query;
+
+    if (error) throw error;
+    return orders || [];
+  },
+
+  // Obtener órdenes por sesión de caja
+  async getOrdersBySession(sessionId) {
+    if (!sessionId) return [];
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        customers (name, phone),
+        order_items (*)
+      `)
+      .eq('cash_session_id', sessionId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };

@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import { salesService } from './salesService';
 import { terminalService } from './terminalService';
+import { orderService } from './orderService';
 
 export const cashCutService = {
     // Obtener el último corte de caja (para saber dónde empezó el turno)
@@ -135,7 +136,7 @@ export const cashCutService = {
 
                     const { data: session, error: sessionError } = await supabase
                         .from('cash_sessions')
-                        .select('opened_at')
+                        .select('id, opened_at')
                         .eq('terminal_id', terminalId)
                         .eq('status', 'open')
                         .order('opened_at', { ascending: false })
@@ -148,22 +149,125 @@ export const cashCutService = {
 
                     if (session && session.opened_at) {
                         startTime = session.opened_at;
+                        // Si tenemos la sesión, podemos buscar órdenes por ID de sesión para mayor precisión
+                        const sessionOrders = await orderService.getOrdersBySession(session.id);
+                        sales = await salesService.getSalesSince(startTime, terminalId);
+                        
+                        // Normalizar órdenes al formato de "venta" para el resumen
+                        const normalizedOrders = sessionOrders.map(order => ({
+                            ...order,
+                            total: parseFloat(order.total),
+                            // Mapeo de métodos de pago de órdenes a formato de ventas/corte
+                            payment_method: order.payment_method === 'cash' ? 'efectivo' : 
+                                           order.payment_method === 'card' ? 'tarjeta' : 
+                                           order.payment_method === 'usd_cash' ? 'dolares' : 
+                                           order.payment_method,
+                            is_order: true,
+                            // Si es USD, intentamos proveer el monto en USD para que aparezca en el resumen
+                            // Aunque la tabla orders no lo tiene, si el método es usd_cash, el total es en MXN
+                            // pero el pago fue en USD. Como no tenemos la tasa guardada en la orden, 
+                            // dejamos amount_usd como null o 0, a menos que el sistema se actualice para guardarlo.
+                            amount_usd: order.payment_method === 'usd_cash' ? 0 : 0 
+                        }));
+                        
+                        sales = [...sales, ...normalizedOrders];
                     } else {
                         const lastCut = await cashCutService.getLastCut();
-                        startTime = lastCut ? lastCut.end_time : new Date(new Date().setHours(0,0,0,0)).toISOString();
+                        startTime = lastCut?.end_time || new Date(new Date().setHours(0,0,0,0)).toISOString();
+                        
+                        console.log(`[CashCut] No session found, falling back to last cut or today. StartTime: ${startTime}`);
+
+                        sales = await salesService.getSalesSince(startTime, terminalId);
+                        
+                        const ordersSince = await orderService.getOrdersSince(startTime);
+                        const normalizedOrders = ordersSince.map(order => ({
+                            ...order,
+                            total: parseFloat(order.total),
+                            payment_method: order.payment_method === 'cash' ? 'efectivo' : 
+                                           order.payment_method === 'card' ? 'tarjeta' : 
+                                           order.payment_method === 'usd_cash' ? 'dolares' : 
+                                           order.payment_method,
+                            is_order: true
+                        }));
+                        sales = [...sales, ...normalizedOrders];
                     }
-                    sales = await salesService.getSalesSince(startTime, terminalId);
                 } else {
                     console.warn("Terminal ID not found in localStorage");
                     startTime = new Date(new Date().setHours(0,0,0,0)).toISOString();
                     sales = await salesService.getSalesSince(startTime, null);
+                    const ordersSince = await orderService.getOrdersSince(startTime);
+                    sales = [...sales, ...ordersSince.map(o => ({
+                        ...o, 
+                        total: parseFloat(o.total), 
+                        payment_method: o.payment_method === 'cash' ? 'efectivo' : 
+                                       o.payment_method === 'card' ? 'tarjeta' : 
+                                       o.payment_method === 'usd_cash' ? 'dolares' : 
+                                       o.payment_method,
+                        is_order: true
+                    }))];
                 }
             } else {
                 const lastDayCut = await cashCutService.getLastDayCut();
-                startTime = lastDayCut ? lastDayCut.end_time : new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
-                sales = await salesService.getSalesSince(startTime, null);
+                startTime = lastDayCut?.end_time || new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+                
+                console.log(`[CashCut] Fetching day summary since: ${startTime}`);
+
+                const cloudSales = await salesService.getSalesSince(startTime, null);
+                const cloudOrders = await orderService.getOrdersSince(startTime);
+                
+                sales = [
+                    ...cloudSales, 
+                    ...cloudOrders.map(o => ({
+                        ...o, 
+                        total: parseFloat(o.total), 
+                        payment_method: o.payment_method === 'cash' ? 'efectivo' : 
+                                       o.payment_method === 'card' ? 'tarjeta' : 
+                                       o.payment_method === 'usd_cash' ? 'dolares' : 
+                                       o.payment_method,
+                        is_order: true
+                    }))
+                ];
             }
 
+            // --- FUSIÓN CON VENTAS OFFLINE (LOCALES) ---
+            try {
+                // Obtener ventas que aún no se han subido a la nube
+                const localSales = await salesService.getLocalPendingSales();
+                
+                if (localSales.length > 0) {
+                    const currentTerminalId = terminalService.getTerminalId();
+                    
+                    const filteredLocalSales = localSales.filter(localSale => {
+                        const saleDate = new Date(localSale.created_at);
+                        const sessionStart = new Date(startTime);
+                        
+                        // 1. Debe ser posterior al inicio del turno/día
+                        if (saleDate < sessionStart) return false;
+
+                        // 2. Si es corte de turno, debe coincidir la terminal
+                        if (cutType === 'turno') {
+                            // Si la venta local tiene terminal_id, comparamos
+                            if (localSale.terminal_id && currentTerminalId) {
+                                return localSale.terminal_id === currentTerminalId;
+                            }
+                        }
+                        return true;
+                    });
+
+                    console.log(`[CashCut] Agregando ${filteredLocalSales.length} ventas locales al corte.`);
+                    sales = [...sales, ...filteredLocalSales];
+                    
+                    // Re-ordenar por fecha
+                    sales.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                }
+            } catch (e) {
+                console.warn('[CashCut] No se pudieron cargar ventas offline:', e);
+            }
+            // ------------------------------------------
+
+            // ------------------------------------------
+
+            // RECALCULAR TOTALES con la lista unificada
             const salesCount = sales.length;
             const salesTotal = sales.reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0);
 

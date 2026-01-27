@@ -107,3 +107,31 @@
     opacity: 0.7;
     cursor: not-allowed;
 }
+
+/* Mejoras para la visibilidad de la configuración de impresora */
+.printer-config-section input[type="number"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    margin: 0;
+}
+
+/* Forzar que las flechas selectoras sean visibles y contrastadas */
+.printer-config-section input[type="number"]::-webkit-inner-spin-button,
+.printer-config-section input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1 !important;
+    height: 30px;
+    cursor: pointer;
+}
+
+/* Color negro intenso para el texto de selección */
+.printer-config-section select, 
+.printer-config-section select option {
+    color: #000 !important;
+    font-weight: 800 !important;
+}
+
+.printer-config-section label {
+    color: #000 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}

@@ -102,6 +102,35 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Actualizar datos del perfil (ej. PIN Maestro)
+    const updateProfile = async (updates) => {
+        if (!user) return;
+        
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('id', user.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        setProfile(data);
+        return data;
+    };
+
+    const verifyMasterPin = async (pin) => {
+        if (!profile?.master_pin) {
+            // Si no hay PIN configurado, permitimos el acceso pero avisamos
+            return { success: true, warning: 'PIN no configurado' };
+        }
+        return { success: profile.master_pin === pin };
+    };
+
+    const verifyRecoveryCode = async (code) => {
+        if (!profile?.recovery_code) return false;
+        return profile.recovery_code === code;
+    };
+
     // Login del dueño con email/password
     const login = async (email, password) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -262,6 +291,11 @@ export const AuthProvider = ({ children }) => {
         lockScreen,            // Bloquear pantalla
         unlockAsOwner,         // Desbloquear como propietario
 
+        // Seguridad Avanzada 2026
+        updateProfile,         // Actualizar datos del perfil
+        verifyMasterPin,       // Validar PIN Maestro
+        verifyRecoveryCode,    // Validar Código de Recuperación
+
         // Sistema de sesión de caja (fondo de caja)
         cashSession,           // Sesión de caja activa
         needsCashFund,         // Si necesita ingresar fondo de caja
@@ -270,7 +304,8 @@ export const AuthProvider = ({ children }) => {
         closeCashSession,      // Cerrar sesión de caja
 
         // Info de la tienda
-        storeName: profile?.store_name
+        storeName: profile?.store_name,
+        masterPinConfigured: !!profile?.master_pin
 
     };
 

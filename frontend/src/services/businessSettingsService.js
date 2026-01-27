@@ -37,6 +37,9 @@ export const businessSettingsService = {
                     phone: settingsData.phone,
                     logo_url: settingsData.logo_url,
                     ticket_message: settingsData.ticket_message,
+                    printer_width: settingsData.printer_width || 80,
+                    printer_font_size: settingsData.printer_font_size || 12,
+                    printer_margin: settingsData.printer_margin || 0,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', existingSettings.id)
@@ -54,7 +57,10 @@ export const businessSettingsService = {
                     address: settingsData.address,
                     phone: settingsData.phone,
                     logo_url: settingsData.logo_url,
-                    ticket_message: settingsData.ticket_message
+                    ticket_message: settingsData.ticket_message,
+                    printer_width: settingsData.printer_width || 80,
+                    printer_font_size: settingsData.printer_font_size || 12,
+                    printer_margin: settingsData.printer_margin || 0
                 }])
                 .select()
                 .single();

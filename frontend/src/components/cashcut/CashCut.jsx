@@ -3,6 +3,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { cashCutService } from '../../services/cashCutService';
 import { salesService } from '../../services/salesService';
 import { terminalService } from '../../services/terminalService';
+import { businessSettingsService } from '../../services/businessSettingsService';
+import TicketCorte from './TicketCorte';
 import Swal from 'sweetalert2';
 import './CashCut.css';
 
@@ -18,12 +20,10 @@ export const CashCut = ({ onClose }) => {
     const [submitting, setSubmitting] = useState(false);
     const [showTicket, setShowTicket] = useState(false);
     const [cutResult, setCutResult] = useState(null);
-
+    const [settings, setSettings] = useState(null);
     const ticketRef = useRef(null);
 
-    useEffect(() => {
-        loadSummary();
-    }, []);
+    // El resumen se carga mediante el efecto dependiente de cutType definido más abajo
 
     const loadSummary = async () => {
         try {
@@ -183,6 +183,7 @@ export const CashCut = ({ onClose }) => {
                 differenceUSD: diffUSD,
                 cardTotal: summary.cardTotal,
                 transferTotal: summary.transferTotal,
+                opening_fund: parseFloat(cashSession?.opening_fund) || 0,
                 notes
             };
 
@@ -211,44 +212,35 @@ export const CashCut = ({ onClose }) => {
     const handlePrint = () => {
         if (!ticketRef.current) return;
 
-        const printWindow = window.open('', '', 'width=400,height=600');
-        printWindow.document.write('<html><head><title>Corte de Caja</title>');
+        const printContent = ticketRef.current.innerHTML;
+        const printWindow = window.open('', '', 'width=800,height=600');
         printWindow.document.write(`
-            <style>
-                body { 
-                    font-family: 'Courier New', monospace; 
-                    padding: 10px; 
-                    max-width: 300px;
-                    margin: 0 auto;
-                    font-size: 11px;
-                }
-                .ticket-header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; }
-                .store-name { font-size: 16px; font-weight: bold; }
-                .ticket-title { font-size: 13px; margin-top: 5px; }
-                .section { margin: 10px 0; padding: 10px 0; border-bottom: 1px dashed #000; }
-                .row { display: flex; justify-content: space-between; margin: 3px 0; }
-                .label { color: #666; }
-                .value { font-weight: bold; }
-                .total-row { font-size: 13px; font-weight: bold; margin-top: 10px; }
-                .sales-list { font-size: 10px; }
-                .sale-item { padding: 8px 0; border-bottom: 1px dotted #999; margin-bottom: 5px; }
-                .sale-header-row { background: #f0f0f0; padding: 3px 5px; margin-bottom: 3px; }
-                .product-row { display: flex; justify-content: space-between; padding: 2px 0; padding-left: 10px; font-size: 10px; }
-                .product-name { color: #333; }
-                .product-price { font-weight: 500; }
-                .sale-total-row { border-top: 1px solid #ccc; margin-top: 5px; padding-top: 5px; font-size: 11px; }
-                .footer { text-align: center; margin-top: 15px; font-size: 10px; color: #666; }
-                .difference-positive { color: green; }
-                .difference-negative { color: red; }
-            </style>
+            <html>
+                <head>
+                    <title>Corte de Caja - ${cutType === 'dia' ? 'Cierre de Día' : 'Corte de Turno'}</title>
+                    <style>
+                        body { 
+                            margin: 0; 
+                            padding: 0; 
+                            display: flex; 
+                            justify-content: center;
+                        }
+                        @media print {
+                            body { width: 100%; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent}
+                </body>
+            </html>
         `);
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(ticketRef.current.innerHTML);
-        printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
     };
 
     const handleFinish = async () => {
@@ -281,6 +273,19 @@ export const CashCut = ({ onClose }) => {
         loadSummary();
     }, [cutType]);
 
+    useEffect(() => {
+        loadSettings();
+    }, []);
+
+    const loadSettings = async () => {
+        try {
+            const data = await businessSettingsService.getSettings();
+            setSettings(data);
+        } catch (error) {
+            console.error('Error cargando configuración:', error);
+        }
+    };
+
     if (loading && !summary) {
         return (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[1050] p-4">
@@ -310,75 +315,13 @@ export const CashCut = ({ onClose }) => {
                     </div>
 
                     <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50 dark:bg-slate-950/20">
-                        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 font-mono text-sm" ref={ticketRef}>
-                            <div className="text-center border-b-2 border-dashed border-slate-200 dark:border-slate-700 pb-6 mb-6">
-                                <div className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{storeName || 'MI TIENDA'}</div>
-                                <div className="text-[10px] mt-1 text-slate-500 font-sans uppercase tracking-[0.2em] font-bold">
-                                    {cutType === 'dia' ? 'CIERRE FINAL DEL DÍA' : 'CORTE DE TURNO'}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-y-2 mb-6 text-slate-600 dark:text-slate-400 border-b border-dashed border-slate-200 dark:border-slate-700 pb-6">
-                                <span>Fecha:</span> <span className="text-right font-bold text-slate-900 dark:text-white">{formatDate(cutResult.endTime)}</span>
-                                <span>Hora:</span> <span className="text-right font-bold text-slate-900 dark:text-white">{new Date(cutResult.endTime).toLocaleTimeString('es-MX')}</span>
-                                <span>Operador:</span> <span className="text-right font-bold text-slate-900 dark:text-white truncate ml-4">{cutResult.staffName}</span>
-                            </div>
-
-                            <div className="space-y-3 mb-6">
-                                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg">
-                                    <span className="text-xs uppercase font-bold text-slate-400">Fondo Inicial:</span>
-                                    <span className="font-bold">{formatMoney(parseFloat(cashSession?.opening_fund) || 0)}</span>
-                                </div>
-                                <div className="flex justify-between items-center p-3">
-                                    <span className="text-xs uppercase font-bold text-slate-400">Total Ventas ({cutResult.salesCount}):</span>
-                                    <span className="font-bold">{formatMoney(cutResult.salesTotal)}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/20">
-                                    <span className="text-xs uppercase font-bold text-emerald-600 dark:text-emerald-400">Total Esperado (MXN):</span>
-                                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{formatMoney(cutResult.expectedCash)}</span>
-                                </div>
-                                {cutResult.expectedUSD > 0 && (
-                                    <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg border border-blue-100 dark:border-blue-900/20">
-                                        <span className="text-xs uppercase font-bold text-blue-600 dark:text-blue-400">Total Esperado (USD):</span>
-                                        <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{formatMoney(cutResult.expectedUSD, 'USD')}</span>
-                                    </div>
-                                )}
-                                {cutResult.cardTotal > 0 && (
-                                    <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/20">
-                                        <span className="text-xs uppercase font-bold text-indigo-600 dark:text-indigo-400">Ventas Tarjeta:</span>
-                                        <span className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{formatMoney(cutResult.cardTotal)}</span>
-                                    </div>
-                                )}
-                                {cutResult.transferTotal > 0 && (
-                                    <div className="flex justify-between items-center bg-purple-50 dark:bg-purple-900/10 p-3 rounded-lg border border-purple-100 dark:border-purple-900/20">
-                                        <span className="text-xs uppercase font-bold text-purple-600 dark:text-purple-400">Ventas Transferencia:</span>
-                                        <span className="font-bold text-purple-600 dark:text-purple-400 text-lg">{formatMoney(cutResult.transferTotal)}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="pt-4 border-t-2 border-dashed border-slate-200 dark:border-slate-700 text-center space-y-2">
-                                <div className="flex justify-between text-slate-900 dark:text-white font-bold">
-                                    <span>EFECTIVO MXN:</span>
-                                    <span>{formatMoney(cutResult.actualCash || 0)}</span>
-                                </div>
-                                <div className={`flex justify-between font-black text-lg ${cutResult.difference === 0 ? 'text-slate-900 dark:text-white' : cutResult.difference > 0 ? 'text-blue-500' : 'text-red-500'}`}>
-                                    <span>DIFERENCIA MXN:</span>
-                                    <span>{cutResult.difference === 0 ? 'CORRECTO' : formatMoney(cutResult.difference)}</span>
-                                </div>
-                                {cutResult.expectedUSD > 0 && (
-                                    <>
-                                        <div className="flex justify-between text-slate-900 dark:text-white font-bold mt-2 pt-2 border-t border-dotted border-slate-300">
-                                            <span>EFECTIVO USD:</span>
-                                            <span>{formatMoney(cutResult.actualUSD || 0, 'USD')}</span>
-                                        </div>
-                                        <div className={`flex justify-between font-black text-lg ${cutResult.differenceUSD === 0 ? 'text-slate-900 dark:text-white' : cutResult.differenceUSD > 0 ? 'text-blue-500' : 'text-red-500'}`}>
-                                            <span>DIFERENCIA USD:</span>
-                                            <span>{cutResult.differenceUSD === 0 ? 'CORRECTO' : formatMoney(cutResult.differenceUSD, 'USD')}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                        <div className="flex justify-center">
+                            <TicketCorte 
+                                cutResult={cutResult} 
+                                settings={settings} 
+                                cutType={cutType} 
+                                ref={ticketRef} 
+                            />
                         </div>
                     </div>
 

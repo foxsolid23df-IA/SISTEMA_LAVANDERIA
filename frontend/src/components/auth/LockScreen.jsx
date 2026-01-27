@@ -7,7 +7,7 @@ import './LockScreen.css';
 export const LockScreen = () => {
     const [pin, setPin] = useState('');
     const [isValidating, setIsValidating] = useState(false);
-    const { loginWithPin, unlockAsOwner, storeName, logout, user } = useAuth();
+    const { loginWithPin, unlockAsOwner, storeName, logout, user, verifyMasterPin, verifyRecoveryCode } = useAuth();
     const containerRef = React.useRef(null);
 
     // Auto-enfocar el contenedor al montar para habilitar teclado de inmediato
@@ -81,86 +81,132 @@ export const LockScreen = () => {
     };
 
     const handleOwnerAccess = async () => {
-        // Pedir contraseña para verificar identidad
+        // 1. Intentar acceso con PIN Maestro primero si está configurado
+        const { value: masterPin } = await Swal.fire({
+            title: '👑 Acceso Propietario',
+            text: 'Ingresa tu PIN Maestro de 6 dígitos',
+            input: 'password',
+            inputAttributes: {
+                maxlength: 6,
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            },
+            inputPlaceholder: 'PIN Maestro',
+            showCancelButton: true,
+            confirmButtonText: 'Validar PIN',
+            cancelButtonText: 'Usar Contraseña',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b'
+        });
+
+        // Si canceló o cerró el modal
+        if (masterPin === undefined) return;
+
+        // Si pulsó "Usar Contraseña" (masterPin será null o vacío si no escribió nada y cerró, 
+        // pero Swal devuelve false o undefined dependiendo de como se cierre)
+        // En este caso, si no hay PIN, vamos al flujo de contraseña
+        if (!masterPin) {
+            return await handleOwnerAccessWithPassword();
+        }
+
+        const result = await verifyMasterPin(masterPin);
+        
+        if (result.success) {
+            unlockAsOwner();
+            Swal.fire({
+                title: '¡Bienvenido, Propietario!',
+                text: result.warning || '',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire('PIN Incorrecto', 'El PIN Maestro no es válido.', 'error');
+        }
+    };
+
+    const handleOwnerAccessWithPassword = async () => {
         const { value: password } = await Swal.fire({
-            title: '🔐 Acceso de Propietario',
+            title: '🔐 Acceso por Contraseña',
             html: `
                 <p style="margin-bottom: 15px; color: #666;">
-                    Por seguridad, ingresa tu contraseña de cuenta
+                    Ingresa tu contraseña de cuenta (Supabase)
                 </p>
-                <p style="font-size: 12px; color: #999;">
-                    Email: ${user?.email || 'usuario@email.com'}
+                <p style="font-size: 11px; color: #ef4444; font-weight: bold;">
+                    ⚠️ Se recomienda configurar un PIN Maestro en Configuración para evitar usar tu contraseña principal.
                 </p>
             `,
             input: 'password',
             inputPlaceholder: 'Tu contraseña',
             showCancelButton: true,
             confirmButtonText: 'Verificar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#10b981',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'Debes ingresar tu contraseña';
-                }
-            }
+            cancelButtonText: 'Cancelar'
         });
 
         if (!password) return;
 
-        // Mostrar loading
-        Swal.fire({
-            title: 'Verificando...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+        Swal.fire({ title: 'Verificando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
         try {
-            // Verificar contraseña con Supabase
             const { error } = await supabase.auth.signInWithPassword({
                 email: user?.email,
                 password: password
             });
 
             if (error) {
-                Swal.fire({
-                    title: 'Contraseña incorrecta',
-                    text: 'La contraseña no es válida. Intenta de nuevo.',
-                    icon: 'error'
-                });
+                Swal.fire('Error', 'Contraseña incorrecta.', 'error');
                 return;
             }
 
-            // Contraseña correcta - desbloquear
             unlockAsOwner();
-            Swal.fire({
-                title: '¡Bienvenido, Propietario!',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            Swal.fire({ title: 'Acceso Concedido', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (error) {
-            console.error('Error verificando contraseña:', error);
-            Swal.fire('Error', 'No se pudo verificar la contraseña', 'error');
+            Swal.fire('Error', 'No se pudo verificar la identidad.', 'error');
         }
     };
 
     const handleLogout = async () => {
-        // Pedir contraseña para confirmar cierre de sesión maestro
-        const { value: password } = await Swal.fire({
-            title: '🚪 Cerrar Sesión Maestra',
-            text: 'Para desvincular este dispositivo, ingresa tu contraseña de Propietario.',
+        const { value: credential, dismiss } = await Swal.fire({
+            title: '🚪 Desvincular Tienda',
+            text: 'Ingresa tu PIN Maestro o Código de Recuperación',
             input: 'password',
-            inputPlaceholder: 'Tu contraseña de cuenta',
+            inputPlaceholder: 'PIN o Código',
             showCancelButton: true,
             confirmButtonText: 'Confirmar Cierre',
-            cancelButtonText: 'Cancelar',
+            cancelButtonText: 'Usar Contraseña',
+            confirmButtonColor: '#ef4444'
+        });
+
+        if (dismiss === Swal.DismissReason.cancel) {
+            return await handleLogoutWithPassword();
+        }
+
+        if (!credential) return;
+
+        const isPinValid = (await verifyMasterPin(credential)).success;
+        const isRecoveryValid = await verifyRecoveryCode(credential);
+
+        if (isPinValid || isRecoveryValid) {
+            logout();
+            Swal.fire({ title: 'Sesión Finalizada', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire('Error', 'Credencial inválida. No se puede desvincular el equipo.', 'error');
+        }
+    };
+
+    const handleLogoutWithPassword = async () => {
+        const { value: password } = await Swal.fire({
+            title: '🚪 Desvincular con Contraseña',
+            text: 'Usa tu contraseña maestra para desvincular este dispositivo.',
+            input: 'password',
+            inputPlaceholder: 'Contraseña de cuenta',
+            showCancelButton: true,
+            confirmButtonText: 'Desvincular Ahora',
             confirmButtonColor: '#ef4444'
         });
 
         if (!password) return;
 
-        Swal.fire({ title: 'Cerrando sesión...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
         try {
             const { error } = await supabase.auth.signInWithPassword({
                 email: user?.email,
@@ -168,14 +214,14 @@ export const LockScreen = () => {
             });
 
             if (error) {
-                Swal.fire('Error', 'Contraseña incorrecta. No se puede cerrar la sesión maestra.', 'error');
+                Swal.fire('Error', 'Contraseña incorrecta.', 'error');
                 return;
             }
 
             logout();
             Swal.fire({ title: 'Sesión Finalizada', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch (error) {
-            Swal.fire('Error', 'No se pudo verificar la identidad.', 'error');
+            Swal.fire('Error', 'Ocurrió un error inesperado.', 'error');
         }
     };
 

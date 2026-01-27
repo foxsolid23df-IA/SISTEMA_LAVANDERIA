@@ -1,27 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Inventory.css';
 import { productService } from '../../services/productService';
-import CameraScanner from '../common/CameraScanner';
-import { validarCodigoBarras } from '../../utils';
 import Swal from 'sweetalert2';
-import * as XLSX from 'xlsx';
-import BulkImportModal from './BulkImportModal';
 import { useProducts } from '../../contexts/ProductContext';
 
 // Icons
-import {
-    FiPlus,
-    FiSearch,
-    FiEdit2,
-    FiTrash2,
-    FiX,
-    FiSave,
-    FiUploadCloud,
-    FiImage,
-    FiMoreVertical,
-    FiFilter,
-    FiSettings, // Aseguramos que esté importado
-    FiDownload
+import * as XLSX from 'xlsx';
+import { 
+    FiPlus, 
+    FiEdit2, 
+    FiTrash2, 
+    FiX, 
+    FiSave, 
+    FiMoreVertical, 
+    FiFilter, 
+    FiSettings,
+    FiDownload,
+    FiUpload
 } from 'react-icons/fi';
 
 const Inventory = () => {
@@ -44,36 +39,24 @@ const Inventory = () => {
     const [showFiltersModal, setShowFiltersModal] = useState(false);
     const [filters, setFilters] = useState({
         category: 'all',
-        stockStatus: 'all', // all, low, medium, high
         minPrice: '',
         maxPrice: ''
     });
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
-    const [showImportModal, setShowImportModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
         name: '',
-        barcode: '',
         price: '',
-        cost_price: '',
-        wholesale_price: '',
-        stock: '',
-        min_stock: '',
-        image: '',
-        category: ''
+        category: '',
+        pricing_type: 'unit'
     });
 
-    // Image Upload State
-    const [previewImage, setPreviewImage] = useState(null);
-    const [dragActive, setDragActive] = useState(false);
-    const fileInputRef = useRef(null);
-
-    // Camera Scanner State
-    const [mostrarCameraScanner, setMostrarCameraScanner] = useState(false);
+    // Modal State de Semilla
+    const [isSeeding, setIsSeeding] = useState(false);
 
     // Categories Management State
     const [showCategoriesModal, setShowCategoriesModal] = useState(false);
@@ -92,8 +75,6 @@ const Inventory = () => {
         }
     }, []);
 
-
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -105,36 +86,22 @@ const Inventory = () => {
     const resetForm = () => {
         setFormData({
             name: '',
-            barcode: '',
             price: '',
-            cost_price: '',
-            wholesale_price: '',
-            stock: '',
-            min_stock: '',
-            image: '',
-            category: ''
+            category: '',
+            pricing_type: 'unit'
         });
-        setPreviewImage(null);
         setEditingProduct(null);
     };
 
     const handleOpenModal = (product = null) => {
         if (product) {
             setEditingProduct(product);
-            // Obtener categoría del producto o inferirla del nombre
-            const productCategory = product.category || getCategory(product.name).name;
             setFormData({
                 name: product.name,
-                barcode: product.barcode || '',
                 price: product.price,
-                cost_price: product.cost_price || '',
-                wholesale_price: product.wholesale_price || '',
-                stock: product.stock,
-                min_stock: product.min_stock || '',
-                image: product.image_url || '',
-                category: productCategory
+                category: product.category || 'General',
+                pricing_type: product.pricing_type || 'unit'
             });
-            setPreviewImage(product.image_url || null);
         } else {
             resetForm();
         }
@@ -146,109 +113,43 @@ const Inventory = () => {
         resetForm();
     };
 
-    const processImage = (file) => {
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            Swal.fire('Error', 'El archivo debe ser una imagen', 'error');
-            return;
-        }
-
-        const maxSize = 2 * 1024 * 1024; // 2MB
-        if (file.size > maxSize) {
-            Swal.fire('Error', 'La imagen no debe superar los 2MB', 'error');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result;
-            // Basic optimization: if string is too long, we might warn, but for now we trust the limit
-            setPreviewImage(base64String);
-            setFormData(prev => ({ ...prev, image: base64String }));
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            processImage(e.dataTransfer.files[0]);
-        }
-    };
-
-    const handleFileSelect = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            processImage(e.target.files[0]);
-        }
-    };
-
-    const removeImage = (e) => {
-        e.stopPropagation();
-        setPreviewImage(null);
-        setFormData(prev => ({ ...prev, image: '' }));
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.name || !formData.price || !formData.stock || !formData.category) {
-            Swal.fire('Error', 'Por favor completa todos los campos obligatorios (incluyendo categoría)', 'warning');
+        if (!formData.name || !formData.price || !formData.category) {
+            Swal.fire('Error', 'Por favor completa todos los campos obligatorios', 'warning');
             return;
         }
 
         try {
-            // Si no se seleccionó categoría, inferirla del nombre
-            const category = formData.category || getCategory(formData.name).name;
-            
             const productData = {
                 name: formData.name,
-                barcode: formData.barcode,
                 price: parseFloat(formData.price),
-                cost_price: parseFloat(formData.cost_price || 0),
-                wholesale_price: parseFloat(formData.wholesale_price || 0),
-                stock: parseInt(formData.stock),
-                min_stock: parseInt(formData.min_stock || 0),
-                image: formData.image,
-                category: category
+                stock: 9999, // Stock infinito para servicios
+                category: formData.category,
+                pricing_type: formData.pricing_type || 'unit'
             };
 
             if (editingProduct) {
                 await productService.updateProduct(editingProduct.id, productData);
-                Swal.fire('Actualizado', 'Producto actualizado correctamente', 'success');
+                Swal.fire('Actualizado', 'Servicio actualizado correctamente', 'success');
             } else {
                 await productService.createProduct(productData);
-                Swal.fire('Creado', 'Producto creado correctamente', 'success');
+                Swal.fire('Creado', 'Servicio creado correctamente', 'success');
             }
 
             handleCloseModal();
             fetchProducts();
         } catch (error) {
             console.error('Error saving product:', error);
-            Swal.fire('Error', 'Error al guardar el producto', 'error');
+            Swal.fire('Error', 'Error al guardar el servicio', 'error');
         }
     };
 
     const handleDelete = async (id) => {
         const result = await Swal.fire({
             title: '¿Estás seguro?',
-            text: "No podrás revertir esto",
+            text: "Se eliminará este servicio del catálogo",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -260,360 +161,254 @@ const Inventory = () => {
         if (result.isConfirmed) {
             try {
                 await productService.deleteProduct(id);
-                Swal.fire('Eliminado', 'Producto eliminado', 'success');
+                Swal.fire('Eliminado', 'Servicio eliminado', 'success');
                 fetchProducts();
             } catch (error) {
                 console.error('Error deleting product:', error);
-                Swal.fire('Error', 'No se pudo eliminar el producto', 'error');
+                Swal.fire('Error', 'No se pudo eliminar el servicio', 'error');
             }
         }
     };
 
-    // Manejar escaneo de cámara
-    const manejarEscaneoCamara = (codigo) => {
-        const codigoLimpio = codigo.trim();
+    const handleExportExcel = () => {
+        try {
+            const dataToExport = filteredProducts.map(p => ({
+                'Servicio': p.name,
+                'Categoría': p.category || 'General',
+                'Precio': p.price,
+                'Tipo de Cobro': p.pricing_type === 'kg' ? 'Por Kilo' : 'Por Unidad'
+            }));
 
-        if (!codigoLimpio) return;
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Servicios");
+            
+            // Auto-ajustar ancho de columnas
+            const maxWidths = [
+                { wch: 40 }, // Servicio
+                { wch: 20 }, // Categoría
+                { wch: 10 }, // Precio
+                { wch: 15 }  // Tipo de Cobro
+            ];
+            worksheet['!cols'] = maxWidths;
 
-        // Validar formato de código de barras
-        if (!validarCodigoBarras(codigoLimpio)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Código inválido',
-                text: 'El código escaneado no tiene un formato válido.',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            return;
+            XLSX.writeFile(workbook, "Catalogo_Servicios_Lavanderia.xlsx");
+        } catch (error) {
+            console.error('Error exporting excel:', error);
+            Swal.fire('Error', 'No se pudo exportar el archivo Excel', 'error');
         }
-
-        // Actualizar el campo de código de barras en el formulario
-        setFormData(prev => ({
-            ...prev,
-            barcode: codigoLimpio
-        }));
-
-        // Mostrar confirmación
-        Swal.fire({
-            icon: 'success',
-            title: 'Código escaneado',
-            text: `Código de barras: ${codigoLimpio}`,
-            timer: 1500,
-            showConfirmButton: false
-        });
     };
 
-    // Función para determinar categoría basada en el nombre del producto
-    const getCategory = (productName) => {
-        const name = productName.toLowerCase();
-        if (name.includes('leche') || name.includes('queso') || name.includes('yogur') || name.includes('lácteo')) {
-            return { name: 'Lácteos', color: 'blue' };
-        }
-        if (name.includes('pan') || name.includes('tortilla') || name.includes('panadería')) {
-            return { name: 'Panadería', color: 'amber' };
-        }
-        if (name.includes('bebida') || name.includes('refresco') || name.includes('agua') || name.includes('jugo') || name.includes('coca') || name.includes('pepsi')) {
-            return { name: 'Bebidas', color: 'purple' };
-        }
-        if (name.includes('fruta') || name.includes('verdura') || name.includes('aguacate') || name.includes('manzana') || name.includes('plátano')) {
-            return { name: 'Frutas', color: 'green' };
-        }
-        if (name.includes('limpieza') || name.includes('jabón') || name.includes('detergente') || name.includes('shampoo')) {
-            return { name: 'Limpieza', color: 'gray' };
-        }
-        return { name: 'General', color: 'gray' };
-    };
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    // Función para generar SKU basado en barcode o ID
-    const getSKU = (product) => {
-        if (product.barcode) {
-            return product.barcode;
-        }
-        // Si no hay barcode, generar SKU desde ID y categoría
-        const categoryCode = getCategory(product.name).name.substring(0, 3).toUpperCase();
-        return `${categoryCode}-${product.id.toString().padStart(5, '0')}`;
-    };
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
 
-    // Función para obtener descripción corta del producto
-    const getDescription = (product) => {
-        // Intentar extraer información del nombre o usar valores por defecto
-        const name = product.name.toLowerCase();
-        if (name.includes('1 litro') || name.includes('1l') || name.includes('litro')) return '1 Litro • Tetrapak';
-        if (name.includes('600ml') || name.includes('600 ml')) return '600ml • Botella';
-        if (name.includes('grande')) return 'Grande • Blanco';
-        if (name.includes('kg') || name.includes('kilogramo')) return 'Kg • Fresco';
-        if (name.includes('400g') || name.includes('400 g')) return '400g • Barra';
-        return 'Unidad';
-    };
+                if (data.length === 0) {
+                    Swal.fire('Error', 'El archivo está vacío', 'error');
+                    return;
+                }
 
-    // Función para obtener estado de stock
-    const getStockStatus = (stock) => {
-        if (stock < 5) return { color: 'red', pulse: true };
-        if (stock < 15) return { color: 'yellow', pulse: false };
-        return { color: 'emerald', pulse: false };
-    };
+                // Validar columnas
+                const firstRow = data[0];
+                const requiredColumns = ['Servicio', 'Categoría', 'Precio', 'Tipo de Cobro'];
+                const missingColumns = requiredColumns.filter(col => !Object.keys(firstRow).includes(col));
 
-    // Aplicar filtros y búsqueda
-    const filteredProducts = products.filter(product => {
-        // Filtro de búsqueda
-        const matchesSearch = 
-            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.barcode && product.barcode.includes(searchTerm)) ||
-            getSKU(product).toLowerCase().includes(searchTerm.toLowerCase());
+                if (missingColumns.length > 0) {
+                    Swal.fire('Error', `Faltan las siguientes columnas: ${missingColumns.join(', ')}`, 'error');
+                    return;
+                }
 
-        if (!matchesSearch) return false;
+                const servicesToImport = data.map(item => ({
+                    name: item['Servicio'],
+                    category: item['Categoría'],
+                    price: parseFloat(item['Precio']),
+                    pricing_type: item['Tipo de Cobro']?.toString().toLowerCase().includes('kilo') ? 'kg' : 'unit',
+                    stock: 9999
+                })).filter(s => s.name && !isNaN(s.price));
 
-        // Filtro de categoría
-        if (filters.category !== 'all') {
-            const productCategory = product.category || getCategory(product.name).name;
-            if (productCategory !== filters.category) return false;
-        }
+                const confirm = await Swal.fire({
+                    title: 'Confirmar Importación',
+                    text: `Se importarán ${servicesToImport.length} servicios al catálogo.`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Importar ahora',
+                    cancelButtonText: 'Revisar archivo'
+                });
 
-        // Filtro de stock
-        if (filters.stockStatus !== 'all') {
-            if (filters.stockStatus === 'low' && product.stock >= 5) return false;
-            if (filters.stockStatus === 'medium' && (product.stock < 5 || product.stock >= 15)) return false;
-            if (filters.stockStatus === 'high' && product.stock < 15) return false;
-        }
-
-        // Filtro de precio mínimo
-        if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
-
-        // Filtro de precio máximo
-        if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
-
-        return true;
-    });
-
-    // Obtener categorías únicas (predefinidas + personalizadas + de productos existentes)
-    const predefinedCategories = ['Lavandería', 'Cama y Hogar', 'Ventas Mostrador', 'General'];
-    const existingCategories = products.map(p => p.category || getCategory(p.name).name);
-    const allCategories = [...predefinedCategories, ...customCategories, ...existingCategories];
-    const uniqueCategories = Array.from(new Set(allCategories)).sort();
-
-    // Funciones para gestionar categorías personalizadas
-    const handleAddCategory = () => {
-        const trimmedName = newCategoryName.trim();
-        
-        if (!trimmedName) {
-            Swal.fire('Error', 'Por favor ingresa un nombre para la categoría', 'warning');
-            return;
-        }
-
-        if (uniqueCategories.includes(trimmedName)) {
-            Swal.fire('Error', 'Esta categoría ya existe', 'warning');
-            return;
-        }
-
-        const updatedCategories = [...customCategories, trimmedName];
-        setCustomCategories(updatedCategories);
-        localStorage.setItem('customCategories', JSON.stringify(updatedCategories));
-        setNewCategoryName('');
-        Swal.fire('Éxito', 'Categoría agregada correctamente', 'success');
-    };
-
-    const handleDeleteCategory = (categoryName) => {
-        /* Permite borrar cualquier categoría, incluso las del sistema si el usuario lo desea
-        // No permitir eliminar categorías predefinidas
-        if (predefinedCategories.includes(categoryName)) {
-            Swal.fire('Error', 'No se pueden eliminar las categorías predefinidas del sistema', 'warning');
-            return;
-        }
-        */
-
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: `¿Deseas eliminar la categoría "${categoryName}"?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const updatedCategories = customCategories.filter(cat => cat !== categoryName);
-                setCustomCategories(updatedCategories);
-                localStorage.setItem('customCategories', JSON.stringify(updatedCategories));
-                
-                // Si algún producto tenía esta categoría, limpiarla
-                Swal.fire('Éxito', 'Categoría eliminada correctamente', 'success');
-            }
-        });
-    };
-
-    // Paginación
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-    // Cerrar menú de acciones al hacer clic fuera
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (!event.target.closest('.actions-menu-container')) {
-                setActiveMenuId(null);
+                if (confirm.isConfirmed) {
+                    setIsSeeding(true);
+                    await productService.bulkCreateProducts(servicesToImport);
+                    Swal.fire('¡Éxito!', 'Servicios importados correctamente', 'success');
+                    fetchProducts();
+                }
+            } catch (error) {
+                console.error('Error importing excel:', error);
+                Swal.fire('Error', 'Hubo un error al procesar el archivo Excel. Asegúrate que el formato sea correcto.', 'error');
+            } finally {
+                setIsSeeding(false);
+                e.target.value = ''; // Reset input
             }
         };
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
+        reader.readAsBinaryString(file);
+    };
 
-    // Resetear página cuando cambia la búsqueda
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
+    const seedServices = async () => {
+        const services = [
+            {"name": "Carga (4 kg)", "price": 90, "stock": 9999, "category": "Lavado de Ropa", "pricing_type": "unit"},
+            {"name": "Kilo a partir de 5 kg", "price": 19, "stock": 9999, "category": "Lavado de Ropa", "pricing_type": "kg"},
+            {"name": "Servicio de secado (Carga 4 kg)", "price": 65, "stock": 9999, "category": "Lavado de Ropa", "pricing_type": "unit"},
+            {"name": "Carga toalla y sabanas (3kg)", "price": 90, "stock": 9999, "category": "Lavado de Ropa", "pricing_type": "unit"},
+            {"name": "Kilo a partir de 4 kg", "price": 30, "stock": 9999, "category": "Lavado de Ropa", "pricing_type": "kg"},
+            {"name": "Almohada Extra Grande", "price": 65, "stock": 9999, "category": "Blancos/Sabanas", "pricing_type": "unit"},
+            {"name": "Almohada grande", "price": 40, "stock": 9999, "category": "Blancos/Sabanas", "pricing_type": "unit"},
+            {"name": "Almohada mediana", "price": 30, "stock": 9999, "category": "Blancos/Sabanas", "pricing_type": "unit"},
+            {"name": "Almohada chica", "price": 25, "stock": 9999, "category": "Blancos/Sabanas", "pricing_type": "unit"},
+            {"name": "Bolsas", "price": 30, "stock": 9999, "category": "Varios", "pricing_type": "unit"},
+            {"name": "Chamarra grande", "price": 60, "stock": 9999, "category": "Prendas", "pricing_type": "unit"},
+            {"name": "Chamarra mediana", "price": 40, "stock": 9999, "category": "Prendas", "pricing_type": "unit"},
+            {"name": "Chamarra chica", "price": 25, "stock": 9999, "category": "Prendas", "pricing_type": "unit"},
+            {"name": "Cobertor especial", "price": 110, "stock": 9999, "category": "Cobertores", "pricing_type": "unit"},
+            {"name": "Cobertor sencillo", "price": 80, "stock": 9999, "category": "Cobertores", "pricing_type": "unit"},
+            {"name": "Colcha", "price": 100, "stock": 9999, "category": "Cama", "pricing_type": "unit"},
+            {"name": "Colcha pequeña", "price": 50, "stock": 9999, "category": "Cama", "pricing_type": "unit"},
+            {"name": "Cortina pza grande", "price": 70, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Cortina pza mediana", "price": 50, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Cortina pza chica", "price": 35, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Cubre colchón (Según tamaño)", "price": 100, "stock": 9999, "category": "Cama", "pricing_type": "unit"},
+            {"name": "Edredón (Matrimonial e individual)", "price": 150, "stock": 9999, "category": "Cama", "pricing_type": "unit"},
+            {"name": "Gorras", "price": 15, "stock": 9999, "category": "Accesorios", "pricing_type": "unit"},
+            {"name": "Hamaca", "price": 100, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Mantel grande", "price": 55, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Mantel mediano", "price": 40, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Mantel chico", "price": 35, "stock": 9999, "category": "Hogar", "pricing_type": "unit"},
+            {"name": "Peluches (Según tamaño desde)", "price": 25, "stock": 9999, "category": "Varios", "pricing_type": "unit"},
+            {"name": "Tapete grande (Según tamaño)", "price": 70, "stock": 9999, "category": "Tapetes", "pricing_type": "unit"},
+            {"name": "Tapete mediano", "price": 50, "stock": 9999, "category": "Tapetes", "pricing_type": "unit"},
+            {"name": "Tapete chico", "price": 35, "stock": 9999, "category": "Tapetes", "pricing_type": "unit"},
+            {"name": "Zarape", "price": 70, "stock": 9999, "category": "Prendas", "pricing_type": "unit"}
+        ];
 
-    // Detectar categoría automáticamente cuando se escribe el nombre
-    useEffect(() => {
-        if (formData.name && !formData.category && showModal) {
-            const detectedCategory = getCategory(formData.name).name;
-            // Solo auto-seleccionar si no hay categoría ya seleccionada
-            setFormData(prev => ({
-                ...prev,
-                category: detectedCategory
-            }));
-        }
-    }, [formData.name, showModal]);
+        const confirm = await Swal.fire({
+            title: 'Cargar Lista de Precios',
+            text: "¿Deseas cargar los servicios predefinidos de la lista de precios? Esto no eliminará tus servicios actuales.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cargar',
+            cancelButtonText: 'Cancelar'
+        });
 
-    // Función para exportar productos a Excel
-    const handleExport = () => {
-        try {
-            let data = [];
-            
-            if (filteredProducts.length > 0) {
-                // Si hay productos, los exportamos normalmente
-                data = filteredProducts.map(p => ({
-                    'Nombre': p.name,
-                    'Categoría': p.category || 'General',
-                    'Tipo_Cobro': p.pricing_type || 'unit',
-                    'Precio_Venta': parseFloat(p.price),
-                    'Precio_Costo': parseFloat(p.cost_price || 0),
-                    'Existencia': p.stock,
-                    'Stock_Minimo': p.min_stock || 0,
-                    'Codigo_Barras': p.barcode || '',
-                    'Descripcion': p.description || ''
-                }));
-            } else {
-                // Si NO hay productos, generamos una plantilla con ejemplos de Lavandería
-                data = [
-                    {
-                        'Nombre': 'SERVICIO: Lavado por Kilo (Ropa Color)',
-                        'Categoría': 'Lavandería',
-                        'Tipo_Cobro': 'kg',
-                        'Precio_Venta': 45.00,
-                        'Precio_Costo': 15.00,
-                        'Existencia': 9999,
-                        'Stock_Minimo': 0,
-                        'Codigo_Barras': '',
-                        'Descripcion': 'Lavado básico incluye detergente y suavizante'
-                    },
-                    {
-                        'Nombre': 'PRENDA: Edredón Matrimonial (Individual)',
-                        'Categoría': 'Cama y Hogar',
-                        'Tipo_Cobro': 'unit',
-                        'Precio_Venta': 180.00,
-                        'Precio_Costo': 40.00,
-                        'Existencia': 9999,
-                        'Stock_Minimo': 0,
-                        'Codigo_Barras': '',
-                        'Descripcion': 'Lavado y secado industrial'
-                    },
-                    {
-                        'Nombre': 'PRODUCTO: Suavizante de Telas 500ml',
-                        'Categoría': 'Ventas Mostrador',
-                        'Tipo_Cobro': 'unit',
-                        'Precio_Venta': 35.00,
-                        'Precio_Costo': 20.00,
-                        'Existencia': 15,
-                        'Stock_Minimo': 5,
-                        'Codigo_Barras': '750123456789',
-                        'Descripcion': 'Venta para uso externo'
-                    }
-                ];
+        if (confirm.isConfirmed) {
+            setIsSeeding(true);
+            try {
+                await productService.bulkCreateProducts(services);
+                Swal.fire('¡Éxito!', 'Catálogo de servicios actualizado correctamente', 'success');
+                fetchProducts();
+            } catch (error) {
+                console.error('Error seeding services:', error);
+                Swal.fire('Error', 'No se pudieron cargar los servicios', 'error');
+            } finally {
+                setIsSeeding(false);
             }
-
-            // Crear un libro de trabajo
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(data);
-
-            // Ajustar el ancho de las columnas para que se vea profesional
-            const columnWidths = [
-                { wch: 40 }, // Nombre
-                { wch: 15 }, // Categoría
-                { wch: 12 }, // Tipo_Cobro
-                { wch: 15 }, // Precio_Venta
-                { wch: 15 }, // Precio_Costo
-                { wch: 12 }, // Existencia
-                { wch: 12 }, // Stock_Minimo
-                { wch: 20 }, // Codigo_Barras
-                { wch: 40 }  // Descripcion
-            ];
-            ws['!cols'] = columnWidths;
-
-            XLSX.utils.book_append_sheet(wb, ws, 'Plantilla Inventario');
-
-            const title = filteredProducts.length > 0 ? 'inventario' : 'plantilla_lavanderia';
-            const fileName = `${title}_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-
-            const msg = filteredProducts.length > 0 
-                ? 'Inventario exportado correctamente' 
-                : 'Se descargó una plantilla con ejemplos de lavandería para que puedas llenarla';
-                
-            Swal.fire('¡Listo!', msg, 'success');
-        } catch (error) {
-            console.error('Error al exportar:', error);
-            Swal.fire('Error', 'No se pudo generar el archivo Excel', 'error');
         }
     };
 
-    // Funciones de filtros
     const handleFilterChange = (name, value) => {
         setFilters(prev => ({
             ...prev,
             [name]: value
         }));
-        setCurrentPage(1); // Reset a la primera página al cambiar filtros
+        setCurrentPage(1);
     };
 
     const handleClearFilters = () => {
         setFilters({
             category: 'all',
-            stockStatus: 'all',
             minPrice: '',
             maxPrice: ''
         });
         setCurrentPage(1);
     };
 
-    // Contar productos filtrados por categoría para mostrar en el modal
+    // Aplicar filtros y búsqueda
+    const filteredProducts = products.filter(product => {
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        if (!matchesSearch) return false;
+
+        if (filters.category !== 'all') {
+            if (product.category !== filters.category) return false;
+        }
+
+        if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
+        if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
+
+        return true;
+    });
+
+    // Obtener categorías únicas
+    const predefinedCategories = ['Lavado de Ropa', 'Cama', 'Cobertores', 'Hogar', 'Tapetes', 'Prendas', 'Blancos/Sabanas', 'Varios', 'Accesorios', 'General'];
+    const existingCategories = Array.from(new Set(products.map(p => p.category || 'General')));
+    const uniqueCategories = Array.from(new Set([...predefinedCategories, ...customCategories, ...existingCategories])).sort();
+
     const getFilterCount = () => {
         let count = 0;
         if (filters.category !== 'all') count++;
-        if (filters.stockStatus !== 'all') count++;
         if (filters.minPrice) count++;
         if (filters.maxPrice) count++;
         return count;
+    };
+
+    const handleAddCategory = () => {
+        const trimmedName = newCategoryName.trim();
+        if (!trimmedName || uniqueCategories.includes(trimmedName)) return;
+        const updatedCategories = [...customCategories, trimmedName];
+        setCustomCategories(updatedCategories);
+        localStorage.setItem('customCategories', JSON.stringify(updatedCategories));
+        setNewCategoryName('');
+    };
+
+    const handleDeleteCategory = (cat) => {
+        const updatedCategories = customCategories.filter(c => c !== cat);
+        setCustomCategories(updatedCategories);
+        localStorage.setItem('customCategories', JSON.stringify(updatedCategories));
     };
 
     return (
         <div className="inventory-page">
             <header className="inventory-header">
                 <div>
-                    <h1 className="inventory-title">Inventario</h1>
-                    <p className="inventory-subtitle">Gestiona el catálogo de productos y existencias</p>
+                    <h1 className="inventory-title">Catálogo de Servicios</h1>
+                    <p className="inventory-subtitle">Gestiona los servicios y precios de la lavandería</p>
                 </div>
-                <button 
-                    onClick={() => {
-                        document.documentElement.classList.toggle('dark');
-                        localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
-                >
-                    <span className="material-symbols-outlined text-[18px]">dark_mode</span>
-                    <span className="hidden sm:inline">Modo Oscuro</span>
-                </button>
+                <div className="flex gap-2 items-center">
+                    <button 
+                        onClick={seedServices}
+                        disabled={isSeeding}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">list_alt</span>
+                        <span className="hidden sm:inline">{isSeeding ? 'Cargando...' : 'Cargar Lista Precios'}</span>
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            document.documentElement.classList.toggle('dark');
+                            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">dark_mode</span>
+                        <span className="hidden sm:inline">Tema</span>
+                    </button>
+                </div>
             </header>
 
             <div className="inventory-content">
@@ -623,12 +418,37 @@ const Inventory = () => {
                         <input
                             type="text"
                             className="search-input"
-                            placeholder="Buscar por nombre, SKU o categoría..."
+                            placeholder="Buscar servicio..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <div className="control-buttons">
+                        <button 
+                            className="control-btn"
+                            onClick={handleExportExcel}
+                            title="Exportar a Excel"
+                        >
+                            <FiDownload className="btn-icon" />
+                            <span className="hidden md:inline">Exportar</span>
+                        </button>
+
+                        <button 
+                            className="control-btn"
+                            onClick={() => document.getElementById('excel-import-input').click()}
+                            title="Importar desde Excel"
+                        >
+                            <FiUpload className="btn-icon" />
+                            <span className="hidden md:inline">Importar</span>
+                            <input 
+                                id="excel-import-input"
+                                type="file" 
+                                accept=".xlsx, .xls" 
+                                onChange={handleImportExcel} 
+                                style={{ display: 'none' }} 
+                            />
+                        </button>
+
                         <button 
                             className={`control-btn ${getFilterCount() > 0 ? 'has-filters' : ''}`}
                             onClick={() => setShowFiltersModal(true)}
@@ -639,92 +459,55 @@ const Inventory = () => {
                                 <span className="filter-badge">{getFilterCount()}</span>
                             )}
                         </button>
-                        <button className="control-btn" onClick={handleExport}>
-                            <FiDownload className="btn-icon" />
-                            Exportar
-                        </button>
-                        <button className="control-btn" onClick={() => setShowImportModal(true)}>
-                            <FiUploadCloud className="btn-icon" />
-                            Importar Excel
-                        </button>
                         <button className="control-btn primary" onClick={() => handleOpenModal()}>
                             <FiPlus className="btn-icon" />
-                            Agregar Producto
+                            Nuevo Servicio
                         </button>
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="loading-state">Cargando inventario...</div>
+                    <div className="loading-state">Cargando catálogo...</div>
                 ) : (
                     <div className="table-container">
                         <table className="products-table">
                             <thead>
                                 <tr>
-                                    <th className="checkbox-col">
-                                        <input type="checkbox" className="table-checkbox" />
-                                    </th>
-                                    <th>Producto</th>
+                                    <th>Servicio</th>
                                     <th>Categoría</th>
-                                    <th>SKU</th>
                                     <th>Precio</th>
-                                    <th>Existencia</th>
+                                    <th>Tipo de Cobro</th>
                                     <th className="actions-col">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginatedProducts.length > 0 ? (
-                                    paginatedProducts.map(product => {
-                                        const productCategoryName = product.category || getCategory(product.name).name;
-                                        const category = getCategory(product.name);
-                                        // Usar el color de la categoría guardada si existe, sino usar el inferido
-                                        const categoryColor = product.category ? 
-                                            uniqueCategories.includes(product.category) ? 
-                                                (getCategory(product.name).color) : category.color 
-                                            : category.color;
-                                        const stockStatus = getStockStatus(product.stock);
-                                        const sku = getSKU(product);
-                                        const description = getDescription(product);
+                                {filteredProducts.length > 0 ? (
+                                    filteredProducts.map(product => {
                                         const isMenuOpen = activeMenuId === product.id;
-
                                         return (
                                             <tr key={product.id} className="table-row">
-                                                <td className="checkbox-col">
-                                                    <input type="checkbox" className="table-checkbox" />
-                                                </td>
                                                 <td>
                                                     <div className="product-cell">
-                                                        <div className="product-image-wrapper">
-                                                            {product.image_url ? (
-                                                                <img
-                                                                    src={product.image_url}
-                                                                    alt={product.name}
-                                                                    className="product-thumb"
-                                                                />
-                                                            ) : (
-                                                                <div className="product-icon-placeholder">
-                                                                    <span className="material-symbols-outlined">image</span>
-                                                                </div>
-                                                            )}
+                                                        <div className="product-icon-placeholder">
+                                                            <span className="material-symbols-outlined">
+                                                                {product.pricing_type === 'kg' ? 'fitness_center' : 'local_laundry_service'}
+                                                            </span>
                                                         </div>
                                                         <div className="product-info">
                                                             <div className="product-name">{product.name}</div>
-                                                            <div className="product-description">{description}</div>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span className={`category-badge category-${categoryColor}`}>
-                                                        {productCategoryName}
+                                                    <span className="category-badge category-blue">
+                                                        {product.category || 'General'}
                                                     </span>
                                                 </td>
-                                                <td className="sku-cell">{sku}</td>
                                                 <td className="price-cell">${product.price.toFixed(2)}</td>
                                                 <td>
-                                                    <div className="stock-cell">
-                                                        <div className={`stock-dot stock-${stockStatus.color} ${stockStatus.pulse ? 'pulse' : ''}`}></div>
-                                                        <span>{product.stock} {product.name.toLowerCase().includes('kg') ? 'kg' : 'un.'}</span>
-                                                    </div>
+                                                    <span className="text-xs font-bold uppercase text-slate-500">
+                                                        {product.pricing_type === 'kg' ? 'Por Kilo' : 'Por Unidad'}
+                                                    </span>
                                                 </td>
                                                 <td className="actions-col">
                                                     <div className="actions-menu-container">
@@ -768,9 +551,9 @@ const Inventory = () => {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="7" className="empty-state-cell">
+                                        <td colSpan="5" className="empty-state-cell">
                                             <div className="empty-state">
-                                                <p>No se encontraron productos</p>
+                                                <p>No se encontraron servicios</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -779,295 +562,81 @@ const Inventory = () => {
                         </table>
                     </div>
                 )}
-
-                {filteredProducts.length > 0 && (
-                    <div className="pagination-container">
-                        <div className="pagination-info">
-                            Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
-                            <span className="font-medium">{Math.min(endIndex, filteredProducts.length)}</span> de{' '}
-                            <span className="font-medium">{filteredProducts.length}</span> resultados
-                        </div>
-                        <div className="pagination-buttons">
-                            <button
-                                className="pagination-btn"
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            >
-                                Anterior
-                            </button>
-                            <button
-                                className="pagination-btn"
-                                disabled={currentPage >= totalPages}
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                            >
-                                Siguiente
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
 
             {showModal && (
                 <div className="new-product-modal-overlay" onClick={handleCloseModal}>
                     <div className="new-product-modal" onClick={(e) => e.stopPropagation()}>
                         <button className="new-product-close-btn" onClick={handleCloseModal}>
-                            <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="18" x2="6" y1="6" y2="18"></line>
-                                <line x1="6" x2="18" y1="6" y2="18"></line>
-                            </svg>
+                            <FiX />
                         </button>
 
                         <div className="new-product-modal-header">
-                            <h2 className="new-product-title">{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+                            <h2 className="new-product-title">{editingProduct ? 'Editar Servicio' : 'Nuevo Servicio'}</h2>
                         </div>
 
                         <div className="new-product-modal-body">
-                            {/* Image Upload Area */}
-                            <div
-                                className={`new-product-image-upload ${dragActive ? 'drag-active' : ''}`}
-                                onDragEnter={handleDrag}
-                                onDragLeave={handleDrag}
-                                onDragOver={handleDrag}
-                                onDrop={handleDrop}
-                                onClick={() => fileInputRef.current.click()}
-                            >
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileSelect}
-                                    style={{ display: 'none' }}
-                                />
-
-                                {previewImage ? (
-                                    <div className="new-product-image-preview-wrapper">
-                                        <img src={previewImage} alt="Preview" className="new-product-image-preview" />
-                                        <button
-                                            type="button"
-                                            className="new-product-remove-image-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeImage(e);
-                                            }}
-                                        >
-                                            <FiX />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="new-product-upload-placeholder">
-                                        <div className="new-product-upload-icon-wrapper">
-                                            <svg className="new-product-upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path>
-                                            </svg>
-                                        </div>
-                                        <div className="new-product-upload-text">
-                                            <p className="new-product-upload-text-main">
-                                                Arrastra una imagen o haz clic para subir
-                                            </p>
-                                            <p className="new-product-upload-text-sub">
-                                                JPG, PNG (Max 2MB)
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
                             <form id="new-product-form" onSubmit={handleSubmit} className="new-product-form">
                                 <div className="new-product-form-grid">
-                                    {/* Nombre del Producto */}
-                                    <div className="new-product-form-group col-span-12 md-col-span-8">
-                                        <label className="new-product-label" htmlFor="product-name">
-                                            Nombre del Producto <span className="text-red-500">*</span>
-                                        </label>
+                                    <div className="new-product-form-group col-span-12">
+                                        <label className="new-product-label">Nombre del Servicio</label>
                                         <input
-                                            id="product-name"
                                             className="new-product-input"
                                             type="text"
                                             name="name"
                                             value={formData.name}
                                             onChange={handleInputChange}
-                                            placeholder="Ej. Coca Cola 600ml"
                                             required
                                         />
                                     </div>
 
-                                    {/* Categoría */}
-                                    <div className="new-product-form-group col-span-12 md-col-span-4">
+                                    <div className="new-product-form-group col-span-12 md:col-span-6">
                                         <div className="new-product-category-header">
-                                            <label className="new-product-label" htmlFor="category">
-                                                Categoría <span className="text-red-500">*</span>
-                                            </label>
-                                            <button
-                                                type="button"
-                                                className="text-xs text-blue-500 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setShowCategoriesModal(true);
-                                                }}
-                                                title="Agregar o quitar categorías"
-                                            >
-                                                <FiSettings size={14} /> Gestionar
+                                            <label className="new-product-label">Categoría</label>
+                                            <button type="button" onClick={() => setShowCategoriesModal(true)} className="text-[10px] text-blue-500 font-bold uppercase">
+                                                <FiSettings className="inline mr-1" /> Gestionar
                                             </button>
                                         </div>
-                                        <div className="new-product-select-wrapper">
-                                            <select
-                                                id="category"
-                                                className="new-product-select"
-                                                name="category"
-                                                value={formData.category}
+                                        <select
+                                            className="new-product-select"
+                                            name="category"
+                                            value={formData.category}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {uniqueCategories.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="new-product-form-group col-span-12 md:col-span-6">
+                                        <label className="new-product-label">Tipo de Cobro</label>
+                                        <select
+                                            className="new-product-select"
+                                            name="pricing_type"
+                                            value={formData.pricing_type}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="unit">Por Unidad</option>
+                                            <option value="kg">Por Kilo</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="new-product-form-group col-span-12">
+                                        <label className="new-product-label">Precio</label>
+                                        <div className="new-product-price-wrapper">
+                                            <span className="new-product-price-symbol">$</span>
+                                            <input
+                                                className="new-product-input new-product-price-input"
+                                                type="number"
+                                                name="price"
+                                                value={formData.price}
                                                 onChange={handleInputChange}
+                                                step="0.01"
                                                 required
-                                            >
-                                                <option value="">Seleccionar</option>
-                                                {predefinedCategories.map(cat => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                                {customCategories.length > 0 && (
-                                                    <optgroup label="Categorías Personalizadas">
-                                                        {customCategories.map(cat => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                )}
-                                                {existingCategories.filter(cat => !predefinedCategories.includes(cat) && !customCategories.includes(cat)).length > 0 && (
-                                                    <optgroup label="Otras">
-                                                        {existingCategories.filter(cat => !predefinedCategories.includes(cat) && !customCategories.includes(cat)).map(cat => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                )}
-                                            </select>
-                                            <div className="new-product-select-arrow">
-                                                <svg className="new-product-select-arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Código de Barras */}
-                                    <div className="new-product-form-group col-span-12 md-col-span-8">
-                                        <div className="new-product-barcode-group">
-                                            <div className="new-product-barcode-input-wrapper">
-                                                <label className="new-product-label" htmlFor="barcode">
-                                                    Código de Barras
-                                                </label>
-                                                <input
-                                                    id="barcode"
-                                                    className="new-product-input"
-                                                    type="text"
-                                                    name="barcode"
-                                                    value={formData.barcode}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Escanear código..."
-                                                />
-                                            </div>
-                                            <div className="new-product-camera-btn-wrapper">
-                                                <button
-                                                    type="button"
-                                                    className="new-product-camera-btn"
-                                                    onClick={() => setMostrarCameraScanner(true)}
-                                                    title="Escanear código con cámara"
-                                                >
-                                                    <svg className="new-product-camera-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                        <path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                                                        <path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                                                    </svg>
-                                                    Cámara
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Precios Group */}
-                                    <div className="new-product-form-group col-span-12">
-                                        <label className="new-product-label">Configuración de Precios</label>
-                                        <div className="grid grid-cols-12 gap-4">
-                                            {/* Costo */}
-                                            <div className="col-span-12 md:col-span-4">
-                                                <label className="text-xs text-gray-500 mb-1 block">Precio Costo</label>
-                                                <div className="new-product-price-wrapper">
-                                                    <span className="new-product-price-symbol">$</span>
-                                                    <input
-                                                        className="new-product-input new-product-price-input"
-                                                        type="number"
-                                                        name="cost_price"
-                                                        value={formData.cost_price}
-                                                        onChange={handleInputChange}
-                                                        placeholder="0.00"
-                                                        step="0.01"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Venta */}
-                                            <div className="col-span-12 md:col-span-4">
-                                                <label className="text-xs text-gray-500 mb-1 block">Precio Venta <span className="text-red-500">*</span></label>
-                                                <div className="new-product-price-wrapper">
-                                                    <span className="new-product-price-symbol">$</span>
-                                                    <input
-                                                        className="new-product-input new-product-price-input"
-                                                        type="number"
-                                                        name="price"
-                                                        value={formData.price}
-                                                        onChange={handleInputChange}
-                                                        placeholder="0.00"
-                                                        step="0.01"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Mayoreo */}
-                                            <div className="col-span-12 md:col-span-4">
-                                                <label className="text-xs text-gray-500 mb-1 block">Precio Mayoreo</label>
-                                                <div className="new-product-price-wrapper">
-                                                    <span className="new-product-price-symbol">$</span>
-                                                    <input
-                                                        className="new-product-input new-product-price-input"
-                                                        type="number"
-                                                        name="wholesale_price"
-                                                        value={formData.wholesale_price}
-                                                        onChange={handleInputChange}
-                                                        placeholder="0.00"
-                                                        step="0.01"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Stock Group */}
-                                    <div className="new-product-form-group col-span-12">
-                                        <label className="new-product-label">Inventario</label>
-                                        <div className="grid grid-cols-12 gap-4">
-                                            {/* Stock Actual */}
-                                            <div className="col-span-12 md:col-span-6">
-                                                <label className="text-xs text-gray-500 mb-1 block">Existencia Actual <span className="text-red-500">*</span></label>
-                                                <input
-                                                    id="stock"
-                                                    className="new-product-input"
-                                                    type="number"
-                                                    name="stock"
-                                                    value={formData.stock}
-                                                    onChange={handleInputChange}
-                                                    placeholder="0"
-                                                    required
-                                                />
-                                            </div>
-
-                                            {/* Stock Minimo */}
-                                            <div className="col-span-12 md:col-span-6">
-                                                <label className="text-xs text-gray-500 mb-1 block">Inventario Mínimo</label>
-                                                <input
-                                                    className="new-product-input"
-                                                    type="number"
-                                                    name="min_stock"
-                                                    value={formData.min_stock}
-                                                    onChange={handleInputChange}
-                                                    placeholder="5"
-                                                />
-                                            </div>
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -1075,248 +644,72 @@ const Inventory = () => {
                         </div>
 
                         <div className="new-product-modal-footer">
-                            <button
-                                type="button"
-                                className="new-product-btn-cancel"
-                                onClick={handleCloseModal}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                form="new-product-form"
-                                className="new-product-btn-save"
-                            >
-                                <svg className="new-product-save-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-                                </svg>
-                                Guardar
+                            <button className="new-product-btn-cancel" onClick={handleCloseModal}>Cancelar</button>
+                            <button type="submit" form="new-product-form" className="new-product-btn-save">
+                                <FiSave className="mr-2" /> {editingProduct ? 'Actualizar' : 'Guardar'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal Scanner de Cámara */}
-            <CameraScanner
-                isOpen={mostrarCameraScanner}
-                onClose={() => setMostrarCameraScanner(false)}
-                onScan={manejarEscaneoCamara}
-            />
-
-            {/* Modal de Gestión de Categorías */}
             {showCategoriesModal && (
                 <div className="modal-overlay" onClick={() => setShowCategoriesModal(false)}>
                     <div className="categories-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="categories-modal-header">
                             <h2>Gestionar Categorías</h2>
-                            <button className="close-btn" onClick={() => setShowCategoriesModal(false)}>
-                                <FiX />
-                            </button>
+                            <button onClick={() => setShowCategoriesModal(false)}><FiX /></button>
                         </div>
                         <div className="categories-modal-content">
-                            {/* Agregar nueva categoría */}
-                            <div className="categories-add-section">
-                                <label className="categories-label">Agregar Nueva Categoría</label>
-                                <div className="categories-input-group">
-                                    <input
-                                        type="text"
-                                        className="categories-input"
-                                        placeholder="Nombre de la categoría..."
-                                        value={newCategoryName}
-                                        onChange={(e) => setNewCategoryName(e.target.value)}
-                                        onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddCategory();
-                                            }
-                                        }}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="categories-add-btn"
-                                        onClick={handleAddCategory}
-                                    >
-                                        <FiPlus />
-                                        Agregar
-                                    </button>
-                                </div>
+                            <div className="flex gap-2 mb-4">
+                                <input 
+                                    type="text" 
+                                    value={newCategoryName} 
+                                    onChange={(e) => setNewCategoryName(e.target.value)} 
+                                    className="categories-input"
+                                    placeholder="Nueva categoría..."
+                                />
+                                <button onClick={handleAddCategory} className="categories-add-btn">Agregar</button>
                             </div>
-
-                            {/* Lista de categorías predefinidas */}
-                            <div className="categories-section">
-                                <h3 className="categories-section-title">Categorías del Sistema</h3>
-                                <div className="categories-list">
-                                    {predefinedCategories.map(cat => (
-                                        <div key={cat} className="categories-item predefined">
-                                            <span className="categories-item-name">{cat}</span>
-                                            {/* Permitir borrar también las del sistema visualmente si se desea ocultar */}
-                                            {/* <span className="categories-item-badge">Sistema</span> */}
-                                             <button
-                                                type="button"
-                                                className="categories-delete-btn"
-                                                onClick={() => handleDeleteCategory(cat)}
-                                                title="Ocultar categoría del sistema"
-                                            >
-                                                <FiTrash2 />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Lista de categorías personalizadas */}
-                            {customCategories.length > 0 && (
-                                <div className="categories-section">
-                                    <h3 className="categories-section-title">Mis Categorías Personalizadas</h3>
-                                    <div className="categories-list">
-                                        {customCategories.map(cat => (
-                                            <div key={cat} className="categories-item custom">
-                                                <span className="categories-item-name">{cat}</span>
-                                                <button
-                                                    type="button"
-                                                    className="categories-delete-btn"
-                                                    onClick={() => handleDeleteCategory(cat)}
-                                                    title="Eliminar categoría"
-                                                >
-                                                    <FiTrash2 />
-                                                </button>
-                                            </div>
-                                        ))}
+                            <div className="categories-list">
+                                {uniqueCategories.map(cat => (
+                                    <div key={cat} className="categories-item">
+                                        <span>{cat}</span>
+                                        {customCategories.includes(cat) && (
+                                            <button onClick={() => handleDeleteCategory(cat)} className="text-red-500"><FiTrash2 /></button>
+                                        )}
                                     </div>
-                                </div>
-                            )}
-
-                            {customCategories.length === 0 && (
-                                <div className="categories-empty">
-                                    <p>No has creado categorías personalizadas aún.</p>
-                                    <p className="categories-empty-hint">Agrega una categoría usando el campo de arriba.</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="categories-modal-footer">
-                            <button
-                                type="button"
-                                className="categories-close-btn"
-                                onClick={() => setShowCategoriesModal(false)}
-                            >
-                                Cerrar
-                            </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal de Filtros */}
             {showFiltersModal && (
                 <div className="modal-overlay" onClick={() => setShowFiltersModal(false)}>
                     <div className="filters-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="filters-modal-header">
                             <h2>Filtros</h2>
-                            <button className="close-btn" onClick={() => setShowFiltersModal(false)}>
-                                <FiX />
-                            </button>
+                            <button onClick={() => setShowFiltersModal(false)}><FiX /></button>
                         </div>
                         <div className="filters-modal-content">
-                            {/* Filtro por Categoría */}
                             <div className="filter-group">
                                 <label className="filter-label">Categoría</label>
-                                <select
-                                    className="filter-select"
-                                    value={filters.category}
-                                    onChange={(e) => handleFilterChange('category', e.target.value)}
-                                >
-                                    <option value="all">Todas las categorías</option>
-                                    {predefinedCategories.map(cat => (
+                                <select className="filter-select" value={filters.category} onChange={(e) => handleFilterChange('category', e.target.value)}>
+                                    <option value="all">Todas</option>
+                                    {uniqueCategories.map(cat => (
                                         <option key={cat} value={cat}>{cat}</option>
                                     ))}
-                                    {customCategories.length > 0 && (
-                                        <optgroup label="Categorías Personalizadas">
-                                            {customCategories.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
-                                    {existingCategories.filter(cat => !predefinedCategories.includes(cat) && !customCategories.includes(cat)).length > 0 && (
-                                        <optgroup label="Otras">
-                                            {existingCategories.filter(cat => !predefinedCategories.includes(cat) && !customCategories.includes(cat)).map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </optgroup>
-                                    )}
                                 </select>
                             </div>
-
-                            {/* Filtro por Estado de Stock */}
-                            <div className="filter-group">
-                                <label className="filter-label">Estado de Stock</label>
-                                <select
-                                    className="filter-select"
-                                    value={filters.stockStatus}
-                                    onChange={(e) => handleFilterChange('stockStatus', e.target.value)}
-                                >
-                                    <option value="all">Todos</option>
-                                    <option value="low">Bajo (menos de 5)</option>
-                                    <option value="medium">Medio (5-14)</option>
-                                    <option value="high">Alto (15 o más)</option>
-                                </select>
-                            </div>
-
-                            {/* Filtro por Rango de Precio */}
-                            <div className="filter-group">
-                                <label className="filter-label">Rango de Precio</label>
-                                <div className="price-range">
-                                    <input
-                                        type="number"
-                                        className="filter-input"
-                                        placeholder="Precio mínimo"
-                                        value={filters.minPrice}
-                                        onChange={(e) => handleFilterChange('minPrice', e.target.value)}
-                                        step="0.01"
-                                        min="0"
-                                    />
-                                    <span className="price-separator">-</span>
-                                    <input
-                                        type="number"
-                                        className="filter-input"
-                                        placeholder="Precio máximo"
-                                        value={filters.maxPrice}
-                                        onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
-                                        step="0.01"
-                                        min="0"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Botones de acción */}
-                            <div className="filters-modal-actions">
-                                <button
-                                    type="button"
-                                    className="filter-clear-btn"
-                                    onClick={handleClearFilters}
-                                >
-                                    Limpiar Filtros
-                                </button>
-                                <button
-                                    type="button"
-                                    className="filter-apply-btn"
-                                    onClick={() => setShowFiltersModal(false)}
-                                >
-                                    Aplicar Filtros
-                                </button>
+                            <div className="flex gap-4 mt-6">
+                                <button onClick={handleClearFilters} className="filter-clear-btn">Limpiar</button>
+                                <button onClick={() => setShowFiltersModal(false)} className="filter-apply-btn">Aplicar</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
-            {showImportModal && (
-                <BulkImportModal 
-                    onClose={() => setShowImportModal(false)} 
-                    onSuccess={() => {
-                        fetchProducts();
-                        // Optionally refresh categories if needed
-                    }} 
-                />
             )}
         </div>
     );

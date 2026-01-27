@@ -21,20 +21,25 @@ export const AdminPanel = () => {
 
   const loadDashboardStats = async () => {
     try {
-      const [products, sales, orders, customers, staff, cuts] = await Promise.all([
+      const [products, sales, orders, todayOrders, customers, staff, cuts] = await Promise.all([
         productService.getProducts(),
         salesService.getTodaySales(),
         orderService.getOrders(),
+        orderService.getTodayOrders(),
         customerService.getCustomers(),
         staffService.getStaff(),
         cashCutService.getCashCuts(10)
       ]);
 
+      const totalTodaySales = sales.length + todayOrders.length;
+      const totalTodayRevenue = sales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0) + 
+                                todayOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+
       setStats({
         totalProducts: products.length,
         lowStockProducts: products.filter(p => p.stock < 5).length,
-        todaySales: sales.length,
-        todayRevenue: sales.reduce((sum, s) => sum + parseFloat(s.total || 0), 0),
+        todaySales: totalTodaySales,
+        todayRevenue: totalTodayRevenue,
         activeOrders: orders.filter(o => o.status !== 'delivered').length,
         totalCustomers: customers.length,
         activeStaff: staff.filter(s => s.active).length,
@@ -585,7 +590,7 @@ const CashCutsView = () => {
 };
 
 const SettingsView = () => {
-  const { user, storeName, logout } = useAuth();
+  const { user, storeName, logout, updateProfile } = useAuth();
   const [syncing, setSyncing] = useState(false);
 
   const handleManualSync = async () => {
@@ -688,6 +693,64 @@ const SettingsView = () => {
     }
   };
 
+  const handleUpdateMasterPin = async () => {
+    const { value: pin } = await Swal.fire({
+      title: 'Configurar PIN Maestro',
+      text: 'El PIN debe tener exactamente 6 dígitos',
+      input: 'password',
+      inputAttributes: {
+        maxlength: 6,
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Guardar PIN',
+      confirmButtonColor: '#10b981',
+      inputValidator: (value) => {
+        if (!value || value.length !== 6 || !/^\d+$/.test(value)) {
+          return 'Debes ingresar 6 números';
+        }
+      }
+    });
+
+    if (!pin) return;
+
+    try {
+      await updateProfile({ master_pin: pin });
+      Swal.fire('Éxito', 'PIN Maestro actualizado correctamente', 'success');
+    } catch (error) {
+      Swal.fire('Error', 'No se pudo actualizar el PIN', 'error');
+    }
+  };
+
+  const handleGenerateRecoveryCode = async () => {
+    const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    
+    const { isConfirmed } = await Swal.fire({
+      title: 'Generar Código de Recuperación',
+      html: `
+        <p>Tu nuevo código es: <strong style="font-size: 1.5rem; color: #10b981;">${newCode}</strong></p>
+        <p style="font-size: 0.8rem; color: #ef4444; margin-top: 1rem;">
+          ⚠️ Guarda este código en un lugar seguro. <br/> 
+          Se usará para desvincular el equipo si olvidas el PIN o la contraseña.
+        </p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, Guardar Código',
+      confirmButtonColor: '#10b981'
+    });
+
+    if (isConfirmed) {
+      try {
+        await updateProfile({ recovery_code: newCode });
+        Swal.fire('Guardado', 'Código de recuperación actualizado', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'No se pudo guardar el código', 'error');
+      }
+    }
+  };
+
   return (
     <div className="settings-container">
       <div className="settings-card">
@@ -732,6 +795,32 @@ const SettingsView = () => {
             Reporte Ejecutivo
           </button>
         </div>
+      </div>
+
+      <div className="settings-card security-card">
+        <h3>Seguridad de la Cuenta (FoxSolid 2026)</h3>
+        <p className="text-slate-400 mb-4" style={{ fontSize: '0.85rem' }}>
+          Protege tu cuenta maestra configurando métodos de acceso local que no requieran tu contraseña principal.
+        </p>
+        <div className="settings-actions">
+          <button className="btn-setting btn-emerald" onClick={handleUpdateMasterPin}>
+            <span className="material-icons-outlined">vpn_key</span>
+            {user?.master_pin ? 'Cambiar PIN Maestro' : 'Configurar PIN Maestro'}
+          </button>
+          <button className="btn-setting btn-slate" onClick={handleGenerateRecoveryCode}>
+            <span className="material-icons-outlined">lock_reset</span>
+            Generar Código de Recuperación
+          </button>
+        </div>
+        {user?.recovery_code && (
+          <div className="mt-4 p-3 bg-slate-800 rounded-lg flex justify-between items-center" style={{ border: '1px solid #1e293b' }}>
+            <div>
+              <span className="block text-slate-500" style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>Código de Recuperación Activo:</span>
+              <code className="text-emerald-400 font-bold" style={{ fontSize: '1.1rem' }}>{user.recovery_code}</code>
+            </div>
+            <span className="material-icons-outlined text-slate-600" title="Usa este código para desvincular equipos">help_outline</span>
+          </div>
+        )}
       </div>
     </div>
   );

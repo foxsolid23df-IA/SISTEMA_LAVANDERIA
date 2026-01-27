@@ -10,7 +10,10 @@ export const TicketConfiguration = () => {
         address: '',
         phone: '',
         logo_url: '',
-        ticket_message: ''
+        ticket_message: '',
+        printer_width: 80,
+        printer_font_size: 12,
+        printer_margin: 0
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -29,7 +32,10 @@ export const TicketConfiguration = () => {
                     address: settings.address || '',
                     phone: settings.phone || '',
                     logo_url: settings.logo_url || '',
-                    ticket_message: settings.ticket_message || ''
+                    ticket_message: settings.ticket_message || '',
+                    printer_width: settings.printer_width || 80,
+                    printer_font_size: settings.printer_font_size || 12,
+                    printer_margin: settings.printer_margin || 0
                 });
             }
         } catch (error) {
@@ -177,6 +183,82 @@ export const TicketConfiguration = () => {
                         placeholder="Gracias por su compra, vuelva pronto"
                         rows="2"
                     />
+                </div>
+
+                <div className="printer-config-section" style={{ marginTop: '20px', padding: '20px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '15px', border: '1px dashed #ccc', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>Configuración de Impresora POS</h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
+                        <div className="form-group-config">
+                            <label htmlFor="printer_width" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Ancho del Papel</label>
+                            <select
+                                id="printer_width"
+                                name="printer_width"
+                                value={formData.printer_width}
+                                onChange={handleChange}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    borderRadius: '10px', 
+                                    border: '2px solid #333', 
+                                    fontSize: '14px', 
+                                    fontWeight: 'bold', 
+                                    color: '#000',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value={58} style={{ color: '#000', fontWeight: 'bold' }}>58 mm (Mini)</option>
+                                <option value={80} style={{ color: '#000', fontWeight: 'bold' }}>80 mm (Estándar)</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group-config">
+                            <label htmlFor="printer_font_size" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Tamaño Fuente (px)</label>
+                            <input
+                                type="number"
+                                id="printer_font_size"
+                                name="printer_font_size"
+                                value={formData.printer_font_size}
+                                onChange={handleChange}
+                                min="8"
+                                max="24"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    borderRadius: '10px', 
+                                    border: '2px solid #333', 
+                                    fontSize: '14px', 
+                                    fontWeight: 'bold', 
+                                    color: '#000', 
+                                    backgroundColor: '#fff'
+                                }}
+                            />
+                        </div>
+
+                        <div className="form-group-config">
+                            <label htmlFor="printer_margin" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Margen (px)</label>
+                            <input
+                                type="number"
+                                id="printer_margin"
+                                name="printer_margin"
+                                value={formData.printer_margin}
+                                onChange={handleChange}
+                                min="0"
+                                max="50"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    borderRadius: '10px', 
+                                    border: '2px solid #333', 
+                                    fontSize: '14px', 
+                                    fontWeight: 'bold', 
+                                    color: '#000', 
+                                    backgroundColor: '#fff'
+                                }}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" className="save-config-btn" disabled={saving}>

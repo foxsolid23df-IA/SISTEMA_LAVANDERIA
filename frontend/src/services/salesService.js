@@ -171,6 +171,52 @@ export const salesService = {
         }
     },
 
+    /**
+     * Obtiene las ventas locales pendientes y las normaliza al formato Supabase
+     */
+    getLocalPendingSales: async () => {
+        try {
+            // Usamos el mismo endpoint que el sync
+            const response = await fetch(`${config.api.baseUrl}/api/admin/sync/sales/pending?masterPin=2026SOP`);
+            if (!response.ok) return [];
+            
+            const { sales } = await response.json();
+            if (!sales || !Array.isArray(sales)) return [];
+
+            return sales.map(local => {
+                let parsedItems = [];
+                try {
+                    parsedItems = typeof local.items === 'string' ? JSON.parse(local.items) : local.items;
+                } catch (e) {
+                    console.warn('Error parseando items locales:', e);
+                }
+
+                // Normalizar al formato que espera CashCut (y el resto del front)
+                return {
+                    id: `local_${local.id}`, // Prefijo para distinguir
+                    total: parseFloat(local.total),
+                    payment_method: local.payment_method,
+                    currency: local.currency || 'MXN',
+                    amount_usd: local.amount_usd,
+                    exchange_rate: local.exchange_rate,
+                    created_at: local.createdAt, // SQLite suele devolver createdAt
+                    terminal_id: local.terminal_id,
+                    sale_items: parsedItems.map(pi => ({
+                        product_name: pi.name,
+                        quantity: pi.quantity,
+                        price: pi.price,
+                        total: (pi.price * pi.quantity)
+                    })),
+                    is_local: true
+                };
+            });
+        } catch (error) {
+            console.warn('[SalesService] No se pudieron obtener ventas locales:', error);
+            // Si falla (ej. el servicio local no corre), retornamos array vacío para no romper el flujo
+            return [];
+        }
+    },
+
     // Obtener ventas de hoy
     getTodaySales: async () => {
         const today = new Date();
