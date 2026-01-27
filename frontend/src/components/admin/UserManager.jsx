@@ -3,6 +3,99 @@ import { staffService } from '../../services/staffService';
 import Swal from 'sweetalert2';
 import './UserManager.css';
 
+const ROLES = {
+    admin: { 
+        id: 'admin',
+        icon: '⭐', 
+        label: 'Administrador', 
+        class: 'role-admin',
+        desc: 'Acceso total a todas las funciones y configuraciones.',
+        permissions: {
+            can_delete_orders: true,
+            can_see_reports: true,
+            can_manage_inventory: true,
+            can_manage_staff: true,
+            can_process_orders: true,
+            can_deliver_orders: true,
+            can_void_sales: true
+        }
+    },
+    gerente: { 
+        id: 'gerente',
+        icon: '👔', 
+        label: 'Gerente', 
+        class: 'role-gerente',
+        desc: 'Gestión operativa, reportes y supervisión.',
+        permissions: {
+            can_delete_orders: false,
+            can_see_reports: true,
+            can_manage_inventory: true,
+            can_manage_staff: false,
+            can_process_orders: true,
+            can_deliver_orders: true,
+            can_void_sales: false
+        }
+    },
+    cajero: { 
+        id: 'cajero',
+        icon: '🛒', 
+        label: 'Cajero', 
+        class: 'role-cajero',
+        desc: 'Ventas, cobros y atención al cliente.',
+        permissions: {
+            can_delete_orders: false,
+            can_see_reports: false,
+            can_manage_inventory: false,
+            can_manage_staff: false,
+            can_process_orders: false,
+            can_deliver_orders: true,
+            can_void_sales: false
+        }
+    },
+    operador: { 
+        id: 'operador',
+        icon: '🌀', 
+        label: 'Operador', 
+        class: 'role-operador',
+        desc: 'Procesamiento de prendas (Lavado/Secado).',
+        permissions: {
+            can_delete_orders: false,
+            can_see_reports: false,
+            can_manage_inventory: false,
+            can_manage_staff: false,
+            can_process_orders: true,
+            can_deliver_orders: false,
+            can_void_sales: false
+        }
+    },
+    repartidor: { 
+        id: 'repartidor',
+        icon: '🛵', 
+        label: 'Repartidor', 
+        class: 'role-repartidor',
+        desc: 'Entrega de pedidos a domicilio.',
+        permissions: {
+            can_delete_orders: false,
+            can_see_reports: false,
+            can_manage_inventory: false,
+            can_manage_staff: false,
+            can_process_orders: false,
+            can_deliver_orders: true,
+            can_void_sales: false
+        }
+    }
+};
+
+const PERMISSION_LABELS = {
+    can_delete_orders: { label: 'Eliminar Órdenes', desc: 'Permite borrar registros de órdenes' },
+    can_see_reports: { label: 'Ver Reportes', desc: 'Acceso a estadísticas y reportes' },
+    can_manage_inventory: { label: 'Gestionar Inventario', desc: 'Modificar productos y stock' },
+    can_manage_staff: { label: 'Gestionar Personal', desc: 'Crear o editar usuarios' },
+    can_process_orders: { label: 'Procesar Lavado', desc: 'Cambiar estado a Procesando/Listo' },
+    can_deliver_orders: { label: 'Entregar Pedidos', desc: 'Marcar pedidos como entregados' },
+    can_void_sales: { label: 'Anular Ventas', desc: 'Cancelar ventas ya cobradas' }
+};
+
 export const UserManager = () => {
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -12,7 +105,8 @@ export const UserManager = () => {
     const [formData, setFormData] = useState({
         name: '',
         role: 'cajero',
-        pin: ''
+        pin: '',
+        permissions: ROLES.cajero.permissions
     });
 
     useEffect(() => {
@@ -33,7 +127,12 @@ export const UserManager = () => {
     };
 
     const resetForm = () => {
-        setFormData({ name: '', role: 'cajero', pin: '' });
+        setFormData({ 
+            name: '', 
+            role: 'cajero', 
+            pin: '', 
+            permissions: ROLES.cajero.permissions 
+        });
         setEditingStaff(null);
     };
 
@@ -43,7 +142,8 @@ export const UserManager = () => {
             setFormData({
                 name: staffMember.name,
                 role: staffMember.role,
-                pin: staffMember.pin
+                pin: staffMember.pin,
+                permissions: staffMember.permissions || ROLES[staffMember.role]?.permissions || ROLES.cajero.permissions
             });
         } else {
             resetForm();
@@ -54,6 +154,24 @@ export const UserManager = () => {
     const handleCloseModal = () => {
         setShowModal(false);
         resetForm();
+    };
+
+    const handleRoleSelect = (roleId) => {
+        setFormData({
+            ...formData,
+            role: roleId,
+            permissions: ROLES[roleId].permissions
+        });
+    };
+
+    const handlePermissionToggle = (permKey) => {
+        setFormData({
+            ...formData,
+            permissions: {
+                ...formData.permissions,
+                [permKey]: !formData.permissions[permKey]
+            }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -94,7 +212,6 @@ export const UserManager = () => {
         } catch (error) {
             console.error('Error al guardar:', error);
             
-            // Manejar específicamente el error de PIN duplicado (código 23505 de Postgres)
             if (error.code === '23505' || error.message?.includes('duplicate key')) {
                 Swal.fire({
                     title: '¡PIN ya en uso!',
@@ -149,12 +266,7 @@ export const UserManager = () => {
     };
 
     const getRoleBadge = (role) => {
-        const roles = {
-            admin: { icon: '⭐', label: 'Administrador', class: 'role-admin' },
-            gerente: { icon: '👔', label: 'Gerente', class: 'role-gerente' },
-            cajero: { icon: '🛒', label: 'Cajero', class: 'role-cajero' }
-        };
-        return roles[role] || roles.cajero;
+        return ROLES[role] || ROLES.cajero;
     };
 
     if (loading) return <div className="loading-state">Cargando empleados...</div>;
@@ -163,27 +275,15 @@ export const UserManager = () => {
         <div className="user-manager-container">
             <header className="manager-header">
                 <div>
-                    <div className="header-badge">Control de Personal</div>
+                    <div className="header-badge">Personal & Seguridad</div>
                     <h2>Gestión de Usuarios</h2>
                     <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                        Administra los accesos y roles del sistema
+                        Administra roles y permisos para el acceso al punto de venta
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => {
-                            document.documentElement.classList.toggle('dark');
-                            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-                        }}
-                        className="hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
-                    >
-                        <span className="material-icons-outlined text-[18px]">dark_mode</span>
-                        <span>Modo Oscuro</span>
-                    </button>
-                    <button className="btn-primary" onClick={() => handleOpenModal()}>
-                        + Nuevo Empleado
-                    </button>
-                </div>
+                <button className="btn-primary" onClick={() => handleOpenModal()}>
+                    + Nuevo Empleado
+                </button>
             </header>
 
             <div className="user-list-card">
@@ -205,13 +305,13 @@ export const UserManager = () => {
                         </thead>
                         <tbody>
                             {staff.map(s => {
-                                const roleBadge = getRoleBadge(s.role);
+                                const roleInfo = getRoleBadge(s.role);
                                 return (
                                     <tr key={s.id}>
-                                        <td>{s.name}</td>
+                                        <td className="font-bold">{s.name}</td>
                                         <td>
-                                            <span className={`role-badge ${roleBadge.class}`}>
-                                                {roleBadge.icon} {roleBadge.label}
+                                            <span className={`role-badge ${roleInfo.class}`}>
+                                                {roleInfo.icon} {roleInfo.label}
                                             </span>
                                         </td>
                                         <td>
@@ -253,29 +353,41 @@ export const UserManager = () => {
                     <div className="modal-content">
                         <h3>{editingStaff ? 'Editar Empleado' : 'Nuevo Empleado'}</h3>
                         <form onSubmit={handleSubmit}>
-                            <div className="form-group">
-                                <label>Nombre completo *</label>
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                    Nombre completo *
+                                </label>
                                 <input
                                     type="text"
                                     required
                                     placeholder="Ej: Juan Pérez"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: '10px', color: '#fff' }}
                                 />
                             </div>
-                            <div className="form-group">
-                                <label>Rol</label>
-                                <select
-                                    value={formData.role}
-                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                >
-                                    <option value="cajero">🛒 Cajero (Solo ventas)</option>
-                                    <option value="gerente">👔 Gerente (Ventas + Reportes)</option>
-                                    <option value="admin">⭐ Administrador (Acceso total)</option>
-                                </select>
+
+                            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '1rem' }}>
+                                Seleccionar Rol del Sistema
+                            </label>
+                            <div className="role-cards-grid">
+                                {Object.values(ROLES).map(role => (
+                                    <div 
+                                        key={role.id}
+                                        className={`role-card ${formData.role === role.id ? 'selected' : ''}`}
+                                        onClick={() => handleRoleSelect(role.id)}
+                                    >
+                                        <span className="role-icon">{role.icon}</span>
+                                        <span className="role-name">{role.label}</span>
+                                        <span className="role-desc">{role.desc}</span>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="form-group">
-                                <label>PIN de acceso * (4-6 dígitos)</label>
+
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                    PIN de acceso * (4-6 dígitos)
+                                </label>
                                 <input
                                     type="password"
                                     required
@@ -286,13 +398,39 @@ export const UserManager = () => {
                                         ...formData,
                                         pin: e.target.value.replace(/\D/g, '')
                                     })}
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', padding: '0.8rem', borderRadius: '10px', color: '#fff', letterSpacing: '4px' }}
                                 />
                             </div>
-                            <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={handleCloseModal}>
+
+                            <div className="permissions-section">
+                                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', display: 'block' }}>
+                                    Permisos Granulares
+                                </label>
+                                <div className="permissions-grid">
+                                    {Object.entries(PERMISSION_LABELS).map(([key, info]) => (
+                                        <div key={key} className="permission-item">
+                                            <div className="permission-info">
+                                                <div className="permission-title">{info.label}</div>
+                                                <div className="permission-desc">{info.desc}</div>
+                                            </div>
+                                            <label className="switch">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={formData.permissions[key] || false}
+                                                    onChange={() => handlePermissionToggle(key)}
+                                                />
+                                                <span className="slider round"></span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="modal-actions" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                <button type="button" className="btn-secondary" onClick={handleCloseModal} style={{ flex: 1, padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: '#fff', cursor: 'pointer' }}>
                                     Cancelar
                                 </button>
-                                <button type="submit" className="btn-primary">
+                                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '1rem', borderRadius: '12px', cursor: 'pointer' }}>
                                     {editingStaff ? 'Guardar Cambios' : 'Crear Empleado'}
                                 </button>
                             </div>

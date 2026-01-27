@@ -464,7 +464,9 @@ const StaffView = () => {
   const roleLabels = {
     admin: { label: 'Administrador', icon: '⭐', color: 'purple' },
     gerente: { label: 'Gerente', icon: '👔', color: 'blue' },
-    cajero: { label: 'Cajero', icon: '🛒', color: 'green' }
+    cajero: { label: 'Cajero', icon: '🛒', color: 'green' },
+    operador: { label: 'Operador', icon: '🌀', color: 'orange' },
+    repartidor: { label: 'Repartidor', icon: '🛵', color: 'pink' }
   };
 
   return (

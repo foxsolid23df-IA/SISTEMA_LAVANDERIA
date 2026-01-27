@@ -37,6 +37,7 @@ export const staffService = {
                 name: staff.name,
                 role: staff.role || 'cajero',
                 pin: staff.pin,
+                permissions: staff.permissions || {},
                 active: true,
                 user_id: userData.user.id
             }])
@@ -55,6 +56,7 @@ export const staffService = {
                 name: updates.name,
                 role: updates.role,
                 pin: updates.pin,
+                permissions: updates.permissions,
                 active: updates.active
             })
             .eq('id', id)
