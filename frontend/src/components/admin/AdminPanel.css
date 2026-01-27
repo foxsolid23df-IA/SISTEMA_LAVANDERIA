@@ -113,7 +113,7 @@
   height: 40px;
   display: flex;
   align-items: center;
-  justify-center;
+  justify-content: center;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 8px;
