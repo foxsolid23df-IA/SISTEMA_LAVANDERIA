@@ -150,7 +150,11 @@ export const Sales = () => {
             setVentaCompletada({
                 ...result,
                 productos: carrito,
-                cliente: clienteSeleccionado
+                cliente: clienteSeleccionado,
+                monto_recibido: usarUSD ? parseFloat(montoRecibidoUSD) : parseFloat(montoRecibido),
+                usar_usd: usarUSD,
+                exchange_rate: exchangeRate?.rate,
+                metodo_pago: metodoPago
             });
             
             Swal.fire('¡Éxito!', 'Orden registrada correctamente', 'success');
@@ -161,6 +165,7 @@ export const Sales = () => {
             setNotas("");
             setAnticipo(0);
             setMontoRecibido("");
+            setMontoRecibidoUSD("");
         } catch (error) {
             console.error('Error al finalizar orden:', error);
             Swal.fire('Error', 'No se pudo registrar la orden', 'error');

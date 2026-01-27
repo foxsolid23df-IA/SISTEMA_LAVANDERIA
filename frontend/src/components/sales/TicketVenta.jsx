@@ -94,6 +94,26 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
                     <span>{saldoPendiente > 0 ? 'SALDO PENDIENTE:' : 'ORDEN PAGADA'}</span>
                     <span>{saldoPendiente > 0 ? formatearDinero(saldoPendiente) : '$ 0.00'}</span>
                 </div>
+
+                {/* Mostrar cambio solo si se ingresó un monto recibido y fue pago en efectivo */}
+                {venta.metodo_pago === 'cash' && (venta.monto_recibido > 0) && (
+                    <>
+                        <div className="ticket-linea" style={{ borderBottom: '1px dotted #000', margin: '5px 0' }} />
+                        <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9em' }}>
+                            <span>{venta.usar_usd ? `RECIBIDO (U$ ${venta.monto_recibido})` : 'RECIBIDO:'}</span>
+                            <span>{venta.usar_usd ? formatearDinero(venta.monto_recibido * (venta.exchange_rate || 1)) : formatearDinero(venta.monto_recibido)}</span>
+                        </div>
+                        <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                            <span>CAMBIO:</span>
+                            <span>{(() => {
+                                const recibidoMXN = venta.usar_usd 
+                                    ? (venta.monto_recibido * (venta.exchange_rate || 1))
+                                    : venta.monto_recibido;
+                                return formatearDinero(Math.max(0, recibidoMXN - (venta.paid_amount || 0)));
+                            })()}</span>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="ticket-linea" style={{ borderBottom: '1px dashed #000', margin: '5px 0' }} />
