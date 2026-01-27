@@ -202,13 +202,13 @@ export const Sales = () => {
             {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
                 <div className="flex justify-between items-center mb-2">
-                     <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider">Servicios y Productos</h3>
+                     <h3 className="font-bold text-black dark:text-white uppercase tracking-wider">Servicios y Productos</h3>
                      <button
                         onClick={connectScale}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             isScaleConnected 
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                            : 'bg-slate-100 text-slate-900 border border-slate-300 hover:bg-slate-200'
+                            : 'bg-slate-100 text-black border border-slate-300 hover:bg-slate-200'
                         }`}
                         title={isScaleConnected ? "Báscula Conectada" : "Conectar Báscula USB"}
                     >
@@ -224,10 +224,10 @@ export const Sales = () => {
 
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="relative flex-1">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-black">search</span>
                         <input 
                             type="text" 
-                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all dark:text-white"
+                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-black font-bold dark:text-white"
                             placeholder="Buscar servicio (Lavado, Secado, Planchado)..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -275,7 +275,7 @@ export const Sales = () => {
                             <div className="relative flex-1">
                                 <input 
                                     type="text"
-                                    className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white font-bold placeholder:text-slate-400"
+                                    className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-black dark:text-white font-bold placeholder:text-slate-400"
                                     placeholder="Nombre o teléfono..."
                                     value={clienteSeleccionado ? clienteSeleccionado.name : busquedaCliente}
                                     onChange={(e) => {
@@ -295,7 +295,7 @@ export const Sales = () => {
                                                     setClientes([]);
                                                 }}
                                             >
-                                                <span className="font-bold text-slate-900 dark:text-white">{c.name}</span>
+                                                <span className="font-bold text-black dark:text-white">{c.name}</span>
                                                 <span className="ml-2 text-xs text-slate-400">{c.phone}</span>
                                             </button>
                                         ))}
@@ -332,7 +332,7 @@ export const Sales = () => {
                                 </button>
                                 <input 
                                     type="number" 
-                                    className="w-12 text-center bg-transparent font-bold text-sm text-slate-900 dark:text-white border-none focus:ring-0"
+                                    className="w-12 text-center bg-transparent font-bold text-sm text-black dark:text-white border-none focus:ring-0"
                                     value={item.quantity}
                                     onChange={(e) => cambiarCantidad(item.id, parseFloat(e.target.value) || 0)}
                                 />
@@ -368,7 +368,7 @@ export const Sales = () => {
                             <label className="text-[10px] font-bold text-black uppercase tracking-widest">Entrega</label>
                             <input 
                                 type="date" 
-                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
+                                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-black dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
                                 value={fechaEntrega}
                                 onChange={(e) => setFechaEntrega(e.target.value)}
                             />
@@ -410,7 +410,7 @@ export const Sales = () => {
                         <div className="p-6 space-y-6">
                             <div className="text-center">
                                 <p className="text-black text-sm mb-1 uppercase tracking-tighter font-bold">Monto Total</p>
-                                <h4 className="text-4xl font-black text-slate-900 dark:text-white">{formatearDinero(total)}</h4>
+                                <h4 className="text-4xl font-black text-black dark:text-white">{formatearDinero(total)}</h4>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
@@ -463,7 +463,7 @@ export const Sales = () => {
                                             </span>
                                             <input 
                                                 type="number" 
-                                                className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 text-xl font-bold text-slate-900 dark:text-white ${usarUSD ? 'border-blue-200 focus:ring-blue-500' : 'border-emerald-200 focus:ring-emerald-500'}`}
+                                                className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 text-xl font-bold text-black dark:text-white ${usarUSD ? 'border-blue-200 focus:ring-blue-500' : 'border-emerald-200 focus:ring-emerald-500'}`}
                                                 value={usarUSD ? montoRecibidoUSD : montoRecibido}
                                                 onChange={(e) => usarUSD ? setMontoRecibidoUSD(e.target.value) : setMontoRecibido(e.target.value)}
                                                 placeholder="0.00"
