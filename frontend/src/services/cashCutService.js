@@ -105,13 +105,35 @@ export const cashCutService = {
         return data || [];
     },
 
-    // Obtener historial de cortes
-    getCashCuts: async (limit = 30) => {
-        const { data, error } = await supabase
+    // Obtener historial de cortes con filtros
+    getCashCuts: async (options = {}) => {
+        const { limit = 50, staffName, startDate, endDate, cutType } = options;
+        
+        let query = supabase
             .from('cash_cuts')
             .select('*')
-            .order('created_at', { ascending: false })
-            .limit(limit);
+            .order('created_at', { ascending: false });
+
+        if (staffName) {
+            query = query.ilike('staff_name', `%${staffName}%`);
+        }
+
+        if (startDate) {
+            query = query.gte('created_at', startDate);
+        }
+
+        if (endDate) {
+            // Ajustar endDate para incluir todo el día
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            query = query.lte('created_at', end.toISOString());
+        }
+
+        if (cutType && cutType !== 'all') {
+            query = query.eq('cut_type', cutType);
+        }
+
+        const { data, error } = await query.limit(limit);
 
         if (error) throw error;
         return data || [];

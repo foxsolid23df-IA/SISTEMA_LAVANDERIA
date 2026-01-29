@@ -6,6 +6,7 @@ import { orderService } from '../../services/orderService';
 import { customerService } from '../../services/customerService';
 import { staffService } from '../../services/staffService';
 import { cashCutService } from '../../services/cashCutService';
+import { exportToExcel } from '../../utils/exportToExcel';
 import Swal from 'sweetalert2';
 import './AdminPanel.css';
 
@@ -517,14 +518,24 @@ const StaffView = () => {
 const CashCutsView = () => {
   const [cuts, setCuts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [cutTypeFilter, setCutTypeFilter] = useState('all');
 
   useEffect(() => {
     loadCuts();
-  }, []);
+  }, [searchTerm, dateRange, cutTypeFilter]);
 
   const loadCuts = async () => {
     try {
-      const data = await cashCutService.getCashCuts(50);
+      setLoading(true);
+      const data = await cashCutService.getCashCuts({
+        limit: 100,
+        staffName: searchTerm,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+        cutType: cutTypeFilter
+      });
       setCuts(data);
     } catch (error) {
       console.error('Error loading cash cuts:', error);
@@ -532,8 +543,6 @@ const CashCutsView = () => {
       setLoading(false);
     }
   };
-
-  if (loading) return <div className="loading">Cargando cortes...</div>;
 
   const cutTypeLabels = {
     turno: { label: 'Turno', color: 'blue' },
@@ -543,10 +552,92 @@ const CashCutsView = () => {
 
   return (
     <div className="admin-table-container">
-      <div className="table-header">
-        <h3>Historial de Cortes de Caja</h3>
-        <span className="table-count">{cuts.length} cortes</span>
+      <div className="table-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Historial de Cortes de Caja</h3>
+          <span className="table-count">{cuts.length} cortes</span>
+        </div>
+        
+        <div className="filters-row" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="search-group" style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+            <span className="material-icons-outlined" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }}>search</span>
+            <input
+              type="text"
+              placeholder="Buscar por empleado..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+              style={{ paddingLeft: '35px', width: '100%' }}
+            />
+          </div>
+          
+          <div className="date-group" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              className="search-input"
+              style={{ padding: '0.5rem' }}
+            />
+            <span style={{ color: '#64748b' }}>a</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              className="search-input"
+              style={{ padding: '0.5rem' }}
+            />
+          </div>
+
+          <select
+            value={cutTypeFilter}
+            onChange={(e) => setCutTypeFilter(e.target.value)}
+            className="search-input"
+            style={{ minWidth: '150px' }}
+          >
+            <option value="all">Todos los Tipos</option>
+            <option value="turno">Turno</option>
+            <option value="dia">Día</option>
+            <option value="parcial">Parcial</option>
+          </select>
+
+          <button 
+            className="btn-icon" 
+            onClick={() => {
+              const dataToExport = cuts.map(cut => ({
+                Empleado: cut.staff_name,
+                Tipo: cut.cut_type,
+                Ventas: cut.sales_count,
+                'Total Ventas ($)': parseFloat(cut.sales_total).toFixed(2),
+                'Efectivo Esperado ($)': parseFloat(cut.expected_cash).toFixed(2),
+                'Efectivo Real ($)': parseFloat(cut.actual_cash || 0).toFixed(2),
+                'Diferencia ($)': parseFloat(cut.difference || 0).toFixed(2),
+                Fecha: new Date(cut.created_at).toLocaleString()
+              }));
+              exportToExcel(dataToExport, `cortes_caja_${new Date().toISOString().split('T')[0]}`, 'Cortes de Caja');
+            }}
+            title="Exportar a Excel"
+            style={{ background: '#10b981', color: '#fff' }}
+            disabled={cuts.length === 0}
+          >
+            <span className="material-icons-outlined">file_download</span>
+          </button>
+
+          <button 
+            className="btn-icon" 
+            onClick={() => {
+              setSearchTerm('');
+              setDateRange({ start: '', end: '' });
+              setCutTypeFilter('all');
+            }}
+            title="Limpiar Filtros"
+            style={{ background: '#f1f5f9', color: '#64748b' }}
+          >
+            <span className="material-icons-outlined">filter_alt_off</span>
+          </button>
+        </div>
       </div>
+
       <div className="table-wrapper">
         <table className="admin-table">
           <thead>
@@ -562,28 +653,34 @@ const CashCutsView = () => {
             </tr>
           </thead>
           <tbody>
-            {cuts.map(cut => {
-              const cutType = cutTypeLabels[cut.cut_type] || cutTypeLabels.turno;
-              const difference = parseFloat(cut.difference || 0);
-              return (
-                <tr key={cut.id}>
-                  <td className="font-bold">{cut.staff_name}</td>
-                  <td>
-                    <span className={`badge badge-${cutType.color}`}>
-                      {cutType.label}
-                    </span>
-                  </td>
-                  <td>{cut.sales_count}</td>
-                  <td className="text-emerald-400">${parseFloat(cut.sales_total).toFixed(2)}</td>
-                  <td className="text-cyan-400">${parseFloat(cut.expected_cash).toFixed(2)}</td>
-                  <td className="text-blue-400">${parseFloat(cut.actual_cash || 0).toFixed(2)}</td>
-                  <td className={difference === 0 ? 'text-slate-400' : difference > 0 ? 'text-emerald-400' : 'text-red-400'}>
-                    {difference > 0 ? '+' : ''}{difference.toFixed(2)}
-                  </td>
-                  <td className="text-slate-400">{new Date(cut.created_at).toLocaleString()}</td>
-                </tr>
-              );
-            })}
+            {loading ? (
+              <tr><td colSpan="8" className="text-center py-10">Cargando cortes...</td></tr>
+            ) : cuts.length === 0 ? (
+              <tr><td colSpan="8" className="text-center py-10 text-slate-400">No se encontraron cortes que coincidan con los filtros</td></tr>
+            ) : (
+              cuts.map(cut => {
+                const cutType = cutTypeLabels[cut.cut_type] || cutTypeLabels.turno;
+                const difference = parseFloat(cut.difference || 0);
+                return (
+                  <tr key={cut.id}>
+                    <td className="font-bold">{cut.staff_name}</td>
+                    <td>
+                      <span className={`badge badge-${cutType.color}`}>
+                        {cutType.label}
+                      </span>
+                    </td>
+                    <td>{cut.sales_count}</td>
+                    <td className="text-emerald-400">${parseFloat(cut.sales_total).toFixed(2)}</td>
+                    <td className="text-cyan-400">${parseFloat(cut.expected_cash).toFixed(2)}</td>
+                    <td className="text-blue-400">${parseFloat(cut.actual_cash || 0).toFixed(2)}</td>
+                    <td className={difference === 0 ? 'text-slate-400' : difference > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                      {difference > 0 ? '+' : ''}{difference.toFixed(2)}
+                    </td>
+                    <td className="text-slate-400">{new Date(cut.created_at).toLocaleString()}</td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

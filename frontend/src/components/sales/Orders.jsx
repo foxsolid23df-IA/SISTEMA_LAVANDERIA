@@ -63,6 +63,34 @@ export const Orders = () => {
     const balance = order.total - (order.paid_amount || 0);
     const isPaid = order.payment_status === 'paid' || balance <= 0;
 
+    if (newStatus === 'cancelled') {
+      const firstConfirm = await Swal.fire({
+        title: '¿Iniciar Cancelación?',
+        text: "Se iniciará el proceso de cancelación de la orden. ¿Deseas continuar?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748B',
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Volver'
+      });
+
+      if (!firstConfirm.isConfirmed) return;
+
+      const secondConfirm = await Swal.fire({
+        title: 'Confirmación de Seguridad',
+        text: '¿Estás seguro que quieren cancelar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748B',
+        confirmButtonText: 'SI',
+        cancelButtonText: 'NO'
+      });
+
+      if (!secondConfirm.isConfirmed) return;
+    }
+
     if (newStatus === 'ready' || newStatus === 'delivered') {
       const actionText = newStatus === 'ready' ? 'marcada como LISTA' : 'registrada como ENTREGADA';
       
