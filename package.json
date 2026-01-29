@@ -49,6 +49,13 @@
         "to": "app/backend/node_modules"
       }
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "foxsolid23df-IA",
+        "repo": "SISTEMA_LAVANDERIA"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "icon.ico",
@@ -61,5 +68,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Sistema de Ventas"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.7.3"
   }
 }

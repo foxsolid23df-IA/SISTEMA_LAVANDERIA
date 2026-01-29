@@ -1,5 +1,6 @@
 // ===== ELECTRON MAIN PROCESS (FINAL STABILITY VERSION) =====
 const { app, BrowserWindow, dialog, utilityProcess } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -9,6 +10,43 @@ let backendProcess;
 
 const PORT = 3001;
 const isDev = !app.isPackaged;
+
+// Configuración de autoUpdater
+autoUpdater.autoDownload = true;
+autoUpdater.allowPrerelease = false;
+
+function setupAutoUpdater() {
+    if (isDev) return;
+
+    autoUpdater.on('update-available', () => {
+        console.log('[Updater] Actualización disponible.');
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        dialog.showMessageBox({
+            type: 'info',
+            title: 'Actualización Lista',
+            message: `Una nueva versión (${info.version}) ha sido descargada. El sistema se reiniciará para aplicar los cambios.`,
+            buttons: ['Reiniciar Ahora', 'Más tarde']
+        }).then((result) => {
+            if (result.response === 0) {
+                autoUpdater.quitAndInstall();
+            }
+        });
+    });
+
+    autoUpdater.on('error', (err) => {
+        console.error(`[Updater Error]: ${err}`);
+    });
+
+    // Verificar actualizaciones cada hora
+    setInterval(() => {
+        autoUpdater.checkForUpdatesAndNotify();
+    }, 60 * 60 * 1000);
+
+    // Verificación inicial
+    autoUpdater.checkForUpdatesAndNotify();
+}
 
 function esperarServidor(url, intentos = 50) {
     return new Promise((resolve, reject) => {
@@ -94,6 +132,7 @@ function crearVentana() {
 
 app.whenReady().then(async () => {
     try {
+        setupAutoUpdater();
         await iniciarBackend();
         crearVentana();
     } catch (error) {
