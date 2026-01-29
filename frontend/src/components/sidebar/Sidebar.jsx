@@ -488,18 +488,20 @@ export const Sidebar = () => {
           </div>
 
           <button
-            className={`w-full flex items-center justify-between px-4 py-3 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm transition-all group ${
-              isCheckingUpdate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-emerald-500"
+            className={`w-full flex items-center justify-between px-4 py-3 text-xs font-extrabold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm transition-all group ${
+              isCheckingUpdate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-emerald-500 hover:scale-[1.02]"
             }`}
             onClick={handleCheckUpdates}
           >
-            <div className="flex items-center gap-2">
-              <span className={`material-icons-outlined text-[18px] text-emerald-500 ${isCheckingUpdate ? "animate-spin" : ""}`}>
+            <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+              <span className={`material-icons-outlined text-[18px] text-emerald-600 ${isCheckingUpdate ? "animate-spin" : ""}`}>
                 system_update
               </span>
               <div className="flex flex-col items-start">
-                <span>{updaterMessage || "Buscar Actualizaciones"}</span>
-                {updaterMessage && <span className="text-[9px] text-slate-400 font-normal">Estado del sistema</span>}
+                <span className={updaterMessage.includes("Error") ? "text-red-600" : ""}>
+                  {updaterMessage || "BUSCAR ACTUALIZACIONES"}
+                </span>
+                {updaterMessage && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Estado del sistema</span>}
               </div>
             </div>
           </button>
