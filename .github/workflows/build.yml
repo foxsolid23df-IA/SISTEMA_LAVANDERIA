@@ -33,3 +33,5 @@ jobs:
         run: npm run electron:build -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_SUPABASE_URL: "https://jugyosyrbixwsmzvdksp.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "sb_publishable_pkUlkLzd6rPbvG9dD4usPg_qALhsbSd"
