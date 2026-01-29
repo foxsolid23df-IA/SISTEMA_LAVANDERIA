@@ -1,9 +1,15 @@
 // ===== ELECTRON MAIN PROCESS (FINAL STABILITY VERSION) =====
 const { app, BrowserWindow, dialog, utilityProcess, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+
+// Configuración de Logs
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
+log.info('App starting...');
 
 let mainWindow;
 let backendProcess;
@@ -18,11 +24,38 @@ autoUpdater.allowPrerelease = false;
 function setupAutoUpdater() {
     if (isDev) return;
 
-    autoUpdater.on('update-available', () => {
-        console.log('[Updater] Actualización disponible.');
+    autoUpdater.on('checking-for-update', () => {
+        log.info('Checking for update...');
+        if (mainWindow) mainWindow.webContents.send('updater-message', 'Buscando actualizaciones...');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+        log.info('Update available.');
+        if (mainWindow) mainWindow.webContents.send('updater-message', 'Nueva versión disponible. Descargando...');
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+        log.info('Update not available.');
+        if (mainWindow) mainWindow.webContents.send('updater-message', 'Sistema actualizado.');
+    });
+
+    autoUpdater.on('error', (err) => {
+        log.error('Error in auto-updater: ' + err);
+        if (mainWindow) mainWindow.webContents.send('updater-message', 'Error al buscar actualización.');
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+        let log_message = "Download speed: " + progressObj.bytesPerSecond;
+        log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+        log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+        log.info(log_message);
+        if (mainWindow) mainWindow.webContents.send('updater-progress', progressObj.percent);
     });
 
     autoUpdater.on('update-downloaded', (info) => {
+        log.info('Update downloaded.');
+        if (mainWindow) mainWindow.webContents.send('updater-message', 'Actualización lista.');
+        
         dialog.showMessageBox({
             type: 'info',
             title: 'Actualización Lista',
@@ -35,20 +68,27 @@ function setupAutoUpdater() {
         });
     });
 
-    autoUpdater.on('error', (err) => {
-        console.error(`[Updater Error]: ${err}`);
-    });
-
     // Verificar actualizaciones cada hora
     setInterval(() => {
-        autoUpdater.checkForUpdatesAndNotify();
+        autoUpdater.checkForUpdates();
     }, 60 * 60 * 1000);
 
     // Verificación inicial
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
 }
 
-// --- IPC HANDLERS PARA IMPRESIÓN ---
+// --- IPC HANDLERS PARA IMPRESIÓN Y UPDATER ---
+
+ipcMain.handle('check-for-updates', async () => {
+    if (isDev) return { message: 'Modo Desarrollo' };
+    try {
+        const result = await autoUpdater.checkForUpdates();
+        return { success: true, updateInfo: result.updateInfo };
+    } catch (error) {
+        log.error('Manual update check error:', error);
+        return { success: false, error: error.message };
+    }
+});
 
 ipcMain.handle('get-printers', async () => {
     return await mainWindow.webContents.getPrintersAsync();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useConnectivity } from "../../hooks/useConnectivity";
@@ -23,7 +23,31 @@ export const Sidebar = () => {
   const [showCashCut, setShowCashCut] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [updaterMessage, setUpdaterMessage] = useState("");
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const isOnline = useConnectivity();
+
+  useEffect(() => {
+    if (window.electron?.onUpdaterMessage) {
+      window.electron.onUpdaterMessage((message) => {
+        setUpdaterMessage(message);
+        if (message.includes("Error") || message.includes("actualizado")) {
+          setTimeout(() => setUpdaterMessage(""), 5000);
+        }
+      });
+    }
+  }, []);
+
+  const handleCheckUpdates = async () => {
+    if (!window.electron?.checkForUpdates) return;
+    setIsCheckingUpdate(true);
+    setUpdaterMessage("Iniciando búsqueda...");
+    try {
+      await window.electron.checkForUpdates();
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   // Determinar el nombre a mostrar
   const displayName = activeStaff?.name || "Usuario";
@@ -462,6 +486,23 @@ export const Sidebar = () => {
               </p>
             )}
           </div>
+
+          <button
+            className={`w-full flex items-center justify-between px-4 py-3 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm transition-all group ${
+              isCheckingUpdate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-emerald-500"
+            }`}
+            onClick={handleCheckUpdates}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`material-icons-outlined text-[18px] text-emerald-500 ${isCheckingUpdate ? "animate-spin" : ""}`}>
+                system_update
+              </span>
+              <div className="flex flex-col items-start">
+                <span>{updaterMessage || "Buscar Actualizaciones"}</span>
+                {updaterMessage && <span className="text-[9px] text-slate-400 font-normal">Estado del sistema</span>}
+              </div>
+            </div>
+          </button>
 
           <button
             className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-white transition-all group"
