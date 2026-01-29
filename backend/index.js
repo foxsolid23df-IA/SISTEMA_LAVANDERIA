@@ -39,12 +39,14 @@ app.use(express.json({ limit: '50mb' }));
 const productRoutes = require('./routes/productRoutes');
 const saleRoutes = require('./routes/saleRoutes');
 const userRoutes = require('./routes/userRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // <--- Nueva ruta
+const adminRoutes = require('./routes/adminRoutes');
+const printerRoutes = require('./routes/printerRoutes');
 
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes); // <--- Nueva ruta
+app.use('/api/admin', adminRoutes);
+app.use('/api/printer', printerRoutes);
 
 // Puerto y host configurables por variable de entorno
 const PORT = 3001; // Forzamos 3001 para Electron

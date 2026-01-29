@@ -1,5 +1,5 @@
 // ===== ELECTRON MAIN PROCESS (FINAL STABILITY VERSION) =====
-const { app, BrowserWindow, dialog, utilityProcess } = require('electron');
+const { app, BrowserWindow, dialog, utilityProcess, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const http = require('http');
@@ -47,6 +47,46 @@ function setupAutoUpdater() {
     // Verificación inicial
     autoUpdater.checkForUpdatesAndNotify();
 }
+
+// --- IPC HANDLERS PARA IMPRESIÓN ---
+
+ipcMain.handle('get-printers', async () => {
+    return await mainWindow.webContents.getPrintersAsync();
+});
+
+ipcMain.handle('print-ticket', async (event, htmlContent, printerName) => {
+    try {
+        const printWindow = new BrowserWindow({
+            show: false,
+            webPreferences: {
+                nodeIntegration: true
+            }
+        });
+
+        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+        return new Promise((resolve) => {
+            printWindow.webContents.on('did-finish-load', () => {
+                printWindow.webContents.print({
+                    silent: true,
+                    printBackground: true,
+                    deviceName: printerName || '', // Si es vacío usa la predeterminada
+                    margins: { marginType: 'none' }
+                }, (success, failureReason) => {
+                    printWindow.close();
+                    if (!success) {
+                        console.error('Error al imprimir:', failureReason);
+                        resolve({ success: false, error: failureReason });
+                    } else {
+                        resolve({ success: true });
+                    }
+                });
+            });
+        });
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
 
 function esperarServidor(url, intentos = 50) {
     return new Promise((resolve, reject) => {
@@ -113,7 +153,8 @@ function crearVentana() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            webSecurity: false // Deshabilitamos temporalmente para asegurar que el fetch local no sea bloqueado
+            preload: path.join(__dirname, 'preload.js'), // Agregamos preload para seguridad
+            webSecurity: false 
         },
         icon: path.join(__dirname, 'icon.ico'),
         title: 'Sistema de Ventas - Lavandería Isla Mujeres'
@@ -125,8 +166,6 @@ function crearVentana() {
     } else {
         const indexPath = path.join(__dirname, 'dist', 'index.html');
         mainWindow.loadFile(indexPath);
-        // Ocultamos la consola en producción para el usuario final
-        // mainWindow.webContents.openDevTools(); 
     }
 }
 
@@ -145,3 +184,4 @@ app.on('window-all-closed', () => {
     if (backendProcess) backendProcess.kill();
     if (process.platform !== 'darwin') app.quit();
 });
+

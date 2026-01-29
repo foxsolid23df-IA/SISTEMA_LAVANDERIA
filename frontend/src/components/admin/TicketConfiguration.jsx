@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { businessSettingsService } from '../../services/businessSettingsService';
+import { printService } from '../../services/printService';
 import './TicketConfiguration.css';
 
 export const TicketConfiguration = () => {
@@ -13,14 +14,22 @@ export const TicketConfiguration = () => {
         ticket_message: '',
         printer_width: 80,
         printer_font_size: 12,
-        printer_margin: 0
+        printer_margin: 0,
+        printer_name: ''
     });
+    const [printersList, setPrintersList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         loadSettings();
+        loadPrinters();
     }, []);
+
+    const loadPrinters = async () => {
+        const list = await printService.getPrinters();
+        setPrintersList(list);
+    };
 
     const loadSettings = async () => {
         try {
@@ -35,7 +44,8 @@ export const TicketConfiguration = () => {
                     ticket_message: settings.ticket_message || '',
                     printer_width: settings.printer_width || 80,
                     printer_font_size: settings.printer_font_size || 12,
-                    printer_margin: settings.printer_margin || 0
+                    printer_margin: settings.printer_margin || 0,
+                    printer_name: settings.printer_name || ''
                 });
             }
         } catch (error) {
@@ -71,6 +81,14 @@ export const TicketConfiguration = () => {
             Swal.fire('Error', 'No se pudo guardar la configuración', 'error');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleTestPrint = async () => {
+        const testHtml = printService.generateTicketHtml(formData, { id: 'TEST-001', total: '0.00' }, [{ quantity: 1, name: 'PRUEBA DE IMPRESIÓN', price: 0 }]);
+        const ok = await printService.print(testHtml, formData.printer_name);
+        if (ok) {
+            Swal.fire('Éxito', 'Comando de impresión enviado', 'success');
         }
     };
 
@@ -188,6 +206,59 @@ export const TicketConfiguration = () => {
                 <div className="printer-config-section" style={{ marginTop: '20px', padding: '20px', backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: '15px', border: '1px dashed #ccc', marginBottom: '20px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '15px' }}>Configuración de Impresora POS</h3>
                     
+                    <div className="form-group-config" style={{ marginBottom: '15px' }}>
+                        <label htmlFor="printer_name" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Seleccionar Impresora</label>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <select
+                                id="printer_name"
+                                name="printer_name"
+                                value={formData.printer_name || ''}
+                                onChange={handleChange}
+                                style={{ 
+                                    flex: 1,
+                                    padding: '12px', 
+                                    borderRadius: '10px', 
+                                    border: '2px solid #333', 
+                                    fontSize: '14px', 
+                                    fontWeight: 'bold', 
+                                    color: '#000',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">Impresora Predeterminada</option>
+                                {printersList.map(p => (
+                                    <option key={p.name} value={p.name}>{p.name} {p.isDefault ? '(Principal)' : ''}</option>
+                                ))}
+                            </select>
+                            <button 
+                                type="button"
+                                onClick={loadPrinters}
+                                className="bg-gray-200 p-2 rounded hover:bg-gray-300"
+                                title="Recargar impresoras"
+                            >
+                                🔄
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleTestPrint}
+                                style={{ 
+                                    padding: '5px 15px', 
+                                    backgroundColor: '#4CAF50', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer'
+                                }}
+                                disabled={saving}
+                            >
+                                Pruebas
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
                         <div className="form-group-config">
                             <label htmlFor="printer_width" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Ancho del Papel</label>

@@ -1,0 +1,152 @@
+/**
+ * Servicio unificado de impresión
+ * Maneja la impresión tanto en Electron (Silent) como en Web (Bridge/Dialog)
+ */
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+export const printService = {
+    /**
+     * Obtiene la lista de impresoras disponibles
+     */
+    async getPrinters() {
+        try {
+            if (window.electron && window.electron.getPrinters) {
+                // Modo Electron: Usar API nativa
+                const printers = await window.electron.getPrinters();
+                return printers.map(p => ({
+                    name: p.name,
+                    isDefault: p.isDefault,
+                    isOnline: p.status === 0
+                }));
+            } else {
+                // Modo Web: Consultar al backend local que actúa como puente
+                const response = await fetch(`${API_URL}/printer/list`);
+                if (!response.ok) throw new Error('No se pudo obtener la lista de impresoras');
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Error al listar impresoras:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Envía contenido HTML a imprimir
+     * @param {string} htmlContent - El contenido a imprimir (ya formateado)
+     * @param {string} printerName - Nombre de la impresora (opcional)
+     */
+    async print(htmlContent, printerName = null) {
+        try {
+            if (window.electron && window.electron.printTicket) {
+                // Modo Electron: Impresión silenciosa nativa
+                console.log('[PrintService] Usando Electron Native Print');
+                const result = await window.electron.printTicket(htmlContent, printerName);
+                if (!result.success) throw new Error(result.error);
+                return true;
+            } else {
+                // Modo Web: Intentar vía Backend Bridge
+                console.log('[PrintService] Usando Backend Bridge Print');
+                const response = await fetch(`${API_URL}/printer/print`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ htmlContent, printerName })
+                });
+                
+                if (!response.ok) {
+                    // Si el bridge falla o no está disponible, fallback a ventana nueva (diálogo de navegador)
+                    this.fallbackPrint(htmlContent);
+                    return true;
+                }
+                
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Error en impresión:', error);
+            // Fallback final: Mostrar diálogo de impresión del navegador
+            this.fallbackPrint(htmlContent);
+            return false;
+        }
+    },
+
+    /**
+     * Fallback cuando la impresión silenciosa falla o no está disponible
+     */
+    fallbackPrint(htmlContent) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    },
+
+    /**
+     * Genera el HTML básico para un ticket (Ticket de Venta)
+     */
+    generateTicketHtml(businessData, orderData, items) {
+        const width = businessData.printer_width || 80;
+        const fontSize = businessData.printer_font_size || 12;
+
+        return `
+            <html>
+            <head>
+                <style>
+                    body { 
+                        font-family: 'Courier New', Courier, monospace; 
+                        width: ${width}mm; 
+                        margin: 0; 
+                        padding: 10px;
+                        font-size: ${fontSize}px;
+                    }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .bold { font-weight: bold; }
+                    hr { border: none; border-top: 1px dashed #000; margin: 5px 0; }
+                    table { width: 100%; border-collapse: collapse; }
+                    .header-logo { max-width: 50mm; display: block; margin: 0 auto 10px; }
+                </style>
+            </head>
+            <body>
+                <div class="text-center">
+                    ${businessData.logo_url ? `<img src="${businessData.logo_url}" class="header-logo">` : ''}
+                    <div class="bold">${businessData.name || 'LAVANDERÍA'}</div>
+                    <div>${businessData.address || ''}</div>
+                    <div>Tel: ${businessData.phone || ''}</div>
+                </div>
+                <hr>
+                <div class="text-center bold">TICKET DE VENTA #${orderData.id || '---'}</div>
+                <div>Fecha: ${new Date().toLocaleString()}</div>
+                <div>Cliente: ${orderData.customer_name || 'Venta General'}</div>
+                <hr>
+                <table>
+                    <thead>
+                        <tr>
+                            <th align="left">Cant</th>
+                            <th align="left">Prod</th>
+                            <th align="right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td>${item.quantity}</td>
+                                <td>${item.name}</td>
+                                <td align="right">$${(item.price * item.quantity).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <hr>
+                <div class="text-right bold">TOTAL: $${orderData.total || '0.00'}</div>
+                <hr>
+                <div class="text-center">
+                    ${businessData.ticket_message || '¡Gracias por su preferencia!'}
+                </div>
+            </body>
+            </html>
+        `;
+    }
+};
