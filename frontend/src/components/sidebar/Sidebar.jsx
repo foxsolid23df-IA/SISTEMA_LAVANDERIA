@@ -151,8 +151,9 @@ export const Sidebar = () => {
             <span className="text-sm font-bold text-primary dark:text-white truncate">
               {displayName}
             </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
               {displayRole}
+              <span className="bg-slate-100 dark:bg-white/5 px-1 rounded text-[8px] border border-slate-200 dark:border-white/10">v{typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1.3.1'}</span>
             </span>
           </div>
         </div>
