@@ -40,8 +40,11 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on('error', (err) => {
-        log.error('Error in auto-updater: ' + err);
-        if (mainWindow) mainWindow.webContents.send('updater-message', 'Error al buscar actualización.');
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        log.error('Error in auto-updater: ' + errorMsg);
+        if (mainWindow) {
+            mainWindow.webContents.send('updater-message', 'Error: ' + errorMsg.substring(0, 40) + '...');
+        }
     });
 
     autoUpdater.on('download-progress', (progressObj) => {
