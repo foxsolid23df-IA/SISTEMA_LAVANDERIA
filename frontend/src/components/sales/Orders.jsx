@@ -310,26 +310,55 @@ export const Orders = () => {
     return true;
   });
 
-  // Función para exportar a Excel
+  // Función para exportar a Excel detallado
   const exportToExcel = () => {
-    const dataToExport = filteredOrders.map(order => ({
-      'ID Orden': order.id,
-      'Cliente': order.customers?.name || 'Cliente General',
-      'Teléfono': order.customers?.phone || '',
-      'Estado': statusLabels[order.status]?.label || order.status,
-      'Fecha Creación': new Date(order.created_at).toLocaleDateString(),
-      'Fecha Prometida': new Date(order.promised_at).toLocaleDateString(),
-      'Total': order.total,
-      'Pagado': order.paid_amount,
-      'Debe': Math.max(0, order.total - (order.paid_amount || 0)),
-      'Notas': order.notes || '',
-      'Items': order.order_items?.map(i => `${i.quantity} ${i.pricing_type === 'kg' ? 'kg' : 'pza'} ${i.product_name}`).join(', ')
-    }));
+    const dataToExport = [];
+    
+    filteredOrders.forEach(order => {
+      // Si por alguna razón la orden no tiene items, crear una fila básica
+      if (!order.order_items || order.order_items.length === 0) {
+        dataToExport.push({
+          'ID Orden': order.id,
+          'Cliente': order.customers?.name || 'Cliente General',
+          'Teléfono': order.customers?.phone || '',
+          'Estado': statusLabels[order.status]?.label || order.status,
+          'Fecha Creación': new Date(order.created_at).toLocaleDateString(),
+          'Fecha Prometida': new Date(order.promised_at).toLocaleDateString(),
+          'Cantidad': '',
+          'Unidad': '',
+          'Artículo': 'Sin artículos',
+          'Total': order.total,
+          'Pagado': order.paid_amount,
+          'Debe': Math.max(0, order.total - (order.paid_amount || 0)),
+          'Notas': order.notes || ''
+        });
+      } else {
+        // Crear una fila por cada artículo de la orden
+        order.order_items.forEach((item, index) => {
+          dataToExport.push({
+            'ID Orden': order.id,
+            'Cliente': order.customers?.name || 'Cliente General',
+            'Teléfono': order.customers?.phone || '',
+            'Estado': statusLabels[order.status]?.label || order.status,
+            'Fecha Creación': new Date(order.created_at).toLocaleDateString(),
+            'Fecha Prometida': new Date(order.promised_at).toLocaleDateString(),
+            'Cantidad': item.quantity,
+            'Unidad': item.pricing_type === 'kg' ? 'kg' : 'pza',
+            'Artículo': item.product_name,
+            // Montos monetarios y notas solo en la primera fila para evitar duplicidad en sumas de Excel
+            'Total': index === 0 ? order.total : '',
+            'Pagado': index === 0 ? (order.paid_amount || 0) : '',
+            'Debe': index === 0 ? Math.max(0, order.total - (order.paid_amount || 0)) : '',
+            'Notas': index === 0 ? (order.notes || '') : ''
+          });
+        });
+      }
+    });
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ordenes");
-    XLSX.writeFile(wb, `Reporte_Ordenes_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Ordenes Detalladas");
+    XLSX.writeFile(wb, `Reporte_Detallado_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
