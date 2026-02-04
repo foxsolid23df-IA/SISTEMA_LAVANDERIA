@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { QRCodeSVG } from 'qrcode.react';
+import { config } from '../../config';
 import './VisionAIModal.css';
 
 const VisionAIModal = ({ isOpen, onClose }) => {
@@ -32,11 +33,25 @@ const VisionAIModal = ({ isOpen, onClose }) => {
             schema: 'public', 
             table: 'ai_scan_sessions', 
             filter: `id=eq.${sessionId}` 
-        }, payload => {
-          if (payload.new.status === 'completed' && payload.new.image_base64) {
-            setImage(payload.new.image_base64);
-            setStep('analyzing');
-            analyzeImage(payload.new.image_base64);
+        }, async (payload) => {
+          console.log('[VisionAI] Cambio detectado en sesión:', payload.new.status);
+          if (payload.new.status === 'completed') {
+            const imageData = payload.new.image_base64;
+            
+            // Si la imagen no viene en el payload (por ser muy pesada para realtime), la buscamos
+            if (!imageData) {
+                console.log('[VisionAI] Imagen no encontrada en realtime, descargando de la tabla...');
+                const { data } = await supabase.from('ai_scan_sessions').select('image_base64').eq('id', sessionId).single();
+                if (data?.image_base64) {
+                    setImage(data.image_base64);
+                    setStep('analyzing');
+                    analyzeImage(data.image_base64);
+                }
+            } else {
+                setImage(imageData);
+                setStep('analyzing');
+                analyzeImage(imageData);
+            }
           }
         })
         .subscribe();
@@ -94,9 +109,18 @@ const VisionAIModal = ({ isOpen, onClose }) => {
 
   const analyzeImage = async (base64Data) => {
     try {
-      // Intentar conectar con la IP del host si no es localhost
-      const host = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
-      const response = await fetch(`http://${host}:3001/api/ai/analyze-cloth`, {
+      // Usar la baseUrl configurada (que ahora es inteligente según el entorno)
+      // Si estamos en Vercel y no hay una URL de API configurada, intentamos usar 127.0.0.1 
+      // pero solo si el usuario dio permiso o si es posible (Mixed Content)
+      const apiUrl = config.api.baseUrl || (window.location.hostname === 'localhost' ? 'http://127.0.0.1:3001' : '');
+      
+      if (!apiUrl) {
+         throw new Error("No hay un servidor de IA disponible en este entorno web.");
+      }
+
+      console.log('[VisionAI] Solicitando análisis a:', `${apiUrl}/api/ai/analyze-cloth`);
+      
+      const response = await fetch(`${apiUrl}/api/ai/analyze-cloth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

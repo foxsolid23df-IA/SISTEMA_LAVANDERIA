@@ -25,7 +25,7 @@ const MobileCapture = () => {
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+                video: { facingMode: 'environment', width: { ideal: 1024 }, height: { ideal: 768 } }
             });
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
@@ -53,7 +53,8 @@ const MobileCapture = () => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            const base64Image = canvas.toDataURL('image/jpeg', 0.7);
+            // Escalar la imagen si es muy grande antes de enviar
+            const base64Image = canvas.toDataURL('image/jpeg', 0.6); // Bajamos un poco la calidad para asegurar rapidez
 
             try {
                 // Notificamos a la PC a través de Supabase
