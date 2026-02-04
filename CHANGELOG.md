@@ -1,4 +1,14 @@
-# Historial de Cambios Recientes
+# Changelog
+
+## [1.3.9] - 2026-02-03
+
+### Added
+
+- **IA Vision Integral:** Sistema completo de inspección visual de prendas.
+- **Flujo Híbrido:** Soporte robusto para Webcam de PC y Captura Móvil (QR) en la misma sesión.
+- **Vinculación a Órdenes:** Botón para trasladar el reporte técnico de la IA (Daños, Riesgo, Plan de Lavado) directamente a las notas de la venta.
+- **Ticket Legal:** Impresión automática de cláusula de "Aceptación de Riesgos" en el ticket cuando la IA detecta prendas delicadas o dañadas.
+- **UX Mejorada:** Interfaz de alto contraste para selección de modo de captura y corrección de errores de visualización.
 
 ## [1.3.8] - 2026-02-03
 

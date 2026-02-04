@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
 import Modal from "../common/Modal";
 import { ClientRegistrationModal } from "./ClientRegistrationModal";
+import VisionAIModal from "../ai/VisionAIModal";
 import "./Sales.css";
 import { useScale } from "../../hooks/useScale";
 
@@ -56,6 +57,9 @@ export const Sales = () => {
     const [montoRecibido, setMontoRecibido] = useState(""); /* State for Change Calculator */
     const [montoRecibidoUSD, setMontoRecibidoUSD] = useState("");
     const [usarUSD, setUsarUSD] = useState(false);
+    
+    // IA States
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     
     // Referencias
     const ticketRef = useRef(null);
@@ -360,7 +364,22 @@ export const Sales = () => {
                 {/* Detalles de la Orden */}
                 <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-4">
                     <div className="space-y-2">
-                        {/* Cliente movido hacia arriba */}
+                        <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-bold text-black uppercase tracking-widest">Notas de la Orden</label>
+                            <button 
+                                onClick={() => setIsAIModalOpen(true)}
+                                className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md hover:bg-emerald-100 flex items-center gap-1 transition-all"
+                            >
+                                <span className="material-symbols-outlined text-xs">auto_awesome</span>
+                                IA VISION Scan
+                            </button>
+                        </div>
+                        <textarea 
+                            className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-600 dark:text-slate-400 min-h-[60px]"
+                            placeholder="Ej. Mancha de grasa en manga derecha..."
+                            value={notas}
+                            onChange={(e) => setNotas(e.target.value)}
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -549,6 +568,17 @@ export const Sales = () => {
                 onClose={() => setIsClientModalOpen(false)}
                 onClientRegistered={handleClientRegistered}
             />
+
+            {/* MODAL IA VISION */}
+            {isAIModalOpen && (
+                <VisionAIModal 
+                    isOpen={isAIModalOpen}
+                    onClose={() => setIsAIModalOpen(false)}
+                    onAccept={(report) => {
+                        setNotas(prev => prev ? `${prev}\n${report}` : report);
+                    }}
+                />
+            )}
         </div>
     );
 };

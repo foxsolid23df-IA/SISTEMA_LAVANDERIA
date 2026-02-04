@@ -35,7 +35,16 @@ router.post('/analyze-cloth', async (req, res) => {
                     content: [
                         {
                             type: "text",
-                            text: "Actúa como un experto en recepción de lavandería. Analiza la imagen y responde ÚNICAMENTE en formato JSON con la siguiente estructura: { \"prenda\": \"nombre de prenda\", \"color\": \"color dominante\", \"estado\": \"estado visible o manchas\", \"sugerencia\": \"instrucción corta de lavado\" }. Responde solo el JSON, sin texto adicional."
+                            text: `Actúa como un experto en lavandería industrial y control de calidad textil.
+                            Analiza esta imagen y genera un reporte técnico en JSON con estos campos exactos:
+                            - prenda: (Tipo de prenda y marca si es visible)
+                            - color: (Color predominante)
+                            - estado: (Inspección de daños: busca manchas, pero también botones flojos, descosidos, hoyos o desgaste en cuellos/puños)
+                            - riesgo: (Nivel de riesgo del 1 al 10 para el proceso de lavado)
+                            - sugerencia: (Un párrafo de texto con el plan de lavado: temperatura, químicos y secado)
+                            - precio_sugerido: (Categoría de precio sugerida: Estándar, Delicado o Premium)
+
+                            Responde ÚNICAMENTE con el objeto JSON.`
                         },
                         {
                             type: "image_url",

@@ -129,8 +129,25 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
                 <>
                     <div className="ticket-linea" style={{ borderBottom: '1px dashed #000', margin: '5px 0' }} />
                     <div className="ticket-notes" style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: 'bold' }}>NOTAS:</div>
-                        <div style={{ fontSize: '0.9em', fontStyle: 'italic' }}>{venta.notes}</div>
+                        {venta.notes.includes('IA INSPECCIÓN') ? (
+                            <div style={{ border: '2px solid black', padding: '5px', borderRadius: '4px', marginTop: '5px' }}>
+                                <div style={{ fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', fontSize: '1.1em' }}>⚠️ REPORTE DE DAÑOS</div>
+                                <div style={{ fontSize: '0.9em', fontWeight: 'bold', marginTop: '4px' }}>
+                                    {venta.notes.replace('IA INSPECCIÓN:', '').trim()}
+                                </div>
+                                <div style={{ fontSize: '0.7em', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>
+                                    "Acepto el estado de recepción y los riesgos mencionados."
+                                    <br /><br />
+                                    _______________________<br />
+                                    Firma del Cliente
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ fontWeight: 'bold' }}>NOTAS:</div>
+                                <div style={{ fontSize: '0.9em', fontStyle: 'italic' }}>{venta.notes}</div>
+                            </>
+                        )}
                     </div>
                 </>
             )}

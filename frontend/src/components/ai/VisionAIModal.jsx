@@ -4,8 +4,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { config } from '../../config';
 import './VisionAIModal.css';
 
-const VisionAIModal = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState('camera'); // 'camera', 'capturing', 'analyzing', 'result', 'mobile_qr'
+const VisionAIModal = ({ isOpen, onClose, onAccept }) => {
+  const [step, setStep] = useState('choice'); // 'choice', 'camera', 'mobile', 'loading', 'result'
   const [sessionId, setSessionId] = useState(null);
   const [image, setImage] = useState(null);
   const [analysis, setAnalysis] = useState(null);
@@ -15,11 +15,14 @@ const VisionAIModal = ({ isOpen, onClose }) => {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
+  /* EFECTO SECUNDARIO: Iniciar Cámara o Móvil según Step */
   useEffect(() => {
     if (isOpen && step === 'camera') {
+      setImage(null); // Limpiar imagen previa para ver la cámara limpia
       startCamera();
+    } else if (isOpen && step === 'mobile') {
+      startMobileSession();
     }
-    return () => stopCamera();
   }, [isOpen, step]);
 
   useEffect(() => {
@@ -195,25 +198,105 @@ const VisionAIModal = ({ isOpen, onClose }) => {
         <div className="vision-modal-body">
           {error && <div className="vision-error">{error}</div>}
 
-          {step === 'camera' && (
-            <div className="camera-container">
-              {image && <img src={image} alt="Última Captura" className="preview-img-overlay" style={{ opacity: 0.5, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
-              <video ref={videoRef} autoPlay playsInline muted />
-              <div className="camera-controls">
-                <button className="capture-btn" onClick={capturePhoto}>
-                  <span className="material-symbols-outlined">photo_camera</span>
-                  Capturar
+          {step === 'choice' && (
+            <div className="choice-container" style={{ textAlign: 'center', padding: '10px' }}>
+              <h4 style={{ marginBottom: '25px', fontSize: '1.2rem', color: '#1f2937', fontWeight: '800' }}>¿Cómo quieres escanear la prenda?</h4>
+              
+              <div className="choice-buttons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <button 
+                    onClick={() => setStep('camera')}
+                    style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                        padding: '25px', borderRadius: '16px', border: 'none',
+                        background: '#1f2937', color: 'white', cursor: 'pointer',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        transition: 'transform 0.2s'
+                    }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#34d399' }}>webcam</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>Cámara PC</span>
                 </button>
-                <button className="mobile-btn" onClick={startMobileSession}>
-                  <span className="material-symbols-outlined">qr_code_2</span>
-                  Usar Celular
+
+                <button 
+                    onClick={() => setStep('mobile')}
+                    style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                        padding: '25px', borderRadius: '16px', border: 'none',
+                        background: '#10b981', color: 'white', cursor: 'pointer',
+                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.3)',
+                        transition: 'transform 0.2s'
+                    }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'white' }}>phone_iphone</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>Usar Celular</span>
                 </button>
               </div>
-              {error && (
-                <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                     <button className="retry-btn" onClick={() => { setError(null); reset(); }}>Intentar de nuevo</button>
-                </div>
-              )}
+            </div>
+          )}
+
+          {step === 'camera' && (
+            <div className="camera-view-wrapper" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="camera-container" style={{ flex: 1, position: 'relative', overflow: 'hidden', borderRadius: '12px', background: 'black' }}>
+                  {!image ? (
+                      <>
+                          <video 
+                              ref={videoRef} 
+                              autoPlay 
+                              playsInline 
+                              muted 
+                              className="camera-feed" 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                          <div className="camera-overlay">
+                              <div className="scan-area"></div>
+                              <p>Encuadra la prenda aquí</p>
+                          </div>
+                      </>
+                  ) : (
+                      <img src={image} alt="Captura" className="captured-image" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  )}
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                  {!image ? (
+                      <>
+                          <button 
+                            onClick={() => setStep('choice')}
+                            style={{
+                                padding: '10px 20px',
+                                borderRadius: '12px',
+                                border: '1px solid #e5e7eb',
+                                background: 'white',
+                                color: '#374151',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#9ca3af'; e.currentTarget.style.background = '#f3f4f6'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = 'white'; }}
+                          >
+                            Cambiar modo
+                          </button>
+                          
+                          <button className="capture-btn" onClick={capturePhoto}>
+                              <span className="material-symbols-outlined">photo_camera</span>
+                              Capturar
+                          </button>
+                      </>
+                  ) : (
+                      <>
+                          <button className="retry-btn" onClick={() => setImage(null)}>Repetir</button>
+                          <button className="analyze-btn" onClick={() => analyzeImage(image)}>
+                              <span className="material-symbols-outlined">auto_awesome</span>
+                              Analizar con IA
+                          </button>
+                      </>
+                  )}
+              </div>
             </div>
           )}
 
@@ -253,30 +336,78 @@ const VisionAIModal = ({ isOpen, onClose }) => {
           )}
 
           {step === 'result' && analysis && (
-            <div className="result-container">
-              <div className="result-header">
-                <img src={image} alt="Captura" className="result-img-mini" />
-                <h4>Análisis Completado</h4>
-              </div>
-              <div className="result-grid">
-                <div className="result-item">
-                  <label>Tipo de Prenda</label>
-                  <span>{analysis.prenda}</span>
+            <div className="analysis-result fade-in">
+                <div className="result-header">
+                    <span className="material-symbols-outlined icon">check_circle</span>
+                    <h3>Análisis Completado</h3>
                 </div>
-                <div className="result-item">
-                  <label>Color Detectado</label>
-                  <span>{analysis.color}</span>
+
+                <div className="image-preview-mini">
+                    {image && <img src={image} alt="Prenda analizada" />}
                 </div>
-                <div className="result-item">
-                  <label>Estado/Notas</label>
-                  <span className="status-badge">{analysis.estado}</span>
+
+                <div className="result-grid">
+                    <div className="result-item">
+                        <label>Prenda / Marca</label>
+                        <span>{analysis.prenda}</span>
+                    </div>
+                    <div className="result-item">
+                        <label>Color</label>
+                        <span>{analysis.color}</span>
+                    </div>
+                    <div className="result-item">
+                        <label>Inspección Técnica</label>
+                        <span className="status-badge" style={{ backgroundColor: '#eef2ff', color: '#4f46e5', fontWeight: 'bold' }}>
+                            {analysis.estado}
+                        </span>
+                    </div>
+                    <div className="result-item">
+                        <label>Riesgo</label>
+                        <div className="risk-meter">
+                            <span className="risk-badge" style={{ 
+                                backgroundColor: analysis.riesgo > 7 ? '#fee2e2' : (analysis.riesgo > 4 ? '#fef3c7' : '#ecfdf5'),
+                                color: analysis.riesgo > 7 ? '#991b1b' : (analysis.riesgo > 4 ? '#92400e' : '#065f46')
+                            }}>
+                                {analysis.riesgo} / 10
+                            </span>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div className="suggestion-box">
-                <label>Sugerencia de Tratamiento:</label>
-                <p>{analysis.sugerencia}</p>
-              </div>
-              <button className="retry-btn" onClick={reset}>Probar con otra prenda</button>
+
+                <div className="suggestion-box">
+                    <label><span className="material-symbols-outlined" style={{ verticalAlign: 'middle', fontSize: '18px' }}>science</span> Plan de Lavado Inteligente:</label>
+                    <p>
+                    {typeof analysis.sugerencia === 'object' 
+                        ? JSON.stringify(analysis.sugerencia).replace(/[{}"]/g, ' ') 
+                        : analysis.sugerencia}
+                    </p>
+                </div>
+
+                <div className="result-actions" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button className="retry-btn" onClick={reset} style={{ flex: 1 }}>Probar con otra prenda</button>
+                    {onAccept && (
+                    <button 
+                        className="accept-btn" 
+                        onClick={() => {
+                        const report = `[IA INSPECCIÓN: ${analysis.prenda}] - Estado: ${analysis.estado}. Riesgo: ${analysis.riesgo}/10. Plan: ${analysis.sugerencia}`;
+                        onAccept(report);
+                        onClose();
+                        }}
+                        style={{ 
+                        flex: 1, 
+                        backgroundColor: '#10b981', 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '12px', 
+                        borderRadius: '12px', 
+                        fontWeight: 'bold', 
+                        cursor: 'pointer' 
+                        }}
+                    >
+                        Vincular a Orden
+                    </button>
+                    )}
+                </div>
             </div>
           )}
         </div>
