@@ -123,12 +123,19 @@ const VisionAIModal = ({ isOpen, onClose }) => {
         body: JSON.stringify({ image: base64Data }),
       });
 
-      if (!response.ok) {
-        if (response.status === 404) throw new Error("El servidor de IA no encontró la ruta de análisis.");
-        throw new Error(`Error del servidor (${response.status})`);
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        if (!response.ok) {
+          throw new Error(`Error del servidor (${response.status})`);
+        }
+        throw new Error("Error al procesar la respuesta del servidor.");
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `Error del servidor (${response.status})`);
+      }
 
       if (data.success) {
         setAnalysis(data.analysis);
@@ -218,11 +225,11 @@ const VisionAIModal = ({ isOpen, onClose }) => {
                 <QRCodeSVG 
                   value={(() => {
                     // En Electron (file://), window.location.origin no sirve para el móvil.
-                    // Priorizamos la IP local o una URL de despliegue estable.
+                    // Usamos la URL de producción en Vercel para asegurar HTTPS y acceso a cámara.
                     const isLocalFile = window.location.protocol === 'file:';
-                    const baseUrl = isLocalFile 
-                      ? `http://192.168.1.112:5173` // Tu IP actual (ideal para pruebas locales)
-                      : window.location.origin;
+                    const productionUrl = 'https://sistema-lavanderia-nu.vercel.app';
+                    
+                    const baseUrl = isLocalFile ? productionUrl : window.location.origin;
                     
                     return `${baseUrl}/#/mobile-capture/${sessionId}`;
                   })()} 

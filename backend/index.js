@@ -1,8 +1,9 @@
 // ===== SERVIDOR BACKEND PRINCIPAL =====
 // Este archivo inicia el servidor Express, importa modelos y rutas, y deja todo listo para funcionar en cualquier PC.
 
-// Cargar variables de entorno desde .env
-require('dotenv').config();
+// Cargar variables de entorno desde .env usando ruta absoluta para compatibilidad con el .exe
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
 const cors = require('cors');

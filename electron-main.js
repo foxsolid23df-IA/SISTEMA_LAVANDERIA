@@ -58,7 +58,7 @@ function setupAutoUpdater() {
     autoUpdater.on('update-downloaded', (info) => {
         log.info('Update downloaded.');
         if (mainWindow) mainWindow.webContents.send('updater-message', 'Actualización lista.');
-        
+
         dialog.showMessageBox({
             type: 'info',
             title: 'Actualización Lista',
@@ -151,32 +151,41 @@ function esperarServidor(url, intentos = 50) {
 
 function iniciarBackend() {
     return new Promise((resolve, reject) => {
-        // En producción, los recursos están en CarpetaApp/resources/app/backend/index.js
         const backendPath = isDev
             ? path.join(__dirname, 'backend', 'index.js')
             : path.join(process.resourcesPath, 'app', 'backend', 'index.js');
 
-        console.log(`[Main] Backend Path: ${backendPath}`);
-
+        // En producción, los recursos están en CarpetaApp/resources/app/backend/index.js
         try {
+            if (!fs.existsSync(backendPath)) {
+                log.error(`❌ El archivo de backend no existe en: ${backendPath}`);
+                return reject(new Error(`No se encontró el motor de datos en la ruta especificada.`));
+            }
+
             // Usamos utilityProcess de Electron para independencia de Node.js externo
             backendProcess = utilityProcess.fork(backendPath, [], {
                 stdio: 'pipe',
                 env: { ...process.env, NODE_ENV: 'production' }
             });
 
-            backendProcess.stdout.on('data', (data) => console.log(`[Backend]: ${data}`));
-            backendProcess.stderr.on('data', (data) => console.error(`[Backend ERR]: ${data}`));
+            backendProcess.stdout.on('data', (data) => {
+                const message = data.toString().trim();
+                log.info(`[Backend]: ${message}`);
+            });
+
+            backendProcess.stderr.on('data', (data) => {
+                const message = data.toString().trim();
+                log.error(`[Backend ERR]: ${message}`);
+            });
 
             backendProcess.on('spawn', () => {
-                console.log('✅ Motor backend iniciado');
+                log.info('✅ Motor backend iniciado');
                 // IMPORTANTE: Damos tiempo a Express para que haga el bind del puerto
                 setTimeout(() => {
-                    // Probamos con 127.0.0.1 que es lo que configuramos en backend/index.js
                     esperarServidor(`http://127.0.0.1:${PORT}/api/products`)
                         .then(resolve)
                         .catch(reject);
-                }, 1000);
+                }, 1500);
             });
 
             backendProcess.on('exit', (code) => {
@@ -196,8 +205,8 @@ function crearVentana() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js'), 
-            webSecurity: false 
+            preload: path.join(__dirname, 'preload.js'),
+            webSecurity: false
         },
         icon: path.join(__dirname, 'icon.ico'),
         title: 'Sistema de Ventas - Lavandería Isla Mujeres'
@@ -218,7 +227,15 @@ app.whenReady().then(async () => {
         await iniciarBackend();
         crearVentana();
     } catch (error) {
-        dialog.showErrorBox('Error de Sistema', `No se pudo conectar con el motor local.\n\n${error.message}`);
+        // Intentamos capturar logs si backendProcess existe
+        let extraInfo = error.message;
+        log.error('Detección de fallo crítico en el inicio:', extraInfo);
+
+        dialog.showErrorBox('Error de Sistema',
+            `No se pudo conectar con el motor local.\n\n` +
+            `Detalle: ${extraInfo}\n\n` +
+            `Por favor, asegúrese de que no haya otra instancia del programa abierta e intente reiniciar su equipo.`
+        );
         app.quit();
     }
 });

@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
 
-// Inicializar Groq con la API Key del .env
+// Inicializar Groq con precaución para evitar crasheos si falta la llave en el .env
+const groqApiKey = process.env.GROQ_API_KEY || 'no-key-provided';
 const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
+    apiKey: groqApiKey
 });
 
 router.post('/analyze-cloth', async (req, res) => {
@@ -45,7 +46,7 @@ router.post('/analyze-cloth', async (req, res) => {
                     ]
                 }
             ],
-            model: "llama-3.2-11b-vision-preview",
+            model: "meta-llama/llama-4-scout-17b-16e-instruct",
             response_format: { type: "json_object" }
         });
 
@@ -57,10 +58,15 @@ router.post('/analyze-cloth', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en AI Analysis:', error);
+        console.error('❌ Error detallado en AI Analysis:', error);
+
+        // Si el error viene de la API de Groq, devolver su mensaje
+        const errorMessage = error.response?.data?.error?.message || error.message || 'Error desconocido en el servidor de IA';
+
         res.status(500).json({
             success: false,
-            error: 'Ocurrió un error al procesar la imagen con la IA.'
+            error: errorMessage,
+            details: error.stack
         });
     }
 });
