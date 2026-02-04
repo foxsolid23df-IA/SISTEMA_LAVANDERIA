@@ -65,6 +65,15 @@
   }
 }
 
+/* Fix SweetAlert2 layering */
+body.swal2-shown {
+  overflow: hidden !important;
+}
+
+.swal2-container {
+  z-index: 10000 !important;
+}
+
 html {
   height: 100%;
   /* Safari iOS fix */
@@ -477,6 +486,10 @@ html.dark .search-input {
   color: var(--dm-text-primary);
 }
 
+html.dark .search-input::placeholder {
+  color: var(--dm-text-muted);
+}
+
 html.dark .control-btn {
   background-color: var(--dm-card-bg);
   border-color: var(--dm-border);
@@ -621,6 +634,86 @@ html.dark .new-product-input {
   background: var(--dm-input-bg);
   border-color: var(--dm-border);
   color: var(--dm-text-primary);
+}
+
+html.dark .search-icon {
+  color: var(--dm-text-secondary);
+}
+
+/* Categories Modal Dark Mode */
+html.dark .categories-modal {
+  background-color: var(--dm-card-bg);
+  border-color: var(--dm-border);
+}
+
+html.dark .categories-modal-header {
+  border-color: var(--dm-border);
+}
+
+html.dark .categories-modal-header h2 {
+  color: var(--dm-text-primary);
+}
+
+html.dark .categories-modal-header button {
+  color: var(--dm-text-muted);
+}
+
+html.dark .categories-label {
+  color: var(--dm-text-secondary);
+}
+
+html.dark .categories-input {
+  background-color: var(--dm-input-bg);
+  border-color: var(--dm-border);
+  color: var(--dm-text-primary);
+}
+
+html.dark .categories-item {
+  background-color: var(--dm-bg-secondary);
+  border-color: var(--dm-border);
+}
+
+html.dark .categories-item.custom {
+  background-color: var(--dm-bg-tertiary);
+  border-color: #0369a1; /* Darker blue border */
+}
+
+html.dark .categories-item-name {
+  color: var(--dm-text-primary);
+}
+
+html.dark .categories-modal-footer {
+  background-color: var(--dm-bg-secondary);
+  border-color: var(--dm-border);
+}
+
+html.dark .categories-close-btn {
+  background-color: var(--dm-bg-tertiary);
+  border-color: var(--dm-border);
+  color: var(--dm-text-secondary);
+}
+
+html.dark .categories-add-btn {
+  background-color: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+}
+
+html.dark .new-product-btn-cancel {
+  background-color: var(--dm-bg-tertiary);
+  border-color: var(--dm-border);
+  color: var(--dm-text-secondary);
+}
+
+html.dark .new-product-btn-save {
+  background-color: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+}
+
+html.dark .new-product-modal-footer {
+  background-color: var(--dm-bg-secondary);
+  border-color: var(--dm-border);
 }
 
 /* Stats Page Dark Mode */

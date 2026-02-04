@@ -121,7 +121,12 @@ export const productService = {
                 body: JSON.stringify({ products: cloudProducts })
             });
 
-            if (!response.ok) throw new Error('Error al guardar en base de datos local');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('[ProductService] Detalle del error de sincronización:', errorData);
+                throw new Error(errorData.error || 'Error al guardar en base de datos local');
+            }
+
 
             const result = await response.json();
             return { success: true, ...result.result };
@@ -150,6 +155,9 @@ export const productService = {
             min_stock: parseInt(product.min_stock || 0),
             barcode: product.barcode || null,
             image_url: product.image || null,
+            unit_type: product.unit_type || (product.pricing_type === 'kg' ? 'kg' : 'PZA'),
+            pricing_type: product.pricing_type || (product.unit_type === 'kg' ? 'kg' : 'unit'),
+            type: product.type || 'PRODUCT',
             user_id: userData.user.id
         };
 
@@ -183,7 +191,10 @@ export const productService = {
             stock: parseInt(updates.stock),
             min_stock: parseInt(updates.min_stock || 0),
             barcode: updates.barcode || null,
-            image_url: updates.image || null
+            image_url: updates.image || null,
+            unit_type: updates.unit_type || (updates.pricing_type === 'kg' ? 'kg' : 'PZA'),
+            pricing_type: updates.pricing_type || (updates.unit_type === 'kg' ? 'kg' : 'unit'),
+            type: updates.type || 'PRODUCT'
         };
 
         // Agregar categoría si existe
@@ -270,6 +281,9 @@ export const productService = {
             barcode: product.barcode || null,
             image_url: product.image || null,
             category: product.category || null,
+            unit_type: product.unit_type || (product.pricing_type === 'kg' ? 'kg' : 'PZA'),
+            pricing_type: product.pricing_type || (product.unit_type === 'kg' ? 'kg' : 'unit'),
+            type: product.type || 'PRODUCT',
             user_id: userData.user.id
         }));
 

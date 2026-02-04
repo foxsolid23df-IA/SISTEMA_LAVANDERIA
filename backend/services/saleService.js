@@ -9,13 +9,20 @@ async function crearVenta(datosVenta) {
 
     let errorStock = null;
 
-    // Verificar stock y reducirlo
+    // Verificar stock y reducirlo solo si es un PRODUCTO
     for (const producto of items) {
         const productoEnDB = await Product.findByPk(producto.productId);
         if (!productoEnDB) {
             errorStock = new Error(`Producto con ID ${producto.productId} no existe`);
             break;
         }
+
+        // Si es un SERVICIO, no tocamos el stock
+        if (productoEnDB.type === 'SERVICE') {
+            continue;
+        }
+
+        // Si es un PRODUCTO, verificamos y reducimos stock
         if (productoEnDB.stock < producto.quantity) {
             errorStock = new Error(`No hay suficiente stock de ${productoEnDB.name}. Stock disponible: ${productoEnDB.stock}`);
             break;
@@ -59,7 +66,7 @@ async function obtenerTodasLasVentas(limit = 100, offset = 0) {
 // 3. OBTENER ESTADÍSTICAS COMPLETAS DE VENTAS
 async function obtenerEstadisticas() {
     const ahora = new Date();
-    
+
     // Usar zona horaria local para calcular el día actual
     const inicioDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
     const finDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999);

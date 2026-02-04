@@ -3,6 +3,7 @@ import './Inventory.css';
 import { productService } from '../../services/productService';
 import Swal from 'sweetalert2';
 import { useProducts } from '../../contexts/ProductContext';
+import { supabase } from '../../supabase';
 
 // Icons
 import * as XLSX from 'xlsx';
@@ -19,7 +20,9 @@ import {
     FiUpload
 } from 'react-icons/fi';
 
-const Inventory = () => {
+const Inventory = ({ mode = 'SERVICE' }) => {
+    const isServiceMode = mode === 'SERVICE';
+
     const { 
         productos: products, 
         loading, 
@@ -52,8 +55,16 @@ const Inventory = () => {
         name: '',
         price: '',
         category: '',
-        pricing_type: 'unit'
+        pricing_type: 'unit',
+        cost_price: '',
+        wholesale_price: '',
+        stock: '9999',
+        min_stock: '0',
+        barcode: '',
+        type: mode
     });
+
+
 
     // Modal State de Semilla
     const [isSeeding, setIsSeeding] = useState(false);
@@ -62,6 +73,8 @@ const Inventory = () => {
     const [showCategoriesModal, setShowCategoriesModal] = useState(false);
     const [customCategories, setCustomCategories] = useState([]);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [editingCategoryId, setEditingCategoryId] = useState(null);
+    const [editedCategoryName, setEditedCategoryName] = useState('');
 
     // Cargar categorías personalizadas desde localStorage
     useEffect(() => {
@@ -84,14 +97,22 @@ const Inventory = () => {
     };
 
     const resetForm = () => {
-        setFormData({
-            name: '',
-            price: '',
-            category: '',
-            pricing_type: 'unit'
-        });
+            setFormData({
+                name: '',
+                price: '',
+                category: '',
+                pricing_type: 'unit',
+                cost_price: '',
+                wholesale_price: '',
+                stock: isServiceMode ? '9999' : '0',
+                min_stock: '0',
+                barcode: '',
+                type: mode
+            });
+
         setEditingProduct(null);
     };
+
 
     const handleOpenModal = (product = null) => {
         if (product) {
@@ -100,13 +121,21 @@ const Inventory = () => {
                 name: product.name,
                 price: product.price,
                 category: product.category || 'General',
-                pricing_type: product.pricing_type || 'unit'
+                pricing_type: product.pricing_type || 'unit',
+                cost_price: product.cost_price || '',
+                wholesale_price: product.wholesale_price || '',
+                stock: product.stock !== undefined ? String(product.stock) : '9999',
+                min_stock: product.min_stock !== undefined ? String(product.min_stock) : '0',
+                barcode: product.barcode || '',
+                type: product.type || 'SERVICE'
             });
+
         } else {
             resetForm();
         }
         setShowModal(true);
     };
+
 
     const handleCloseModal = () => {
         setShowModal(false);
@@ -125,26 +154,33 @@ const Inventory = () => {
             const productData = {
                 name: formData.name,
                 price: parseFloat(formData.price),
-                stock: 9999, // Stock infinito para servicios
+                cost_price: parseFloat(formData.cost_price || 0),
+                wholesale_price: parseFloat(formData.wholesale_price || 0),
+                stock: parseInt(formData.stock || 0),
+                min_stock: parseInt(formData.min_stock || 0),
+                barcode: formData.barcode || null,
                 category: formData.category,
-                pricing_type: formData.pricing_type || 'unit'
+                pricing_type: formData.pricing_type || 'unit',
+                type: formData.type || mode
             };
+
 
             if (editingProduct) {
                 await productService.updateProduct(editingProduct.id, productData);
-                Swal.fire('Actualizado', 'Servicio actualizado correctamente', 'success');
+                Swal.fire('Actualizado', `${isServiceMode ? 'Servicio' : 'Producto'} actualizado correctamente`, 'success');
             } else {
                 await productService.createProduct(productData);
-                Swal.fire('Creado', 'Servicio creado correctamente', 'success');
+                Swal.fire('Creado', `${isServiceMode ? 'Servicio' : 'Producto'} creado correctamente`, 'success');
             }
 
             handleCloseModal();
             fetchProducts();
         } catch (error) {
             console.error('Error saving product:', error);
-            Swal.fire('Error', 'Error al guardar el servicio', 'error');
+            Swal.fire('Error', `Error al guardar el ${isServiceMode ? 'servicio' : 'producto'}`, 'error');
         }
     };
+
 
     const handleDelete = async (id) => {
         const result = await Swal.fire({
@@ -161,38 +197,51 @@ const Inventory = () => {
         if (result.isConfirmed) {
             try {
                 await productService.deleteProduct(id);
-                Swal.fire('Eliminado', 'Servicio eliminado', 'success');
+                Swal.fire('Eliminado', `${isServiceMode ? 'Servicio' : 'Producto'} eliminado`, 'success');
                 fetchProducts();
             } catch (error) {
                 console.error('Error deleting product:', error);
-                Swal.fire('Error', 'No se pudo eliminar el servicio', 'error');
+                Swal.fire('Error', `No se pudo eliminar el ${isServiceMode ? 'servicio' : 'producto'}`, 'error');
             }
         }
+
     };
 
     const handleExportExcel = () => {
         try {
             const dataToExport = filteredProducts.map(p => ({
-                'Servicio': p.name,
-                'Categoría': p.category || 'General',
-                'Precio': p.price,
-                'Tipo de Cobro': p.pricing_type === 'kg' ? 'Por Kilo' : 'Por Unidad'
+                'Código': p.barcode || '',
+                'Producto': p.name,
+                'P. Costo': p.cost_price || 0,
+                'P. Venta': p.price || 0,
+                'P. Mayoreo': p.wholesale_price || 0,
+                'Departamento': p.category || 'General',
+                'Existencia': p.stock || 0,
+                'Inv. Mínimo': p.min_stock || 0,
+                'Tipo de Venta': p.pricing_type === 'kg' ? 'Por Kilo' : 'Por Unidad'
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(dataToExport);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Servicios");
+            XLSX.utils.book_append_sheet(workbook, worksheet, isServiceMode ? "Servicios" : "Productos");
+
             
             // Auto-ajustar ancho de columnas
             const maxWidths = [
-                { wch: 40 }, // Servicio
-                { wch: 20 }, // Categoría
-                { wch: 10 }, // Precio
-                { wch: 15 }  // Tipo de Cobro
+                { wch: 15 }, // Código
+                { wch: 40 }, // Producto
+                { wch: 10 }, // P. Costo
+                { wch: 10 }, // P. Venta
+                { wch: 10 }, // P. Mayoreo
+                { wch: 20 }, // Departamento
+                { wch: 10 }, // Existencia
+                { wch: 10 }, // Inv. Mínimo
+                { wch: 15 }  // Tipo de Venta
             ];
             worksheet['!cols'] = maxWidths;
 
-            XLSX.writeFile(workbook, "Catalogo_Servicios_Lavanderia.xlsx");
+            XLSX.writeFile(workbook, isServiceMode ? "Catalogo_Servicios_Lavanderia.xlsx" : "Catalogo_Productos_Lavanderia.xlsx");
+
         } catch (error) {
             console.error('Error exporting excel:', error);
             Swal.fire('Error', 'No se pudo exportar el archivo Excel', 'error');
@@ -206,59 +255,126 @@ const Inventory = () => {
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
-                const bstr = evt.target.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
+                const dataArray = new Uint8Array(evt.target.result);
+                const wb = XLSX.read(dataArray, { type: 'array' });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws);
 
                 if (data.length === 0) {
-                    Swal.fire('Error', 'El archivo está vacío', 'error');
+                    Swal.fire('Error', 'El archivo está vacío o no tiene el formato correcto.', 'error');
                     return;
                 }
 
-                // Validar columnas
+                console.log('[Import] Datos crudos detectados:', data[0]);
+
+                // Ayudante robusto para obtener valores (ignora espacios, puntos, acentos y mayúsculas)
+                const getVal = (row, searchKeys) => {
+                    const rowKeys = Object.keys(row);
+                    const normalize = (s) => s.toString().toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar acentos
+                        .replace(/[^a-z0-9]/g, ''); // Quitar todo lo no alfanumérico
+
+                    for (const searchKey of searchKeys) {
+                        const normalizedSearchKey = normalize(searchKey);
+                        const foundKey = rowKeys.find(k => normalize(k) === normalizedSearchKey);
+                        if (foundKey !== undefined) return row[foundKey];
+                    }
+                    return null;
+                };
+
+                // Validar si encontramos al menos la columna del nombre del producto
                 const firstRow = data[0];
-                const requiredColumns = ['Servicio', 'Categoría', 'Precio', 'Tipo de Cobro'];
-                const missingColumns = requiredColumns.filter(col => !Object.keys(firstRow).includes(col));
-
-                if (missingColumns.length > 0) {
-                    Swal.fire('Error', `Faltan las siguientes columnas: ${missingColumns.join(', ')}`, 'error');
+                const hasName = getVal(firstRow, ['Producto', 'Servicio', 'Nombre', 'Descripción', 'Descripcion', 'Articulo']);
+                
+                if (!hasName && hasName !== 0) {
+                    console.warn('[Import] Encabezados encontrados:', Object.keys(firstRow));
+                    Swal.fire({
+                        title: 'Error de Formato',
+                        text: 'No se encontró la columna "Producto" o "Servicio". Asegúrate de que tu Excel tenga encabezados en la primera fila.',
+                        icon: 'error'
+                    });
                     return;
                 }
 
-                const servicesToImport = data.map(item => ({
-                    name: item['Servicio'],
-                    category: item['Categoría'],
-                    price: parseFloat(item['Precio']),
-                    pricing_type: item['Tipo de Cobro']?.toString().toLowerCase().includes('kilo') ? 'kg' : 'unit',
-                    stock: 9999
-                })).filter(s => s.name && !isNaN(s.price));
+                const servicesToImport = data.map(item => {
+                    // Mapeo exacto basado en la captura de consola: 
+                    // { Código: "1", Producto: "ROPA KG", P. Costo: "$100.00", P. Venta: "$10.00", P. Mayoreo: "$0.00", ... }
+                    const rawName = getVal(item, ['Producto', 'Servicio', 'Descripcion', 'Nombre', 'Articulo']);
+                    
+                    // Función interna para limpiar precios con símbolos de moneda o formato texto
+                    const parseMoney = (val) => {
+                        if (val === null || val === undefined) return 0;
+                        if (typeof val === 'number') return val;
+                        const cleaned = val.toString().replace(/[^0-9.-]/g, '');
+                        return parseFloat(cleaned) || 0;
+                    };
+
+                    const rawPrice = getVal(item, ['P. Venta', 'Venta', 'Precio Venta', 'PVenta', 'Precio']);
+                    const rawCost = getVal(item, ['P. Costo', 'Costo', 'Precio Costo', 'PCosto']);
+                    const rawWholesale = getVal(item, ['P. Mayoreo', 'Mayoreo', 'Precio Mayoreo', 'PMayoreo']);
+                    const rawCategory = getVal(item, ['Departamento', 'Categoría', 'Categoria', 'Depto', 'Seccion']);
+                    const rawStock = getVal(item, ['Existencia', 'Stock', 'Cantidad', 'Cant']);
+                    const rawMinStock = getVal(item, ['Inv. Mínimo', 'Inv. Minimo', 'Mínimo', 'Minimo', 'Stock Mínimo', 'Stock Minimo']);
+                    const rawBarcode = getVal(item, ['Código', 'Codigo', 'Barcode', 'Cód. Barras', 'Cod. Barras', 'Cod']);
+                    const rawType = getVal(item, ['Tipo de Venta', 'Tipo de Cobro', 'Unidad', 'Tipo']);
+
+                    const parsedStock = (rawStock !== null && rawStock !== undefined && rawStock.toString().trim() !== '') 
+                        ? parseInt(rawStock.toString().replace(/[^0-9]/g, '')) 
+                        : 9999;
+                    
+                    const parsedMinStock = (rawMinStock !== null && rawMinStock !== undefined && rawMinStock.toString().trim() !== '')
+                        ? parseInt(rawMinStock.toString().replace(/[^0-9]/g, ''))
+                        : 0;
+
+                    return {
+                        name: rawName,
+                        category: rawCategory || 'General',
+                        price: parseMoney(rawPrice),
+                        cost_price: parseMoney(rawCost),
+                        wholesale_price: parseMoney(rawWholesale),
+                        stock: isNaN(parsedStock) ? (isServiceMode ? 9999 : 0) : parsedStock,
+                        min_stock: isNaN(parsedMinStock) ? 0 : parsedMinStock,
+                        barcode: rawBarcode ? String(rawBarcode).trim() : null,
+                        pricing_type: (rawType?.toString().toLowerCase().includes('kilo') || rawName?.toString().toLowerCase().includes(' kg')) ? 'kg' : 'unit',
+                        unit_type: (rawType?.toString().toLowerCase().includes('kilo') || rawName?.toString().toLowerCase().includes(' kg')) ? 'kg' : 'unit',
+                        type: mode
+                    };
+
+                }).filter(s => s.name && s.name.trim() !== ''); // Filtro simplificado para no fallar por el precio 0.00
+
+                if (servicesToImport.length === 0) {
+                    console.error('[Import] Error: No se generaron registros válidos después del mapeo.');
+                    Swal.fire('Atención', 'No se pudieron procesar los registros. Verifica que la columna "Producto" tenga texto.', 'warning');
+                    return;
+                }
 
                 const confirm = await Swal.fire({
                     title: 'Confirmar Importación',
-                    text: `Se importarán ${servicesToImport.length} servicios al catálogo.`,
-                    icon: 'info',
+                    text: `Se detectaron ${servicesToImport.length} ítems. ¿Deseas importarlos como ${isServiceMode ? 'servicios' : 'productos'} ahora?`,
+                    icon: 'question',
                     showCancelButton: true,
-                    confirmButtonText: 'Importar ahora',
-                    cancelButtonText: 'Revisar archivo'
+                    confirmButtonText: 'Sí, importar todo',
+                    cancelButtonText: 'Cancelar'
                 });
+
 
                 if (confirm.isConfirmed) {
                     setIsSeeding(true);
                     await productService.bulkCreateProducts(servicesToImport);
-                    Swal.fire('¡Éxito!', 'Servicios importados correctamente', 'success');
+                    Swal.fire('¡Listo!', `${isServiceMode ? 'Servicios' : 'Productos'} importados correctamente.`, 'success');
                     fetchProducts();
+
                 }
             } catch (error) {
                 console.error('Error importing excel:', error);
-                Swal.fire('Error', 'Hubo un error al procesar el archivo Excel. Asegúrate que el formato sea correcto.', 'error');
+                Swal.fire('Error', 'Hubo un problema al procesar el archivo. Revisa que no esté protegido con contraseña.', 'error');
             } finally {
                 setIsSeeding(false);
                 e.target.value = ''; // Reset input
             }
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
     };
 
     const seedServices = async () => {
@@ -338,9 +454,13 @@ const Inventory = () => {
         setCurrentPage(1);
     };
 
-    // Aplicar filtros y búsqueda
+    // Aplicar filtros, búsqueda y MODO (Service vs Product)
     const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+        // 1. Filtrar por tipo (si es nulo, asumimos SERVICE por compatibilidad con datos viejos)
+        const productType = product.type || 'SERVICE';
+        if (productType !== mode) return false;
+
+        const matchesSearch = (product.name || '').toLowerCase().includes(searchTerm.toLowerCase());
         if (!matchesSearch) return false;
 
         if (filters.category !== 'all') {
@@ -353,9 +473,16 @@ const Inventory = () => {
         return true;
     });
 
+
     // Obtener categorías únicas
-    const predefinedCategories = ['Lavado de Ropa', 'Cama', 'Cobertores', 'Hogar', 'Tapetes', 'Prendas', 'Blancos/Sabanas', 'Varios', 'Accesorios', 'General'];
-    const existingCategories = Array.from(new Set(products.map(p => p.category || 'General')));
+    const predefinedCategories = isServiceMode 
+        ? ['Lavado de Ropa', 'Cama', 'Cobertores', 'Hogar', 'Tapetes', 'Prendas', 'Blancos/Sabanas', 'Varios', 'Accesorios', 'General']
+        : ['Venta', 'Limpieza', 'Químicos', 'Bolsas', 'Accesorios', 'Hogar', 'General'];
+
+    const existingCategories = Array.from(new Set(products
+        .filter(p => (p.type || 'SERVICE') === mode)
+        .map(p => p.category || 'General')));
+
     const uniqueCategories = Array.from(new Set([...predefinedCategories, ...customCategories, ...existingCategories])).sort();
 
     const getFilterCount = () => {
@@ -375,28 +502,101 @@ const Inventory = () => {
         setNewCategoryName('');
     };
 
-    const handleDeleteCategory = (cat) => {
-        const updatedCategories = customCategories.filter(c => c !== cat);
-        setCustomCategories(updatedCategories);
-        localStorage.setItem('customCategories', JSON.stringify(updatedCategories));
+    const handleStartEditCategory = (cat) => {
+        setEditingCategoryId(cat);
+        setEditedCategoryName(cat);
+    };
+
+    const handleRenameCategory = async (oldName) => {
+        const newName = editedCategoryName.trim();
+        if (!newName || oldName === newName) {
+            setEditingCategoryId(null);
+            return;
+        }
+
+        try {
+            // Actualizar productos en Supabase
+            const { error } = await supabase
+                .from('products')
+                .update({ category: newName })
+                .eq('category', oldName);
+
+            if (error) throw error;
+
+            // Actualizar customCategories si aplica
+            if (customCategories.includes(oldName)) {
+                const updated = customCategories.map(c => c === oldName ? newName : c);
+                setCustomCategories(updated);
+                localStorage.setItem('customCategories', JSON.stringify(updated));
+            }
+
+            setEditingCategoryId(null);
+            fetchProducts();
+            Swal.fire('Éxito', 'Categoría renombrada correctamente', 'success');
+        } catch (error) {
+            console.error('Error renaming category:', error);
+            Swal.fire('Error', 'No se pudo renombrar la categoría', 'error');
+        }
+    };
+
+    const handleDeleteCategory = async (cat) => {
+        const result = await Swal.fire({
+            title: '¿Eliminar categoría?',
+            text: `Todos los ítems en "${cat}" pasarán a ser "General".`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+
+
+        if (result.isConfirmed) {
+            try {
+                // Mover productos a 'General'
+                const { error } = await supabase
+                    .from('products')
+                    .update({ category: 'General' })
+                    .eq('category', cat);
+
+                if (error) throw error;
+
+                // Quitar de customCategories
+                const updated = customCategories.filter(c => c !== cat);
+                setCustomCategories(updated);
+                localStorage.setItem('customCategories', JSON.stringify(updated));
+
+                fetchProducts();
+                Swal.fire('Eliminada', 'Categoría eliminada correctamente', 'success');
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                Swal.fire('Error', 'No se pudo eliminar la categoría', 'error');
+            }
+        }
     };
 
     return (
         <div className="inventory-page">
             <header className="inventory-header">
                 <div>
-                    <h1 className="inventory-title">Catálogo de Servicios</h1>
-                    <p className="inventory-subtitle">Gestiona los servicios y precios de la lavandería</p>
+                    <h1 className="inventory-title">{isServiceMode ? 'Catálogo de Servicios' : 'Catálogo de Productos'}</h1>
+                    <p className="inventory-subtitle">
+                        {isServiceMode ? 'Gestiona los servicios y precios de la lavandería' : 'Gestiona los productos de venta al público'}
+                    </p>
                 </div>
+
                 <div className="flex gap-2 items-center">
-                    <button 
-                        onClick={seedServices}
-                        disabled={isSeeding}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">list_alt</span>
-                        <span className="hidden sm:inline">{isSeeding ? 'Cargando...' : 'Cargar Lista Precios'}</span>
-                    </button>
+                    {isServiceMode && (
+                        <button 
+                            onClick={seedServices}
+                            disabled={isSeeding}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">list_alt</span>
+                            <span className="hidden sm:inline">{isSeeding ? 'Cargando...' : 'Cargar Lista Precios'}</span>
+                        </button>
+                    )}
+
                     
                     <button 
                         onClick={() => {
@@ -418,7 +618,8 @@ const Inventory = () => {
                         <input
                             type="text"
                             className="search-input"
-                            placeholder="Buscar servicio..."
+                            placeholder={isServiceMode ? "Buscar servicio..." : "Buscar producto..."}
+
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -461,8 +662,9 @@ const Inventory = () => {
                         </button>
                         <button className="control-btn primary" onClick={() => handleOpenModal()}>
                             <FiPlus className="btn-icon" />
-                            Nuevo Servicio
+                            {isServiceMode ? 'Nuevo Servicio' : 'Nuevo Producto'}
                         </button>
+
                     </div>
                 </div>
 
@@ -473,10 +675,12 @@ const Inventory = () => {
                         <table className="products-table">
                             <thead>
                                 <tr>
-                                    <th>Servicio</th>
+                                    <th>{isServiceMode ? 'Servicio' : 'Producto'}</th>
                                     <th>Categoría</th>
                                     <th>Precio</th>
-                                    <th>Tipo de Cobro</th>
+                                    {!isServiceMode && <th>Stock</th>}
+                                    <th>{isServiceMode ? 'Tipo de Cobro' : 'Tipo Venta'}</th>
+
                                     <th className="actions-col">Acciones</th>
                                 </tr>
                             </thead>
@@ -490,12 +694,14 @@ const Inventory = () => {
                                                     <div className="product-cell">
                                                         <div className="product-icon-placeholder">
                                                             <span className="material-symbols-outlined">
-                                                                {product.pricing_type === 'kg' ? 'fitness_center' : 'local_laundry_service'}
+                                                                {product.pricing_type === 'kg' ? 'fitness_center' : (isServiceMode ? 'local_laundry_service' : 'shopping_bag')}
                                                             </span>
                                                         </div>
                                                         <div className="product-info">
                                                             <div className="product-name">{product.name}</div>
+                                                            {product.barcode && <div className="text-[10px] text-slate-400 font-mono">#{product.barcode}</div>}
                                                         </div>
+
                                                     </div>
                                                 </td>
                                                 <td>
@@ -504,11 +710,24 @@ const Inventory = () => {
                                                     </span>
                                                 </td>
                                                 <td className="price-cell">${product.price.toFixed(2)}</td>
+                                                {!isServiceMode && (
+                                                    <td>
+                                                        {(product.type === 'SERVICE' || product.stock >= 9999) ? (
+                                                            <span className="text-slate-400 text-xs italic">Infinito</span>
+                                                        ) : (
+                                                            <span className={`text-sm font-black ${product.stock <= (product.min_stock || 0) ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200'}`}>
+                                                                {product.stock}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                )}
+
                                                 <td>
                                                     <span className="text-xs font-bold uppercase text-slate-500">
                                                         {product.pricing_type === 'kg' ? 'Por Kilo' : 'Por Unidad'}
                                                     </span>
                                                 </td>
+
                                                 <td className="actions-col">
                                                     <div className="actions-menu-container">
                                                         <button
@@ -553,8 +772,9 @@ const Inventory = () => {
                                     <tr>
                                         <td colSpan="5" className="empty-state-cell">
                                             <div className="empty-state">
-                                                <p>No se encontraron servicios</p>
+                                                <p>No se encontraron {isServiceMode ? 'servicios' : 'productos'}</p>
                                             </div>
+
                                         </td>
                                     </tr>
                                 )}
@@ -572,14 +792,31 @@ const Inventory = () => {
                         </button>
 
                         <div className="new-product-modal-header">
-                            <h2 className="new-product-title">{editingProduct ? 'Editar Servicio' : 'Nuevo Servicio'}</h2>
+                            <h2 className="new-product-title">
+                                {editingProduct ? (isServiceMode ? 'Editar Servicio' : 'Editar Producto') : (isServiceMode ? 'Nuevo Servicio' : 'Nuevo Producto')}
+                            </h2>
                         </div>
+
 
                         <div className="new-product-modal-body">
                             <form id="new-product-form" onSubmit={handleSubmit} className="new-product-form">
                                 <div className="new-product-form-grid">
-                                    <div className="new-product-form-group col-span-12">
-                                        <label className="new-product-label">Nombre del Servicio</label>
+                                    <div className="new-product-form-group col-span-12 md:col-span-12">
+                                        <label className="new-product-label">Clasificación (¿Dónde aparecerá?)</label>
+                                        <select
+                                            className="new-product-select !bg-blue-50 dark:!bg-blue-900/20 !border-blue-200 dark:!border-blue-800 font-bold"
+                                            name="type"
+                                            value={formData.type}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="SERVICE">🧺 Catálogo de Servicios</option>
+                                            <option value="PRODUCT">🛍️ Catálogo de Productos (con Stock)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="new-product-form-group col-span-12 md:col-span-8">
+                                        <label className="new-product-label">Nombre del {isServiceMode ? 'Servicio' : 'Producto'}</label>
+
                                         <input
                                             className="new-product-input"
                                             type="text"
@@ -589,6 +826,19 @@ const Inventory = () => {
                                             required
                                         />
                                     </div>
+
+                                    <div className="new-product-form-group col-span-12 md:col-span-4">
+                                        <label className="new-product-label">Código (Opcional)</label>
+                                        <input
+                                            className="new-product-input"
+                                            type="text"
+                                            name="barcode"
+                                            value={formData.barcode}
+                                            onChange={handleInputChange}
+                                            placeholder="Código de barras..."
+                                        />
+                                    </div>
+
 
                                     <div className="new-product-form-group col-span-12 md:col-span-6">
                                         <div className="new-product-category-header">
@@ -624,8 +874,8 @@ const Inventory = () => {
                                         </select>
                                     </div>
 
-                                    <div className="new-product-form-group col-span-12">
-                                        <label className="new-product-label">Precio</label>
+                                    <div className="new-product-form-group col-span-12 md:col-span-4">
+                                        <label className="new-product-label">Precio de Venta</label>
                                         <div className="new-product-price-wrapper">
                                             <span className="new-product-price-symbol">$</span>
                                             <input
@@ -639,6 +889,65 @@ const Inventory = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {formData.type === 'PRODUCT' && (
+                                        <>
+                                            <div className="new-product-form-group col-span-12 md:col-span-4">
+                                                <label className="new-product-label">Precio Costo</label>
+                                                <div className="new-product-price-wrapper">
+                                                    <span className="new-product-price-symbol">$</span>
+                                                    <input
+                                                        className="new-product-input new-product-price-input"
+                                                        type="number"
+                                                        name="cost_price"
+                                                        value={formData.cost_price}
+                                                        onChange={handleInputChange}
+                                                        step="0.01"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="new-product-form-group col-span-12 md:col-span-4">
+                                                <label className="new-product-label">Precio Mayoreo</label>
+                                                <div className="new-product-price-wrapper">
+                                                    <span className="new-product-price-symbol">$</span>
+                                                    <input
+                                                        className="new-product-input new-product-price-input"
+                                                        type="number"
+                                                        name="wholesale_price"
+                                                        value={formData.wholesale_price}
+                                                        onChange={handleInputChange}
+                                                        step="0.01"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="new-product-form-group col-span-12 md:col-span-6">
+                                                <label className="new-product-label">Stock Actual</label>
+                                                <input
+                                                    className="new-product-input"
+                                                    type="number"
+                                                    name="stock"
+                                                    value={formData.stock}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div className="new-product-form-group col-span-12 md:col-span-6">
+                                                <label className="new-product-label">Stock Mínimo (Alerta)</label>
+                                                <input
+                                                    className="new-product-input"
+                                                    type="number"
+                                                    name="min_stock"
+                                                    value={formData.min_stock}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+
                                 </div>
                             </form>
                         </div>
@@ -674,9 +983,44 @@ const Inventory = () => {
                             <div className="categories-list">
                                 {uniqueCategories.map(cat => (
                                     <div key={cat} className="categories-item">
-                                        <span>{cat}</span>
-                                        {customCategories.includes(cat) && (
-                                            <button onClick={() => handleDeleteCategory(cat)} className="text-red-500"><FiTrash2 /></button>
+                                        {editingCategoryId === cat ? (
+                                            <div className="flex items-center gap-2 w-full">
+                                                <input 
+                                                    type="text" 
+                                                    value={editedCategoryName} 
+                                                    onChange={(e) => setEditedCategoryName(e.target.value)}
+                                                    className="categories-input flex-1"
+                                                    autoFocus
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleRenameCategory(cat);
+                                                        if (e.key === 'Escape') setEditingCategoryId(null);
+                                                    }}
+                                                />
+                                                <button onClick={() => handleRenameCategory(cat)} className="text-emerald-500 p-1"><FiSave /></button>
+                                                <button onClick={() => setEditingCategoryId(null)} className="text-gray-500 p-1"><FiX /></button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span>{cat}</span>
+                                                <div className="flex gap-1">
+                                                    <button 
+                                                        onClick={() => handleStartEditCategory(cat)} 
+                                                        className="text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+                                                        title="Renombrar"
+                                                    >
+                                                        <FiEdit2 size={14} />
+                                                    </button>
+                                                    {cat !== 'General' && (
+                                                        <button 
+                                                            onClick={() => handleDeleteCategory(cat)} 
+                                                            className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                                            title="Eliminar"
+                                                        >
+                                                            <FiTrash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 ))}

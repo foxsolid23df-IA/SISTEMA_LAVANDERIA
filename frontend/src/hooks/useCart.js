@@ -11,10 +11,10 @@ export const useCart = (mostrarError) => {
         setCarrito(carritoAnterior => {
             // Buscar si el producto ya está en el carrito
             const productoExistente = carritoAnterior.find(item => item.id === producto.id)
-            
+
             if (productoExistente) {
                 // Si es un servicio (cobro por kg o unitario sin stock crítico), simplemente incrementamos
-                if (producto.category === 'service') {
+                if (producto.type === 'SERVICE') {
                     return carritoAnterior.map(item =>
                         item.id === producto.id
                             ? { ...item, quantity: item.quantity + 1 }
@@ -35,7 +35,7 @@ export const useCart = (mostrarError) => {
                 }
             } else {
                 // Si no existe, verificar si es servicio o tiene stock
-                if (producto.category === 'service' || producto.stock > 0) {
+                if (producto.type === 'SERVICE' || producto.stock > 0) {
                     return [...carritoAnterior, {
                         ...producto,
                         quantity: 1
@@ -57,18 +57,18 @@ export const useCart = (mostrarError) => {
             carritoAnterior.map(item => {
                 if (item.id === idProducto) {
                     // Si es servicio, permitimos decimales y no hay tope de stock
-                    if (item.category === 'service') {
+                    if (item.type === 'SERVICE') {
                         return { ...item, quantity: parseFloat(nuevaCantidad) || 0 }
                     }
 
                     // Si es producto físico, aplicamos reglas normales
                     const cantidadMaxima = item.stock
                     const cantidadValida = Math.min(nuevaCantidad, cantidadMaxima)
-                    
+
                     if (nuevaCantidad > cantidadMaxima) {
                         mostrarError?.(`Máximo disponible: ${cantidadMaxima}`)
                     }
-                    
+
                     return { ...item, quantity: Math.floor(cantidadValida) }
                 }
                 return item
@@ -78,7 +78,7 @@ export const useCart = (mostrarError) => {
 
     // 5. FUNCIÓN PARA QUITAR UN PRODUCTO DEL CARRITO
     const quitarProducto = (idProducto) => {
-        setCarrito(carritoAnterior => 
+        setCarrito(carritoAnterior =>
             carritoAnterior.filter(item => item.id !== idProducto)
         )
     }

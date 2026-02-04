@@ -20,16 +20,17 @@ exports.getHealth = async (req, res) => {
         });
 
         await sequelize.authenticate();
-        
+
         const licenseExpiry = await syncService.getLicenseExpiry();
-        
+
         res.json({
             success: true,
             status: 'Operational',
             database: 'Connected',
             license_expires_at: licenseExpiry,
             timestamp: new Date().toISOString(),
-            version: '1.0.0-admin-alpha'
+            version: '1.4.0'
+
         });
     } catch (error) {
         await SystemLog.create({
@@ -200,17 +201,39 @@ exports.syncProducts = async (req, res) => {
 
         const result = await syncService.pullProducts(products);
 
-        await SystemLog.create({
-            action: 'SYNC_PRODUCTS',
-            module: 'SYNC_API',
-            details: `Sincronizados ${products.length} productos (Nuevos: ${result.created}, Actualizados: ${result.updated})`,
-            ip: req.ip,
-            userAgent: req.headers['user-agent']
-        });
+        // Registro de auditoría (No bloqueante para la respuesta)
+        try {
+            await SystemLog.create({
+                action: 'SYNC_PRODUCTS',
+                module: 'SYNC_API',
+                details: `Sincronizados ${products.length} productos (Nuevos: ${result.created}, Actualizados: ${result.updated})`,
+                ip: req.ip,
+                userAgent: req.headers['user-agent']
+            });
+        } catch (logError) {
+            console.error('[AdminController] Error al guardar log de sincronización:', logError.message);
+        }
 
         res.json({ success: true, result });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error('[AdminController] Error crítico en syncProducts:', error);
+
+        // Extraer detalles si es un error de validación de Sequelize
+        const validationErrors = error.errors ? error.errors.map(e => ({
+            field: e.path,
+            message: e.message,
+            value: e.value
+        })) : null;
+
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            errorName: error.name,
+            details: validationErrors || error,
+            fullError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))),
+            stack: error.stack
+        });
+
     }
 };
 
@@ -233,7 +256,7 @@ exports.markSaleSynced = async (req, res) => {
     try {
         const { localId, supabaseId } = req.body;
         const success = await syncService.markSaleAsSynced(localId, supabaseId);
-        
+
         if (success) {
             res.json({ success: true });
         } else {

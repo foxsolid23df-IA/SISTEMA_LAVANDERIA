@@ -9,9 +9,12 @@ const Product = sequelize.define('Product', {
     wholesale_price: { type: DataTypes.FLOAT, defaultValue: 0 }, // Precio al por mayor
     stock: { type: DataTypes.INTEGER, allowNull: false },    // Stock disponible
     min_stock: { type: DataTypes.INTEGER, defaultValue: 0 }, // Stock mínimo para alertas
+    max_stock: { type: DataTypes.INTEGER, defaultValue: 0 }, // Stock máximo
     category: { type: DataTypes.STRING },                    // Categoría
     barcode: { type: DataTypes.STRING, unique: true },       // Código de barras único
     image: { type: DataTypes.TEXT },                         // URL o Base64 de imagen (opcional)
+    unit_type: { type: DataTypes.STRING, defaultValue: 'UNIDAD' }, // UNIDAD, KG, etc
+    type: { type: DataTypes.STRING, defaultValue: 'PRODUCT' },      // PRODUCT o SERVICE
     supabase_id: { type: DataTypes.BIGINT, unique: true }     // ID de referencia en Supabase
 }, {
     timestamps: true,            // Habilitamos para rastrear modificaciones locales

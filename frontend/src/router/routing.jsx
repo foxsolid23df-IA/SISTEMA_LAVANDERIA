@@ -9,6 +9,7 @@ import { Login } from "../components/auth/Login"
 import { LockScreen } from "../components/auth/LockScreen"
 import { CashFundModal } from "../components/auth/CashFundModal"
 import { UserManager } from "../components/admin/UserManager"
+import { SupplyInventory } from "../components/supplies/SupplyInventory";
 
 import { AuthProvider, useAuth } from "../hooks/useAuth"
 import { TerminalSetup } from "../components/config/TerminalSetup";
@@ -145,7 +146,10 @@ export const Routing = () => {
 
                                 <Route path="/" element={<PrivateLayout><Sales /></PrivateLayout>} />
                                 <Route path="/ventas" element={<PrivateLayout><Sales /></PrivateLayout>} />
-                                <Route path="/servicios" element={<PrivateLayout><Inventory /></PrivateLayout>} />
+                                <Route path="/servicios" element={<PrivateLayout><Inventory mode="SERVICE" /></PrivateLayout>} />
+                                <Route path="/productos" element={<PrivateLayout><Inventory mode="PRODUCT" /></PrivateLayout>} />
+
+                                <Route path="/insumos" element={<PrivateLayout><SupplyInventory /></PrivateLayout>} />
 
                                 <Route path="/historial" element={<PrivateLayout><Historial /></PrivateLayout>} />
                                 <Route path="/ordenes" element={<PrivateLayout><Orders /></PrivateLayout>} />

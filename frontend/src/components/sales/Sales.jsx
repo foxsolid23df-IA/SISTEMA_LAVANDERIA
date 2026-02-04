@@ -22,7 +22,7 @@ export const Sales = () => {
     const { user, cashSession } = useAuth();
     const { weight, isConnected: isScaleConnected, connect: connectScale, error: scaleError } = useScale();
 
-    const { productos, loading: loadingProducts } = useProducts();
+    const { productos, loading: loadingProducts, loadProducts } = useProducts();
     const { 
         carrito, 
         agregarProducto, 
@@ -61,18 +61,27 @@ export const Sales = () => {
     // IA States
     const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     
+    // Modo de Venta (Filtro Principal)
+    const [saleMode, setSaleMode] = useState('SERVICE'); // 'SERVICE' o 'PRODUCT'
+
+    
     // Referencias
     const ticketRef = useRef(null);
 
     // Filtrado de productos/servicios
     const filteredProducts = useMemo(() => {
         return productos.filter(p => {
+            // Filtro de Modo (Servicio vs Producto)
+            const productType = p.type || 'SERVICE';
+            if (productType !== saleMode) return false;
+
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                  (p.barcode && p.barcode.includes(searchTerm));
             const matchesCategory = filterCategory === "all" || p.category === filterCategory;
             return matchesSearch && matchesCategory;
         });
-    }, [productos, searchTerm, filterCategory]);
+    }, [productos, searchTerm, filterCategory, saleMode]);
+
 
     // Estados de configuración
     const [businessSettings, setBusinessSettings] = useState(null);
@@ -162,6 +171,7 @@ export const Sales = () => {
             });
             
             Swal.fire('¡Éxito!', 'Orden registrada correctamente', 'success');
+            loadProducts(true); // Refrescar stock
             setIsPaymentModalOpen(false);
             vaciarCarrito();
             setClienteSeleccionado(null);
@@ -205,8 +215,32 @@ export const Sales = () => {
         <div className="pos-container flex flex-col h-[calc(100vh-64px)] lg:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950">
             {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
-                <div className="flex justify-between items-center mb-2">
-                     <h3 className="font-bold text-black dark:text-white uppercase tracking-wider">Servicios y Productos</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                     <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <button 
+                            onClick={() => setSaleMode('SERVICE')}
+                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black transition-all ${
+                                saleMode === 'SERVICE' 
+                                ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-lg' 
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">local_laundry_service</span>
+                            SERVICIOS
+                        </button>
+                        <button 
+                            onClick={() => setSaleMode('PRODUCT')}
+                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black transition-all ${
+                                saleMode === 'PRODUCT' 
+                                ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-lg' 
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                            PRODUCTOS
+                        </button>
+                     </div>
+
                      <button
                         onClick={connectScale}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -232,8 +266,9 @@ export const Sales = () => {
                         <input 
                             type="text" 
                             className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-black font-bold dark:text-white"
-                            placeholder="Buscar servicio (Lavado, Secado, Planchado)..."
+                            placeholder={saleMode === 'SERVICE' ? "Buscar servicio (Lavado, Secado, Planchado)..." : "Buscar producto por nombre o código..."}
                             value={searchTerm}
+
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
@@ -244,19 +279,75 @@ export const Sales = () => {
                         <div className="col-span-full flex justify-center py-20">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
                         </div>
-                    ) : filteredProducts.map(p => (
-                        <button 
-                            key={p.id}
-                            onClick={() => agregarProducto(p)}
-                            className="flex flex-col text-left bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-lg transition-all group"
-                        >
-                            <div className="mb-2 w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                <span className="material-symbols-outlined">{p.category === 'service' ? 'dry_cleaning' : 'inventory_2'}</span>
-                            </div>
-                            <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight mb-1">{p.name}</h3>
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatearDinero(p.price)} {p.pricing_type === 'kg' ? '/ kg' : '/ pza'}</p>
-                        </button>
-                    ))}
+                    ) : filteredProducts.map(p => {
+                        // Detección Inteligente de Servicio (Incluso si la DB aún dice PRODUCT)
+                        const isService = p.type === 'SERVICE' || 
+                                         p.stock >= 9999 || 
+                                         (p.name && p.name.toLowerCase().includes('carga')) || 
+                                         (p.name && p.name.toLowerCase().includes('lavado')) ||
+                                         (p.name && p.name.toLowerCase().includes('planchado')) ||
+                                         p.category?.toLowerCase().includes('ropa');
+
+                        return (
+                            <button 
+                                key={p.id}
+                                onClick={() => agregarProducto(p)}
+                                disabled={!isService && p.stock <= 0}
+                                className={`flex flex-col text-left bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all shadow-sm hover:shadow-xl group relative min-h-[140px] ${
+                                    !isService && p.stock <= 0 
+                                        ? 'opacity-50 grayscale cursor-not-allowed border-slate-100' 
+                                        : isService 
+                                            ? 'border-indigo-100 dark:border-indigo-900/30 hover:border-indigo-500 bg-indigo-50/5' 
+                                            : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500'
+                                }`}
+                            >
+                                {/* Badge de Tipo - Más compacto */}
+                                <div className="absolute top-2 right-2 z-10">
+                                    {isService ? (
+                                        <span className="bg-indigo-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm">
+                                            Servicio
+                                        </span>
+                                    ) : (
+                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
+                                            p.stock <= p.min_stock 
+                                                ? 'bg-rose-500 text-white' 
+                                                : 'bg-emerald-500 text-white'
+                                        }`}>
+                                            Stock: {p.stock}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className={`mb-2 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                                    isService
+                                        ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600'
+                                        : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600'
+                                } group-hover:text-white`}>
+                                    <span className="material-symbols-outlined text-xl">
+                                        {isService ? 'dry_cleaning' : 'inventory_2'}
+                                    </span>
+                                </div>
+
+                                <h3 className="text-xs lg:text-sm font-bold text-slate-800 dark:text-white leading-tight mb-2 pr-1 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                                    {p.name || 'Sin nombre'}
+                                </h3>
+
+                                <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
+                                    <p className="text-xs lg:text-sm font-black">
+                                        <span className={isService ? 'text-indigo-600' : 'text-emerald-600'}>
+                                            {formatearDinero(p.price)}
+                                        </span>
+                                        <span className="text-[9px] ml-1 text-slate-400 font-bold opacity-70">
+                                            / {p.unit_type || (p.pricing_type === 'kg' ? 'kg' : 'pza')}
+                                        </span>
+                                    </p>
+                                    <span className={`material-symbols-outlined text-sm transition-all ${isService ? 'text-indigo-400' : 'text-emerald-400'}`}>
+                                        add_circle
+                                    </span>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -327,7 +418,12 @@ export const Sales = () => {
                     ) : carrito.map(item => (
                         <div key={item.id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</h4>
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</h4>
+                                    <span className={`text-[8px] font-black px-1 rounded uppercase ${item.type === 'SERVICE' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {item.type === 'SERVICE' ? 'S' : 'P'}
+                                    </span>
+                                </div>
                                 <p className="text-xs font-bold text-emerald-600">{formatearDinero(item.price)} {item.pricing_type === 'kg' ? '/ kg' : '/ pza'}</p>
                             </div>
                             <div className="flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-1">

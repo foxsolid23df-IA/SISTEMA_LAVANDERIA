@@ -16,6 +16,9 @@ const User = require('./models/User');
 require('./models/SystemLog');
 require('./models/Terminal'); // <--- Registro de terminales
 require('./models/StoreSetting'); // <--- Registro de configuración y licencia
+require('./models/Supply'); // <--- Control de Insumos
+require('./models/SupplyMovement'); // <--- Movimientos de Insumos
+require('./models/WeeklyReconciliation'); // <--- Reconciliación Semanal
 
 // Crear la app de Express
 const app = express();
@@ -43,6 +46,7 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const printerRoutes = require('./routes/printerRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const supplyRoutes = require('./routes/supplyRoutes');
 
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
@@ -50,6 +54,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/printer', printerRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/supplies', supplyRoutes);
 
 // Puerto y host configurables por variable de entorno
 const PORT = 3001; // Forzamos 3001 para Electron
