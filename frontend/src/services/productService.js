@@ -33,10 +33,10 @@ export const productService = {
     subscribeToProducts: (callback) => {
         return supabase
             .channel('public:products')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'products' 
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'products'
             }, (payload) => {
                 console.log('[ProductService] Cambio detectado:', payload.eventType);
                 // Actualizar caché local según el tipo de evento
@@ -70,13 +70,18 @@ export const productService = {
                 lastFetchTime = now;
                 return data;
             }
-            
+
             if (error) console.warn('[ProductService] Error en Supabase, intentando local...', error.message);
         } catch (error) {
             console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
         }
 
-        // 3. Fallback: Intentar API Local (SQLite)
+        // 3. Fallback: Intentar API Local (SQLite) solo en Electron
+        if (!config.isElectron) {
+            console.log('[ProductService] Modo Web: Saltando fallback local.');
+            return productsCache || [];
+        }
+
         try {
             console.log('[ProductService] Consultando SQLite local...');
             const response = await fetch(LOCAL_API_URL);
@@ -110,14 +115,14 @@ export const productService = {
             // 2. Enviar al backend local para persistencia con PIN por URL para evitar bloqueos CORS
             const response = await fetch(`${config.api.baseUrl}/api/admin/sync/products?masterPin=2026SOP`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ products: cloudProducts })
             });
 
             if (!response.ok) throw new Error('Error al guardar en base de datos local');
-            
+
             const result = await response.json();
             return { success: true, ...result.result };
         } catch (error) {
@@ -129,7 +134,7 @@ export const productService = {
     // Crear un nuevo producto
     createProduct: async (product) => {
         const { data: userData, error: authError } = await supabase.auth.getUser();
-        
+
         if (authError) {
             if (authError.message?.includes('aborted') || authError.name === 'AbortError') {
                 throw new Error('Operación cancelada');
@@ -247,7 +252,7 @@ export const productService = {
     // Crear múltiples productos (Carga Masiva)
     bulkCreateProducts: async (products) => {
         const { data: userData, error: authError } = await supabase.auth.getUser();
-        
+
         if (authError) {
             if (authError.message?.includes('aborted') || authError.name === 'AbortError') {
                 throw new Error('Operación cancelada');

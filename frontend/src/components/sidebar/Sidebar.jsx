@@ -7,6 +7,7 @@ import { productService } from "../../services/productService";
 import { salesService } from "../../services/salesService";
 import { CashCut } from "../cashcut/CashCut";
 import Swal from "sweetalert2";
+import { config } from "../../config";
 import "./Sidebar.css";
 import VisionAIModal from "../ai/VisionAIModal";
 
@@ -488,7 +489,7 @@ export const Sidebar = () => {
                   {isOnline ? "En Línea" : "Sin Conexión"}
                 </span>
               </div>
-              {isOnline && (
+              {isOnline && config.isElectron && (
                 <button 
                   onClick={handleManualSync}
                   disabled={isSyncing}
