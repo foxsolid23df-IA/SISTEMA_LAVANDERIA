@@ -536,3 +536,5 @@ _Última actualización: Enero 2026_
 
 
 -- Deployment Trigger v1.3.7 --
+
+- Force Refresh Vercel -
