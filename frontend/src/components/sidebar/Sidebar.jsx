@@ -8,6 +8,7 @@ import { salesService } from "../../services/salesService";
 import { CashCut } from "../cashcut/CashCut";
 import Swal from "sweetalert2";
 import "./Sidebar.css";
+import VisionAIModal from "../ai/VisionAIModal";
 
 export const Sidebar = () => {
   const {
@@ -21,6 +22,7 @@ export const Sidebar = () => {
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [updaterMessage, setUpdaterMessage] = useState("");
@@ -375,6 +377,23 @@ export const Sidebar = () => {
             <span className="text-sm font-bold">Dólares</span>
           </NavLink>
 
+          {/* AI Vision POC Button */}
+          <button
+            onClick={() => {
+              setShowAIModal(true);
+              setIsOpen(false);
+            }}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="material-icons-outlined text-[20px]">
+                auto_awesome
+              </span>
+              <span className="text-sm font-bold">IA Vision</span>
+            </div>
+            <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-md font-black tracking-tighter">BETA</span>
+          </button>
+
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               onClick={() => {
@@ -525,6 +544,9 @@ export const Sidebar = () => {
 
       {/* Modal de Corte de Caja */}
       {showCashCut && <CashCut onClose={() => setShowCashCut(false)} />}
+
+      {/* Modal de IA Vision POC */}
+      {showAIModal && <VisionAIModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} />}
     </>
   );
 };

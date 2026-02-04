@@ -23,6 +23,7 @@ import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
+import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
 
 const PrivateLayout = ({ children }) => {
@@ -132,6 +133,7 @@ export const Routing = () => {
             <Routes>
                 {/* Pantalla Cliente: Independiente de AuthProvider y ProductProvider */}
                 <Route path="/customer-display" element={<CustomerDisplay />} />
+                <Route path="/mobile-capture/:sessionId" element={<MobileCapture />} />
 
                 {/* Rutas de la Aplicación Principal */}
                 <Route path="/*" element={
