@@ -109,15 +109,10 @@ const VisionAIModal = ({ isOpen, onClose }) => {
 
   const analyzeImage = async (base64Data) => {
     try {
-      // Usar la baseUrl configurada (que ahora es inteligente según el entorno)
-      // Si estamos en Vercel y no hay una URL de API configurada, intentamos usar 127.0.0.1 
-      // pero solo si el usuario dio permiso o si es posible (Mixed Content)
-      const apiUrl = config.api.baseUrl || (window.location.hostname === 'localhost' ? 'http://127.0.0.1:3001' : '');
+      // Intentamos usar la URL configurada, o por defecto el puente local 127.0.0.1
+      // Esto permite que la versión Web hable con el motor de IA que corre en la PC del usuario.
+      const apiUrl = config.api.baseUrl || 'http://127.0.0.1:3001';
       
-      if (!apiUrl) {
-         throw new Error("No hay un servidor de IA disponible en este entorno web.");
-      }
-
       console.log('[VisionAI] Solicitando análisis a:', `${apiUrl}/api/ai/analyze-cloth`);
       
       const response = await fetch(`${apiUrl}/api/ai/analyze-cloth`, {
@@ -127,6 +122,11 @@ const VisionAIModal = ({ isOpen, onClose }) => {
         },
         body: JSON.stringify({ image: base64Data }),
       });
+
+      if (!response.ok) {
+        if (response.status === 404) throw new Error("El servidor de IA no encontró la ruta de análisis.");
+        throw new Error(`Error del servidor (${response.status})`);
+      }
 
       const data = await response.json();
 
@@ -141,8 +141,14 @@ const VisionAIModal = ({ isOpen, onClose }) => {
       }
     } catch (err) {
       console.error("AI Analysis Error:", err);
-      setError("Error al conectar con la IA. Asegúrate de que el backend esté corriendo.");
-      setStep('camera');
+      let errorMsg = err.message;
+      
+      // Guía para el usuario sobre Mixed Content (HTTPS -> HTTP Localhost)
+      if (window.location.protocol === 'https:' && (apiUrl.includes('127.0.0.1') || apiUrl.includes('localhost'))) {
+          errorMsg = "Conexión local bloqueada por el navegador. Como estás en Vercel (Sitio Seguro), debes dar permiso para conectar con tu PC: Haz clic en el icono de AJUSTES/CANDADO junto a la URL y activa 'Contenido no seguro' (Insecure content).";
+      }
+
+      setError(errorMsg);
     }
   };
 
@@ -184,6 +190,7 @@ const VisionAIModal = ({ isOpen, onClose }) => {
 
           {step === 'camera' && (
             <div className="camera-container">
+              {image && <img src={image} alt="Última Captura" className="preview-img-overlay" style={{ opacity: 0.5, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />}
               <video ref={videoRef} autoPlay playsInline muted />
               <div className="camera-controls">
                 <button className="capture-btn" onClick={capturePhoto}>
@@ -195,6 +202,11 @@ const VisionAIModal = ({ isOpen, onClose }) => {
                   Usar Celular
                 </button>
               </div>
+              {error && (
+                <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                     <button className="retry-btn" onClick={() => { setError(null); reset(); }}>Intentar de nuevo</button>
+                </div>
+              )}
             </div>
           )}
 
