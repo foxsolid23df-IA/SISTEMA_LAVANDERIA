@@ -1,5 +1,14 @@
 # Historial de Cambios Recientes
 
+## [1.3.8] - 2026-02-03
+
+### 🚀 IA y Captura Móvil
+
+- **IA Vision Pro**: Actualizado a **Llama 4 Scout**, el modelo más rápido y potente de Groq.
+- **Backend Robusto**: Sincronización absoluta de archivos `.env`, permitiendo que la IA funcione correctamente dentro del archivo `.exe` instalado.
+- **Captura Móvil Segura**: El código QR ahora utiliza túneles HTTPS vía Vercel, habilitando el permiso de cámara en dispositivos móviles de forma estable.
+- **Diagnóstico Mejorado**: Mensajes de error detallados en pantalla si la API de IA presenta problemas.
+
 Este documento resume las mejoras y correcciones implementadas recientemente en el sistema PosMulticajas.
 
 ## Módulo de Proveedores
