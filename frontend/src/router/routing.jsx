@@ -84,24 +84,25 @@ const PrivateLayout = ({ children }) => {
         }
     }, [user, activeStaff, isLocked, isTerminalConfigured, isValidating]);
 
-    if (loading || isValidating) return <div className="loading-screen">Verificando configuración...</div>;
-    if (!user) return <Navigate to="/login" />;
-
-    // 1. Verificación de Terminal (Fundamental para operar)
-    if (!isTerminalConfigured) {
-        return <TerminalSetup onTerminalConfigured={() => setIsTerminalConfigured(true)} />;
-    }
-
-    // 2. Si la pantalla está bloqueada, mostrar pantalla de PIN
-    if (isLocked) return <LockScreen />;
-
     // Auto-apertura de caja para el Propietario (skip del modal)
+    // REGLA DE REACT: Hooks deben llamarse antes de cualquier return condicional.
     useEffect(() => {
         if (needsCashFund && activeStaff?.isOwner) {
             console.log('[PrivateLayout] Auto-iniciando caja para Propietario...');
             openCashSession(0).catch(err => console.error('Error auto-opening session:', err));
         }
     }, [needsCashFund, activeStaff]);
+
+    if (loading || isValidating) return <div className="loading-screen">Verificando configuración...</div>;
+    if (!user) return <Navigate to="/login" />;
+
+    // Verificación de Terminal (Fundamental para operar)
+    if (!isTerminalConfigured) {
+        return <TerminalSetup onTerminalConfigured={() => setIsTerminalConfigured(true)} />;
+    }
+
+    // Si la pantalla está bloqueada, mostrar pantalla de PIN
+    if (isLocked) return <LockScreen />;
 
     // 3. Si necesita ingresar fondo de caja y está en Ventas, mostrar modal (SOLO si no es dueño)
     if (needsCashFund && isPOSRoute) {
