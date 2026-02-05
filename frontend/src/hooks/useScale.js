@@ -12,12 +12,25 @@ export const useScale = () => {
             setError(null);
             await scaleService.connect();
             setIsConnected(true);
-            
+
             // Start reading automatically upon connection
             startReading();
         } catch (err) {
             setError(err.message || 'Error connecting to scale');
             setIsConnected(false);
+        }
+    }, []);
+
+    const connectSimulation = useCallback(async () => {
+        try {
+            setError(null);
+            await scaleService.connectSimulation((newWeight) => {
+                setWeight(newWeight);
+            });
+            setIsConnected(true);
+            setIsReading(true);
+        } catch (err) {
+            setError(err.message);
         }
     }, []);
 
@@ -33,7 +46,7 @@ export const useScale = () => {
 
     const startReading = useCallback(async () => {
         if (isReading) return;
-        
+
         setIsReading(true);
         try {
             await scaleService.readWeight((newWeight) => {
@@ -63,6 +76,7 @@ export const useScale = () => {
         isConnected,
         error,
         connect,
+        connectSimulation,
         disconnect
     };
 };

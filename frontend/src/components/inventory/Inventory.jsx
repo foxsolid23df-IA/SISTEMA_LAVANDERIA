@@ -283,15 +283,40 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                     return null;
                 };
 
-                // Validar si encontramos al menos la columna del nombre del producto
+                // Validar si encontramos al menos la columna del nombre del producto y Costo
                 const firstRow = data[0];
                 const hasName = getVal(firstRow, ['Producto', 'Servicio', 'Nombre', 'Descripción', 'Descripcion', 'Articulo']);
+                const hasCostVal = getVal(firstRow, ['P. Costo', 'Costo', 'Precio Costo', 'PCosto']);
+
+                // Helper para verificar existencia de columna (no solo valor)
+                const checkColumnExists = (row, keys) => {
+                    const rowKeys = Object.keys(row).map(k => k.toString().toLowerCase()
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]/g, ''));
+                    
+                    return keys.some(key => {
+                        const normalizedKey = key.toString().toLowerCase()
+                            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            .replace(/[^a-z0-9]/g, '');
+                        return rowKeys.includes(normalizedKey);
+                    });
+                };
+
+                const costColumnExists = checkColumnExists(firstRow, ['P. Costo', 'Costo', 'Precio Costo', 'PCosto']);
                 
-                if (!hasName && hasName !== 0) {
+                // Enforce Cost validation ONLY for Products (not Services)
+                // The requirement specified "En catalogo de productos"
+                const isCostMissing = !isServiceMode && !costColumnExists;
+
+                if ((!hasName && hasName !== 0) || isCostMissing) {
                     console.warn('[Import] Encabezados encontrados:', Object.keys(firstRow));
+                    let missing = [];
+                    if (!hasName && hasName !== 0) missing.push('"Producto"');
+                    if (isCostMissing) missing.push('"Costo"');
+
                     Swal.fire({
                         title: 'Error de Formato',
-                        text: 'No se encontró la columna "Producto" o "Servicio". Asegúrate de que tu Excel tenga encabezados en la primera fila.',
+                        text: `Faltan columnas requeridas: ${missing.join(', ')}. ${!isServiceMode ? 'Para productos, la columna "Costo" es obligatoria.' : ''}`,
                         icon: 'error'
                     });
                     return;
@@ -677,6 +702,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                 <tr>
                                     <th>{isServiceMode ? 'Servicio' : 'Producto'}</th>
                                     <th>Categoría</th>
+                                    {!isServiceMode && <th>Costo</th>}
                                     <th>Precio</th>
                                     {!isServiceMode && <th>Stock</th>}
                                     <th>{isServiceMode ? 'Tipo de Cobro' : 'Tipo Venta'}</th>
@@ -709,6 +735,9 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                                         {product.category || 'General'}
                                                     </span>
                                                 </td>
+                                                {!isServiceMode && (
+                                                    <td className="price-cell text-slate-500">${(product.cost_price || 0).toFixed(2)}</td>
+                                                )}
                                                 <td className="price-cell">${product.price.toFixed(2)}</td>
                                                 {!isServiceMode && (
                                                     <td>

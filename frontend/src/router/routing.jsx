@@ -26,6 +26,8 @@ import { ProductProvider } from "../contexts/ProductContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
 import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
+import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
+import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
 
 const PrivateLayout = ({ children }) => {
     const {
@@ -197,6 +199,15 @@ export const Routing = () => {
                                         <AdminRoute>
                                             <Maintenance />
                                         </AdminRoute>
+                                    </PrivateLayout>
+                                } />
+
+                                {/* Ruta Secreta Super Admin */}
+                                <Route path="/super-admin/licencias" element={
+                                    <PrivateLayout>
+                                        <SuperAdminRoute>
+                                            <MasterLicenseManager />
+                                        </SuperAdminRoute>
                                     </PrivateLayout>
                                 } />
 

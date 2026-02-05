@@ -20,7 +20,7 @@ import { useScale } from "../../hooks/useScale";
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
     const { user, cashSession } = useAuth();
-    const { weight, isConnected: isScaleConnected, connect: connectScale, error: scaleError } = useScale();
+    const { weight, isConnected: isScaleConnected, connect: connectScale, connectSimulation, error: scaleError } = useScale();
 
     const { productos, loading: loadingProducts, loadProducts } = useProducts();
     const { 
@@ -242,13 +242,19 @@ export const Sales = () => {
                      </div>
 
                      <button
-                        onClick={connectScale}
+                        onClick={(e) => {
+                            if (e.altKey || e.ctrlKey) {
+                                connectSimulation();
+                            } else {
+                                connectScale();
+                            }
+                        }}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             isScaleConnected 
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
                             : 'bg-slate-100 text-black border border-slate-300 hover:bg-slate-200'
                         }`}
-                        title={isScaleConnected ? "Báscula Conectada" : "Conectar Báscula USB"}
+                        title={isScaleConnected ? "Báscula Conectada" : "Conectar Báscula USB (Alt+Click para Simular)"}
                     >
                         <span className="material-symbols-outlined text-sm">
                             {isScaleConnected ? 'scale' : 'link_off'}

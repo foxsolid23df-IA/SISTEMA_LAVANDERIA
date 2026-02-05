@@ -76,7 +76,22 @@ const BulkImportModal = ({ onClose, onSuccess }) => {
                     !headers.some(h => h.trim().toLowerCase() === col.toLowerCase())
                 );
                 
-                // Allow some flexibility, but warn
+                // Strict validation for Cost column
+                const hasCost = headers.some(h => {
+                    const normalized = h.trim().toLowerCase().replace(/_/g, ' ');
+                    return ['precio costo', 'costo', 'pcosto', 'p. costo'].includes(normalized);
+                });
+
+                if (!hasCost) {
+                    Swal.fire({
+                        title: 'Falta Columna Costo',
+                        text: 'La columna "Costo" o "Precio Costo" es obligatoria para futuros Excels, tal como se solicitó.',
+                        icon: 'error'
+                    });
+                    setFile(null);
+                    return;
+                }
+
                 /* 
                 if (missingColumns.length > 3) {
                      Swal.fire('Error', `Faltan columnas importantes: ${missingColumns.join(', ')}`, 'error');
