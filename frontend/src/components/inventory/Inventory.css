@@ -160,12 +160,14 @@
 /* Force date picker indicator to be visible and have pointer cursor */
 input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    /* You can apply a filter here if you want to force it dark or light specifically */
+    filter: invert(0) brightness(0); /* Force black */
+    opacity: 1 !important;
 }
 
 /* Optional: Dark mode inversion if using a class 'dark' on html/body */
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
+    filter: invert(1) brightness(2); /* Force white */
+    opacity: 1 !important;
 }
 
 
