@@ -268,13 +268,12 @@ export const Sales = () => {
 
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="relative flex-1">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-black">search</span>
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10">search</span>
                         <input 
                             type="text" 
-                            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-black font-bold dark:text-white"
+                            className="w-full pl-16 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-slate-900 font-bold dark:text-white"
                             placeholder={saleMode === 'SERVICE' ? "Buscar servicio (Lavado, Secado, Planchado)..." : "Buscar producto por nombre o código..."}
                             value={searchTerm}
-
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
