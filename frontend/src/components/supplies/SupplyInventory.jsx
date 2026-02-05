@@ -401,7 +401,11 @@ export const SupplyInventory = () => {
                         defaultValue={new Date().toISOString().split('T')[0]}
                         className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 pl-10 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer text-center"
                     />
-                    <span className="material-icons absolute left-3 top-[38px] text-black !opacity-100 dark:text-white pointer-events-none text-[22px] z-10 font-bold">calendar_today</span>
+                    <div className="absolute left-3 top-[38px] text-black dark:text-white z-10 pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="opacity-100">
+                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+                      </svg>
+                    </div>
                   </div>
                   <div>
                       <button 
@@ -503,7 +507,11 @@ export const SupplyInventory = () => {
 
                 {/* Filtro de Fecha */}
                 <div className="relative group">
-                  <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-black !opacity-100 dark:text-white pointer-events-none text-[22px] z-10 font-bold">calendar_today</span>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-black dark:text-white z-10 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="opacity-100">
+                      <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+                    </svg>
+                  </div>
                   <input 
                     type="date"
                     value={filterDate}
