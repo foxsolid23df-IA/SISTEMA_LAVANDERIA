@@ -1757,3 +1757,24 @@
     flex: 1;
   }
 }
+
+/* Price Input Styles - Fix overlapping symbol */
+.new-product-price-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.new-product-price-symbol {
+  position: absolute;
+  left: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.new-product-price-input {
+  padding-left: 40px !important;
+}
