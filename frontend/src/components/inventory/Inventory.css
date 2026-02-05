@@ -150,14 +150,24 @@
   font-weight: 500;
   color: #374151;
   cursor: pointer;
-  transition: all 0.2s;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-
 .control-btn:hover {
   background-color: #f9fafb;
   border-color: #9ca3af;
 }
+
+/* Force date picker indicator to be visible and have pointer cursor */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    /* You can apply a filter here if you want to force it dark or light specifically */
+}
+
+/* Optional: Dark mode inversion if using a class 'dark' on html/body */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
 
 @media (max-width: 768px) {
   .inventory-header {

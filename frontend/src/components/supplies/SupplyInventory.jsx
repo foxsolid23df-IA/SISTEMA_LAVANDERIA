@@ -6,12 +6,23 @@ import * as XLSX from 'xlsx';
 
 export const SupplyInventory = () => {
   const [supplies, setSupplies] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory
+  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history
+  
+  // Estados para filtros de historial
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDate, setFilterDate] = useState("");
 
   useEffect(() => {
     loadSupplies();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "history") {
+      loadHistory();
+    }
+  }, [activeTab]);
 
   const loadSupplies = async () => {
     try {
@@ -21,6 +32,15 @@ export const SupplyInventory = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const data = await supplyService.getReconciliationHistory();
+      setHistory(data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -168,6 +188,7 @@ export const SupplyInventory = () => {
           { id: "entry", label: "Entradas", icon: "add_circle" },
           { id: "catalog", label: "Catálogo", icon: "settings_suggest" },
           { id: "reconciliation", label: "Corte Semanal", icon: "assignment_turned_in" },
+          { id: "history", label: "Historial", icon: "history" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -456,6 +477,117 @@ export const SupplyInventory = () => {
             </form>
           </div>
 
+        )}
+        {/* Tab: Reconciliation History */}
+        {activeTab === "history" && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="material-icons-outlined text-primary">history</span>
+                Historial de Cortes Semanales
+              </h2>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Buscador */}
+                <div className="relative group">
+                  <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-black transition-colors text-[20px]">search</span>
+                  <input 
+                    type="text"
+                    placeholder="Buscar por insumo o responsable..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-black dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-black/5 w-full md:w-64 transition-all"
+                  />
+                </div>
+
+                {/* Filtro de Fecha */}
+                <div className="relative group">
+                  <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-black group-focus-within:text-black transition-colors text-[20px]">calendar_today</span>
+                  <input 
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-black dark:text-white focus:ring-2 focus:ring-black/5 transition-all"
+                  />
+                  {filterDate && (
+                    <button 
+                      onClick={() => setFilterDate("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
+                      <span className="material-icons-outlined text-[16px]">close</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={loadHistory}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-500 transition-all"
+                    title="Actualizar historial"
+                  >
+                    <span className="material-icons-outlined">refresh</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <th className="px-6 py-4">Fecha</th>
+                    <th className="px-6 py-4">Responsable</th>
+                    <th className="px-6 py-4">Insumo</th>
+                    <th className="px-6 py-4 text-center">Teórico</th>
+                    <th className="px-6 py-4 text-center">Físico</th>
+                    <th className="px-6 py-4 text-center">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {history
+                    .filter(h => {
+                      const matchSearch = (h.supply?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                          (h.responsible || "").toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchDate = filterDate ? (h.reconciliation_date || h.createdAt).split('T')[0] === filterDate : true;
+                      return matchSearch && matchDate;
+                    })
+                    .map((h, index) => (
+                    <tr key={h.id || index} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">
+                        {new Date(h.reconciliation_date || h.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-slate-500">{h.responsible}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                        {h.supply?.name || 'Insumo Eliminado'}
+                      </td>
+                      <td className="px-6 py-4 text-center font-mono text-slate-500">{parseFloat(h.theoretical_stock).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-center font-mono font-bold text-indigo-600 dark:text-indigo-400">{parseFloat(h.physical_stock).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`font-mono font-black ${h.difference < 0 ? 'text-rose-500' : (h.difference > 0 ? 'text-emerald-500' : 'text-slate-300')}`}>
+                          {h.difference > 0 ? `+${parseFloat(h.difference).toFixed(2)}` : parseFloat(h.difference).toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium">No hay registros de cortes previos.</td>
+                    </tr>
+                  )}
+                  {history.length > 0 && history.filter(h => {
+                      const matchSearch = (h.supply?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                          (h.responsible || "").toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchDate = filterDate ? (h.reconciliation_date || h.createdAt).split('T')[0] === filterDate : true;
+                      return matchSearch && matchDate;
+                    }).length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium whitespace-nowrap">No se encontraron resultados para los filtros aplicados.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
     </div>
