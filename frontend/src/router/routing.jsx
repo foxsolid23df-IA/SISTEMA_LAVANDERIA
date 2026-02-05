@@ -95,8 +95,21 @@ const PrivateLayout = ({ children }) => {
     // 2. Si la pantalla está bloqueada, mostrar pantalla de PIN
     if (isLocked) return <LockScreen />;
 
-    // 3. Si necesita ingresar fondo de caja y está en Ventas, mostrar modal
+    // Auto-apertura de caja para el Propietario (skip del modal)
+    useEffect(() => {
+        if (needsCashFund && activeStaff?.isOwner) {
+            console.log('[PrivateLayout] Auto-iniciando caja para Propietario...');
+            openCashSession(0).catch(err => console.error('Error auto-opening session:', err));
+        }
+    }, [needsCashFund, activeStaff]);
+
+    // 3. Si necesita ingresar fondo de caja y está en Ventas, mostrar modal (SOLO si no es dueño)
     if (needsCashFund && isPOSRoute) {
+        if (activeStaff?.isOwner) {
+            // Mientras se auto-abre la sesión, mostramos un loader para evitar parpadeos
+            return <div className="loading-screen">Iniciando Turno...</div>;
+        }
+
         return (
             <CashFundModal
                 staffName={activeStaff?.name || storeName || 'Operador'}
