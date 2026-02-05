@@ -51,7 +51,7 @@ describe('useCart Hook', () => {
 
     it('debe permitir decimales en servicios (lavandería por kg)', () => {
         const { result } = renderHook(() => useCart());
-        const servicio = { id: 10, name: 'Lavado', price: 20, category: 'service' };
+        const servicio = { id: 10, name: 'Lavado', price: 20, type: 'SERVICE' };
 
         act(() => {
             result.current.agregarProducto(servicio);
