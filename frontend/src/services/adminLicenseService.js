@@ -36,5 +36,23 @@ export const adminLicenseService = {
             console.error('Error updating license:', error);
             return { success: false, error: error.message };
         }
+    },
+    /**
+     * Asciende o degrada a un usuario al rol de Super Admin.
+     */
+    toggleSuperAdmin: async (userId, makeAdmin, masterPin) => {
+        try {
+            const { data, error } = await supabase.rpc('toggle_super_admin_role', {
+                target_user_id: userId,
+                make_admin: makeAdmin,
+                master_pin: masterPin
+            });
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error toggling admin role:', error);
+            return { success: false, error: error.message };
+        }
     }
 };

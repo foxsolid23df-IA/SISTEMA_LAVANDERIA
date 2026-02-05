@@ -84,6 +84,34 @@ export const MasterLicenseManager = () => {
         }
     };
 
+    const handleToggleAdmin = async (profile) => {
+        const isCurrentlyAdmin = profile.role === 'super_admin';
+        const actionText = isCurrentlyAdmin ? 'Quitar privilegios de Super Admin' : 'Hacer Super Admin';
+        const confirmText = isCurrentlyAdmin ? 'Sí, degradar' : 'Sí, ascender';
+
+        const result = await Swal.fire({
+            title: `¿${actionText}?`,
+            html: `Usuario: <b>${profile.full_name}</b><br/>Tienda: ${profile.store_name}`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            confirmButtonText: confirmText
+        });
+
+        if (result.isConfirmed) {
+            setLoading(true);
+            const response = await adminLicenseService.toggleSuperAdmin(profile.id, !isCurrentlyAdmin, masterPin);
+            setLoading(false);
+
+            if (response.success) {
+                Swal.fire('Éxito', 'Permisos actualizados correctamente', 'success');
+                refreshProfiles();
+            } else {
+                Swal.fire('Error', 'No se pudo actualizar los permisos', 'error');
+            }
+        }
+    };
+
     const handleSuspend = async (profile) => {
         const result = await Swal.fire({
             title: '¿Suspender Servicio?',
@@ -163,7 +191,7 @@ export const MasterLicenseManager = () => {
                                 type="password"
                                 value={masterPin}
                                 onChange={(e) => setMasterPin(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                                 placeholder="******"
                             />
                         </div>
@@ -224,10 +252,15 @@ export const MasterLicenseManager = () => {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="text-lg font-bold text-gray-900 truncate">{profile.store_name || 'Sin Nombre'}</h4>
                                             <p className="text-sm text-gray-500">{profile.full_name} • {profile.email}</p>
-                                            <div className="mt-2 flex items-center text-sm text-gray-500">
+                                            <div className="mt-2 flex items-center text-sm text-gray-500 space-x-2">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-${statusColor}-100 text-${statusColor}-800`}>
                                                     {expiresAt ? `Vence: ${expiresAt.toLocaleDateString()}` : 'Sin Licencia'}
                                                 </span>
+                                                {profile.role === 'super_admin' && (
+                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                                        SUPER ADMIN
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
@@ -242,6 +275,16 @@ export const MasterLicenseManager = () => {
                                                 className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
                                             >
                                                 +1 Año
+                                            </button>
+                                            <button
+                                                onClick={() => handleToggleAdmin(profile)}
+                                                className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white shadow-sm ${
+                                                    profile.role === 'super_admin' 
+                                                    ? 'bg-gray-600 hover:bg-gray-700' 
+                                                    : 'bg-purple-600 hover:bg-purple-700'
+                                                }`}
+                                            >
+                                                {profile.role === 'super_admin' ? 'Degradar' : 'Hacer Admin'}
                                             </button>
                                             <button
                                                 onClick={() => handleSuspend(profile)}
