@@ -390,7 +390,7 @@ export const SupplyInventory = () => {
                         className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <div className="w-full md:w-1/3">
+                  <div className="w-full md:w-1/3 relative">
                     <label className="block text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300 mb-2">
                         Fecha del Corte
                     </label>
@@ -399,8 +399,9 @@ export const SupplyInventory = () => {
                         type="date"
                         required
                         defaultValue={new Date().toISOString().split('T')[0]}
-                        className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 pl-10 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer text-center"
                     />
+                    <span className="material-icons-outlined absolute left-3 top-[38px] text-black pointer-events-none text-[20px]">calendar_today</span>
                   </div>
                   <div>
                       <button 
