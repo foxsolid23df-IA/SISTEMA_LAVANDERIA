@@ -401,7 +401,7 @@ export const SupplyInventory = () => {
                         defaultValue={new Date().toISOString().split('T')[0]}
                         className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 pl-10 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer text-center"
                     />
-                    <span className="material-icons-outlined absolute left-3 top-[38px] text-black !opacity-100 dark:text-white pointer-events-none text-[20px] z-10">calendar_today</span>
+                    <span className="material-icons absolute left-3 top-[38px] text-black !opacity-100 dark:text-white pointer-events-none text-[22px] z-10 font-bold">calendar_today</span>
                   </div>
                   <div>
                       <button 
@@ -503,7 +503,7 @@ export const SupplyInventory = () => {
 
                 {/* Filtro de Fecha */}
                 <div className="relative group">
-                  <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-black !opacity-100 dark:text-white pointer-events-none text-[20px] z-10">calendar_today</span>
+                  <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-black !opacity-100 dark:text-white pointer-events-none text-[22px] z-10 font-bold">calendar_today</span>
                   <input 
                     type="date"
                     value={filterDate}
