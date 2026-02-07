@@ -132,22 +132,37 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Cliente no encontrado');
     END IF;
 
-    -- Eliminar en cascada (ignorar errores de tablas que no existen)
-    -- Eliminar en cascada (ignorar errores de tablas que no existen)
+    -- ELIMINAR EN ORDEN CORRECTO (Hijos primero, luego padres)
+
+    -- 1. Detalle de órdenes y ventas
     BEGIN DELETE FROM public.order_items WHERE order_id IN (SELECT id FROM public.orders WHERE user_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.orders WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE user_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 2. Órdenes y Ventas (referencian customers, terminals, cash_sessions)
+    BEGIN DELETE FROM public.orders WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.sales WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.customers WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.products WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.staff WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.terminals WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 3. Cortes y Sesiones de Caja (referencian terminals, staff)
     BEGIN DELETE FROM public.cash_cuts WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.cash_sessions WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.store_settings WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+
+    -- 4. Insumos (referencian products o suppliers?)
     BEGIN DELETE FROM public.supplies WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     
-    -- Finalmente, eliminar el perfil
+    -- 5. Terminales (eran referenciadas por sales, cash_*)
+    BEGIN DELETE FROM public.terminals WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 6. Productos y Clientes
+    BEGIN DELETE FROM public.products WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.customers WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 7. Personal (staff)
+    BEGIN DELETE FROM public.staff WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 8. Configuraciones
+    BEGIN DELETE FROM public.store_settings WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    
+    -- 9. Perfil
     DELETE FROM public.profiles WHERE id = target_user_id;
 
     -- Eliminar usuario de autenticación (Liberar email)
