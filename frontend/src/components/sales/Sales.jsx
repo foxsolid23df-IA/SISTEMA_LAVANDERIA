@@ -8,6 +8,7 @@ import { orderService } from "../../services/orderService";
 import { productService } from "../../services/productService";
 import { businessSettingsService } from "../../services/businessSettingsService";
 import { exchangeRateService } from "../../services/exchangeRateService";
+import { printService } from "../../services/printService";
 import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";

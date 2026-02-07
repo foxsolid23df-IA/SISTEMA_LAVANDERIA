@@ -3,6 +3,7 @@ import { orderService } from '../../services/orderService';
 import { staffService } from '../../services/staffService';
 import { exchangeRateService } from '../../services/exchangeRateService';
 import { businessSettingsService } from '../../services/businessSettingsService';
+import { printService } from '../../services/printService';
 import TicketVenta from './TicketVenta';
 import { formatearDinero } from '../../utils';
 import * as XLSX from 'xlsx';
