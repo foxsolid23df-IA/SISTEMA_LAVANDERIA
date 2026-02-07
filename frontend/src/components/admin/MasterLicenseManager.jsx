@@ -150,33 +150,31 @@ export const MasterLicenseManager = () => {
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const code = `CLIENTE-${randomSuffix}`;
 
-        // Insertar en Supabase (Usando inserción directa permitida por políticas o crear servicio)
-        // Por simplicidad, usaremos un insert directo si la política lo permite, 
-        // o idealmente un RPC si quisieramos ser más estrictos, pero el manual decía 'insert'.
-        // Vamos a usar supabase direct client here ya que invitationService es más de lectura/validación.
-        
         try {
-            const { data, error } = await supabase
-                .from('invitation_codes')
-                .insert([{ 
-                    code: code, 
-                    notes: invitationNote,
-                    created_by: 'SuperAdmin Panel' 
-                }])
-                .select()
-                .single();
-
-            if (error) throw error;
+            // Usar RPC seguro a través del servicio de admin
+            const response = await adminLicenseService.createInvitationCode(code, invitationNote, masterPin);
+            
+            if (!response.success) {
+                throw new Error(response.error || 'No se pudo crear el código');
+            }
 
             setGeneratedCode({
-                code: data.code,
-                link: `${window.location.origin}/#/register/${data.code}`
+                code: code,
+                link: `${window.location.origin}/#/register/${code}`
             });
             setInvitationNote('');
             
+            Swal.fire({
+                icon: 'success',
+                title: '¡Código Generado!',
+                text: `Código: ${code}`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
         } catch (error) {
             console.error(error);
-            Swal.fire('Error', 'No se pudo generar el código.', 'error');
+            Swal.fire('Error', error.message || 'No se pudo generar el código.', 'error');
         }
     };
 

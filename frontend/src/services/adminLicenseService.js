@@ -54,5 +54,25 @@ export const adminLicenseService = {
             console.error('Error toggling admin role:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    /**
+     * Crea un nuevo código de invitación para registrar nuevos negocios.
+     * Usa RPC para bypasear políticas RLS.
+     */
+    createInvitationCode: async (code, notes, masterPin) => {
+        try {
+            const { data, error } = await supabase.rpc('create_invitation_code', {
+                p_code: code,
+                p_notes: notes,
+                master_pin: masterPin
+            });
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error creating invitation code:', error);
+            return { success: false, error: error.message };
+        }
     }
 };
