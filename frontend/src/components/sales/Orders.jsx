@@ -249,26 +249,32 @@ export const Orders = () => {
     setOrderToPrint(ventaData);
   };
 
-  const imprimirTicket = () => {
-    if (ticketRef.current) {
+  const imprimirTicket = async () => {
+    if (ticketRef.current && businessSettings) {
         const printContent = ticketRef.current.innerHTML;
-        const win = window.open('', '', 'width=800,height=600');
-        win.document.write(`
+        
+        const fullHtml = `
             <html>
                 <head>
                     <title>Reimpresión Ticket #${orderToPrint.id}</title>
                     <style>
-                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; }
+                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
                         .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
                         .text-center { text-align: center; }
+                        .text-right { text-align: right; }
                         .font-bold { font-weight: bold; }
+                        table { width: 100%; border-collapse: collapse; }
+                        /* Asegurar que estilos de TicketVenta pasen */
+                        ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
                     </style>
                 </head>
                 <body>${printContent}</body>
             </html>
-        `);
-        win.document.close();
-        win.print();
+        `;
+
+        // Reimpresión suele ser 1 copia, a menos que queramos respetar la config doble.
+        // Por norma general reimpresión es manual, 1 copia está bien.
+        await printService.print(fullHtml, businessSettings.printer_name, { copies: 1 });
     }
   };
 

@@ -36,34 +36,45 @@ export const printService = {
      * @param {string} htmlContent - El contenido a imprimir (ya formateado)
      * @param {string} printerName - Nombre de la impresora (opcional)
      */
-    async print(htmlContent, printerName = null) {
-        try {
-            if (window.electron && window.electron.printTicket) {
-                // Modo Electron: Impresión silenciosa nativa
-                console.log('[PrintService] Usando Electron Native Print');
-                const result = await window.electron.printTicket(htmlContent, printerName);
-                if (!result.success) throw new Error(result.error);
-                return true;
-            } else {
-                // Modo Web: Intentar vía Backend Bridge
-                console.log('[PrintService] Usando Backend Bridge Print');
-                const response = await fetch(`${API_URL}/printer/print`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ htmlContent, printerName })
-                });
+    async print(htmlContent, printerName = null, options = {}) {
+        const copies = options.copies || 1;
 
-                if (!response.ok) {
-                    // Si el bridge falla o no está disponible, fallback a ventana nueva (diálogo de navegador)
-                    this.fallbackPrint(htmlContent);
-                    return true;
+        try {
+            console.log(`[PrintService] Inicio de impresión. Copias: ${copies}, Impresora: ${printerName || 'Default'}`);
+
+            for (let i = 0; i < copies; i++) {
+                if (window.electron && window.electron.printTicket) {
+                    // Modo Electron: Impresión silenciosa nativa
+                    console.log(`[PrintService] Usando Electron Native Print (Copia ${i + 1}/${copies})`);
+                    const result = await window.electron.printTicket(htmlContent, printerName);
+                    if (!result.success) throw new Error(result.error);
+                } else {
+                    // Modo Web: Intentar vía Backend Bridge
+                    console.log(`[PrintService] Usando Backend Bridge Print (Copia ${i + 1}/${copies})`);
+                    const response = await fetch(`${API_URL}/printer/print`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ htmlContent, printerName })
+                    });
+
+                    if (!response.ok) {
+                        // Si falla el bridge, forzamos un único fallback ya que el navegador no soporta multicopia silenciosa fácil
+                        console.warn('[PrintService] Bridge falló, usando fallback d navegador.');
+                        this.fallbackPrint(htmlContent);
+                        return true;
+                    }
                 }
 
-                return await response.json();
+                // Pequeña pausa entre impresiones para evitar saturación del buffer
+                if (copies > 1 && i < copies - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
             }
+
+            return true;
         } catch (error) {
             console.error('Error en impresión:', error);
-            // Fallback final: Mostrar diálogo de impresión del navegador
+            // Fallback final
             this.fallbackPrint(htmlContent);
             return false;
         }

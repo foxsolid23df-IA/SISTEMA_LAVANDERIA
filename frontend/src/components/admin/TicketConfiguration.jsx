@@ -17,7 +17,8 @@ export const TicketConfiguration = () => {
         printer_font_family: "'Courier New', Courier, monospace",
         printer_is_bold: false,
         printer_margin: 0,
-        printer_name: ''
+        printer_name: '',
+        ticket_double_print: false
     });
     const [printersList, setPrintersList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -49,7 +50,8 @@ export const TicketConfiguration = () => {
                     printer_font_family: settings.printer_font_family || "'Courier New', Courier, monospace",
                     printer_is_bold: settings.printer_is_bold || false,
                     printer_margin: settings.printer_margin || 0,
-                    printer_name: settings.printer_name || ''
+                    printer_name: settings.printer_name || '',
+                    ticket_double_print: settings.ticket_double_print || false
                 });
             }
         } catch (error) {
@@ -391,6 +393,41 @@ export const TicketConfiguration = () => {
                                 />
                                 <span style={{ fontSize: '16px', fontWeight: '900', color: '#000' }}>
                                     {formData.printer_is_bold ? 'SI' : 'NO'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="form-group-config">
+                            <label htmlFor="ticket_double_print" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Imprimir Doble Ticket</label>
+                            <div 
+                                onClick={() => setFormData(prev => ({ ...prev, ticket_double_print: !prev.ticket_double_print }))}
+                                style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    height: '46px',
+                                    gap: '10px',
+                                    padding: '0 15px',
+                                    border: '2px solid #000',
+                                    borderRadius: '10px',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="ticket_double_print"
+                                    name="ticket_double_print"
+                                    checked={formData.ticket_double_print}
+                                    onChange={(e) => {
+                                        // Evitar doble toggle por el onClick del div
+                                        e.stopPropagation();
+                                        setFormData(prev => ({ ...prev, ticket_double_print: e.target.checked }));
+                                    }}
+                                    style={{ width: '22px', height: '22px', cursor: 'pointer' }}
+                                />
+                                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>
+                                    {formData.ticket_double_print ? 'CLIENTE + CAJERO' : 'SOLO CLIENTE'}
                                 </span>
                             </div>
                         </div>

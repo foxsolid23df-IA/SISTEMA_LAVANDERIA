@@ -12,6 +12,8 @@ import { exportToExcel } from '../../utils/exportToExcel'
 import { salesService } from '../../services/salesService'
 import { productService } from '../../services/productService'
 import { staffService } from '../../services/staffService'
+import { printService } from '../../services/printService' // Importado para reimpresión
+import { businessSettingsService } from '../../services/businessSettingsService' // Importado para configuración
 import Modal from '../common/Modal'
 import Swal from 'sweetalert2'
 
@@ -28,6 +30,9 @@ export const Historial = () => {
     // 3. ESTADOS PARA EL MODAL DE DETALLES
     const [mostrarModal, setMostrarModal] = useState(false)    // Si se muestra el modal
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null) // Venta del modal
+
+    // Estado para configuración de negocio (necesario para el ticket)
+    const [businessSettings, setBusinessSettings] = useState(null)
 
     // 4. HOOK PARA FILTRADO POR FECHAS
     const dateFilter = useDateFilter()
@@ -63,6 +68,19 @@ export const Historial = () => {
         return () => {
             isMountedRef.current = false;
         };
+    }, []);
+
+    // Cargar configuración al montar
+    useEffect(() => {
+        const loadSettings = async () => {
+             try {
+                const settings = await businessSettingsService.getSettings();
+                setBusinessSettings(settings);
+             } catch (e) {
+                 console.error("Error cargando settings para ticket", e);
+             }
+        };
+        loadSettings();
     }, []);
 
     // 7. FUNCIÓN PARA CARGAR TODAS LAS VENTAS DESDE SUPABASE
@@ -269,6 +287,47 @@ export const Historial = () => {
     useEffect(() => {
         filtrarPorFecha()
     }, [dateFilter.fechaDesde, dateFilter.fechaHasta, ventas, filtrarPorFecha])
+
+    // FUNCIÓN PARA REIMPRIMIR TICKET DESDE HISTORIAL
+    const handleReprint = async () => {
+        if (!ventaSeleccionada || !businessSettings) {
+            Swal.fire('Error', 'No se puede imprimir: Falta información de venta o configuración.', 'error');
+            return;
+        }
+
+        try {
+            // Preparar datos para el generador de HTML
+            const itemsParaTicket = ventaSeleccionada.items.map(item => ({
+                quantity: item.quantity,
+                name: item.productName || item.name || 'Producto',
+                price: item.price
+            }));
+
+            // Generar HTML
+            const ticketHtml = printService.generateTicketHtml(
+                businessSettings, 
+                { id: ventaSeleccionada.id, total: ventaSeleccionada.total }, 
+                itemsParaTicket
+            );
+
+            // Imprimir (1 copia para reimpresión)
+            const result = await printService.print(ticketHtml, businessSettings.printer_name, { copies: 1 });
+
+            if (result) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Imprimiendo...',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            } else {
+                throw new Error('Error en el servicio de impresión');
+            }
+        } catch (error) {
+            console.error('Error al reimprimir:', error);
+            Swal.fire('Error', 'No se pudo imprimir el ticket. Verifique la impresora.', 'error');
+        }
+    };
 
     return (
         <div className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark h-full overflow-hidden">
@@ -533,9 +592,17 @@ export const Historial = () => {
                         </div>
                     </div>
 
-                    <div className="px-8 py-6 bg-slate-50 dark:bg-white/5 flex justify-end">
+                    <div className="px-8 py-6 bg-slate-50 dark:bg-white/5 flex justify-end gap-4">
+                        <button
+                            className="bg-gray-800 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-700 transition-all active:scale-95 shadow-lg flex items-center gap-2"
+                            onClick={handleReprint}
+                        >
+                            <span className="material-icons-outlined text-sm">print</span>
+                            Reimprimir Ticket
+                        </button>
+
                         <button 
-                            className="bg-primary dark:bg-white text-black px-8 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95 shadow-lg"
+                            className="bg-primary dark:bg-white text-white dark:text-black px-8 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-95 shadow-lg"
                             onClick={cerrarModal}
                         >
                             Cerrar Detalles

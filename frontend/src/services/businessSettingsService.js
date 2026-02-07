@@ -42,6 +42,7 @@ export const businessSettingsService = {
                     printer_font_family: settingsData.printer_font_family || 'Courier New',
                     printer_is_bold: settingsData.printer_is_bold || false,
                     printer_margin: settingsData.printer_margin || 0,
+                    ticket_double_print: settingsData.ticket_double_print || false,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', existingSettings.id)
@@ -64,7 +65,8 @@ export const businessSettingsService = {
                     printer_font_size: settingsData.printer_font_size || 12,
                     printer_font_family: settingsData.printer_font_family || 'Courier New',
                     printer_is_bold: settingsData.printer_is_bold || false,
-                    printer_margin: settingsData.printer_margin || 0
+                    printer_margin: settingsData.printer_margin || 0,
+                    ticket_double_print: settingsData.ticket_double_print || false
                 }])
                 .select()
                 .single();

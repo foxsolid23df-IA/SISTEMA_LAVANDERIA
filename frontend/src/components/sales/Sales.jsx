@@ -188,26 +188,46 @@ export const Sales = () => {
         }
     };
 
-    const imprimirTicket = () => {
+    const imprimirTicket = async () => {
+        if (!ventaCompletada || !businessSettings) return;
+
+        // Generar HTML del ticket usando el mismo generador centralizado o extrayendo el HTML actual
+        // Para consistencia con lo que se ve en pantalla, usaremos el HTML del ref
         if (ticketRef.current) {
+            // Aseguramos que los estilos en línea se preserven o usamos el generador del servicio si es preferible
+            // Dado que TicketVenta ya tiene estilos, lo mejor es pasarle los datos al servicio generator
+            // Ojo: TicketVenta puede tener estilos específicos de React. 
+            // Para simplicidad y robustez, usaremos el generador del servicio si es posible, 
+            // pero TicketVenta tiene props complejas.
+            // Vamos a usar el contenido del ref pero envolviéndolo en una estructura limpia para impresión
+            
+            // Opción A: Usar el servicio de impresión con el HTML capturado
             const printContent = ticketRef.current.innerHTML;
-            const win = window.open('', '', 'width=800,height=600');
-            win.document.write(`
+            
+            // Construimos un HTML completo para pasar al servicio
+            const fullHtml = `
                 <html>
                     <head>
-                        <title>Ticket #L-${ventaCompletada.id}</title>
+                        <title>Ticket #${ventaCompletada.id}</title>
                         <style>
-                            body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; }
+                            body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
                             .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
                             .text-center { text-align: center; }
+                            .text-right { text-align: right; }
                             .font-bold { font-weight: bold; }
+                            table { width: 100%; border-collapse: collapse; }
+                            td, th { vertical-align: top; }
+                            /* Asegurar que estilos de TicketVenta pasen */
+                            ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
                         </style>
                     </head>
                     <body>${printContent}</body>
                 </html>
-            `);
-            win.document.close();
-            win.print();
+            `;
+
+            const copies = businessSettings.ticket_double_print ? 2 : 1;
+            
+            await printService.print(fullHtml, businessSettings.printer_name, { copies });
         }
     };
 
