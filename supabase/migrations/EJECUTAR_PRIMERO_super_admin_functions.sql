@@ -153,6 +153,9 @@ BEGIN
     -- Finalmente, eliminar el perfil
     DELETE FROM public.profiles WHERE id = target_user_id;
 
+    -- Eliminar usuario de autenticación (Liberar email)
+    DELETE FROM auth.users WHERE id = target_user_id;
+
     RETURN jsonb_build_object(
         'success', true,
         'message', 'Cliente eliminado permanentemente',

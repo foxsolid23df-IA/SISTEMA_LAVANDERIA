@@ -99,6 +99,9 @@ BEGIN
     -- 6.13 Finalmente, eliminar el perfil del cliente
     DELETE FROM public.profiles WHERE id = target_user_id;
 
+    -- 6.14 Eliminar usuario de autenticación (Para liberar el email)
+    DELETE FROM auth.users WHERE id = target_user_id;
+
     -- 7. Retornar éxito con información
     RETURN jsonb_build_object(
         'success', true,

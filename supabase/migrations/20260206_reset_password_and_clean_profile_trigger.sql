@@ -54,6 +54,7 @@ BEGIN
     -- Los datos vienen del metadata del signup
     INSERT INTO public.profiles (
         id, 
+        email, -- Added email
         full_name, 
         store_name, 
         role,
@@ -61,6 +62,7 @@ BEGIN
     )
     VALUES (
         NEW.id,
+        NEW.email, -- Added email from auth.users
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'store_name', ''),
         'admin',
