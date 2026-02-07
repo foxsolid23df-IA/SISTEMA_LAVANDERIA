@@ -225,38 +225,64 @@ export const MasterLicenseManager = () => {
     };
 
     const handleResetPassword = async (profile) => {
-        const result = await Swal.fire({
-            title: '🔐 Resetear Contraseña',
+        // Pedir la nueva contraseña
+        const { value: newPassword } = await Swal.fire({
+            title: '🔐 Cambiar Contraseña',
             html: `
-                <div style="text-align: left;">
+                <div style="text-align: left; margin-bottom: 1rem;">
                     <p><strong>Cliente:</strong> ${profile.store_name || 'Sin nombre'}</p>
                     <p><strong>Email:</strong> ${profile.email}</p>
-                    <hr style="margin: 1rem 0;"/>
-                    <p style="color: #374151;">Se enviará un correo electrónico al cliente con un enlace para crear una nueva contraseña.</p>
                 </div>
             `,
-            icon: 'info',
+            input: 'password',
+            inputLabel: 'Nueva Contraseña',
+            inputPlaceholder: 'Mínimo 6 caracteres',
+            inputAttributes: {
+                minlength: 6,
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            },
             showCancelButton: true,
             confirmButtonColor: '#2563eb',
-            confirmButtonText: 'Enviar correo de reset',
+            confirmButtonText: 'Cambiar Contraseña',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value || value.length < 6) {
+                    return 'La contraseña debe tener al menos 6 caracteres';
+                }
+            }
+        });
+
+        if (!newPassword) return;
+
+        // Confirmar el cambio
+        const confirmResult = await Swal.fire({
+            title: '¿Confirmar cambio?',
+            html: `
+                <p>Se cambiará la contraseña de:</p>
+                <p><strong>${profile.email}</strong></p>
+                <p style="color: #dc2626; margin-top: 1rem; font-size: 0.9rem;">
+                    ⚠️ El cliente deberá usar la nueva contraseña para iniciar sesión.
+                </p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            confirmButtonText: 'Sí, cambiar',
             cancelButtonText: 'Cancelar'
         });
 
-        if (!result.isConfirmed) return;
+        if (!confirmResult.isConfirmed) return;
 
         setLoading(true);
         try {
-            const response = await adminLicenseService.resetClientPassword(profile.email, masterPin);
+            const response = await adminLicenseService.updateClientPassword(profile.id, newPassword, masterPin);
             
             if (response.success) {
                 Swal.fire({
-                    title: '✉️ Correo Enviado',
+                    title: '✅ Contraseña Actualizada',
                     html: `
-                        <p>Se ha enviado un correo a:</p>
-                        <p><strong>${profile.email}</strong></p>
-                        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 1rem;">
-                            El cliente debe revisar su bandeja de entrada (y spam) para restablecer su contraseña.
-                        </p>
+                        <p>La contraseña de <strong>${profile.email}</strong> ha sido cambiada exitosamente.</p>
                     `,
                     icon: 'success',
                     confirmButtonColor: '#10b981'
@@ -265,8 +291,8 @@ export const MasterLicenseManager = () => {
                 throw new Error(response.error || 'Error desconocido');
             }
         } catch (error) {
-            console.error('Error reseteando contraseña:', error);
-            Swal.fire('Error', error.message || 'No se pudo enviar el correo de reset.', 'error');
+            console.error('Error cambiando contraseña:', error);
+            Swal.fire('Error', error.message || 'No se pudo cambiar la contraseña.', 'error');
         } finally {
             setLoading(false);
         }

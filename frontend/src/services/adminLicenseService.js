@@ -96,29 +96,26 @@ export const adminLicenseService = {
     },
 
     /**
-     * Envía un correo de reset de contraseña a un cliente.
-     * Usa la API de autenticación de Supabase.
+     * Cambia la contraseña de un cliente directamente.
+     * Usa Edge Function que tiene acceso al Admin API de Supabase.
      */
-    resetClientPassword: async (email, masterPin) => {
+    updateClientPassword: async (userId, newPassword, masterPin) => {
         try {
-            // Primero validamos que el caller tenga permisos (via RPC)
-            const { data: validation, error: validationError } = await supabase.rpc('validate_super_admin', {
-                master_pin: masterPin
-            });
-
-            if (validationError || !validation?.success) {
-                throw new Error(validation?.error || 'No tienes permisos para esta acción');
-            }
-
-            // Enviar correo de reset usando la API pública de Supabase Auth
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/#/reset-password`
+            // Llamar a Edge Function para cambiar contraseña
+            const { data, error } = await supabase.functions.invoke('admin-update-password', {
+                body: {
+                    user_id: userId,
+                    new_password: newPassword,
+                    master_pin: masterPin
+                }
             });
 
             if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Error al cambiar contraseña');
+
             return { success: true };
         } catch (error) {
-            console.error('Error sending reset password email:', error);
+            console.error('Error updating client password:', error);
             return { success: false, error: error.message };
         }
     }
