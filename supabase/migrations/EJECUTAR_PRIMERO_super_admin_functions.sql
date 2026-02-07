@@ -133,22 +133,19 @@ BEGIN
     END IF;
 
     -- Eliminar en cascada (ignorar errores de tablas que no existen)
-    BEGIN DELETE FROM public.order_items WHERE order_id IN (SELECT id FROM public.orders WHERE store_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.orders WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE store_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.sales WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    -- Eliminar en cascada (ignorar errores de tablas que no existen)
+    BEGIN DELETE FROM public.order_items WHERE order_id IN (SELECT id FROM public.orders WHERE user_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.orders WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.sale_items WHERE sale_id IN (SELECT id FROM public.sales WHERE user_id = target_user_id); EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.sales WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.customers WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.products WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.customers WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.products WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.staff WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.staff WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.terminals WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.cash_cuts WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.terminals WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     BEGIN DELETE FROM public.cash_cuts WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.cash_sessions WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.store_settings WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
-    BEGIN DELETE FROM public.supplies WHERE store_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.cash_sessions WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.store_settings WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
+    BEGIN DELETE FROM public.supplies WHERE user_id = target_user_id; EXCEPTION WHEN undefined_table THEN NULL; WHEN undefined_column THEN NULL; END;
     
     -- Finalmente, eliminar el perfil
     DELETE FROM public.profiles WHERE id = target_user_id;
