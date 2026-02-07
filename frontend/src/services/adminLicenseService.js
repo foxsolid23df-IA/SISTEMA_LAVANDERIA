@@ -124,5 +124,26 @@ export const adminLicenseService = {
             console.error('Error updating client password:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    /**
+     * Limpia todo el catálogo de productos y servicios de un cliente.
+     * Permite rehacer la carga inicial.
+     */
+    clearClientCatalog: async (userId, masterPin) => {
+        try {
+            const { data, error } = await supabase.rpc('clear_client_catalog', {
+                target_user_id: userId,
+                master_pin: masterPin
+            });
+
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Error al limpiar catálogo');
+
+            return { success: true, count: data.deleted_count };
+        } catch (error) {
+            console.error('Error clearing catalog:', error);
+            return { success: false, error: error.message };
+        }
     }
 };

@@ -298,6 +298,53 @@ export const MasterLicenseManager = () => {
         }
     };
 
+    const handleClearCatalog = async (profile) => {
+        const result = await Swal.fire({
+            title: '⚠️ ¿Borrar Catálogo Completo?',
+            html: `
+                <div style="text-align: left;">
+                    <p>Se eliminarán <strong>TODOS</strong> los productos y servicios de:</p>
+                    <p><strong>${profile.store_name || profile.full_name}</strong></p>
+                    <p style="color: #dc2626; margin-top: 10px;">¡Esta acción no se puede deshacer!</p>
+                    <p>Escribe <strong>BORRAR</strong> para confirmar:</p>
+                </div>
+            `,
+            input: 'text',
+            inputPlaceholder: 'Escribe BORRAR',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Sí, borrar todo',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (value !== 'BORRAR') {
+                    return 'Debes escribir BORRAR para confirmar';
+                }
+            }
+        });
+
+        if (!result.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            const response = await adminLicenseService.clearClientCatalog(profile.id, masterPin);
+            
+            if (response.success) {
+                Swal.fire({
+                    title: 'Catálogo Eliminado',
+                    text: `Se eliminaron ${response.count} ítems correctamente.`,
+                    icon: 'success'
+                });
+            } else {
+                throw new Error(response.error || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error('Error clearing catalog:', error);
+            Swal.fire('Error', error.message || 'No se pudo limpiar el catálogo.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const generateInvitation = async () => {
         if (!invitationNote.trim()) {
             return Swal.fire('Requerido', 'Ingresa una nota o nombre del cliente', 'warning');
@@ -454,6 +501,13 @@ export const MasterLicenseManager = () => {
                                                 title="Enviar correo para resetear contraseña"
                                             >
                                                 🔑 Reset Pass
+                                            </button>
+                                            <button
+                                                onClick={() => handleClearCatalog(profile)}
+                                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 shadow-sm"
+                                                title="Borrar todos los productos/servicios"
+                                            >
+                                                🧹 Limpiar Catálogo
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteClient(profile)}
