@@ -20,17 +20,17 @@ export const terminalService = {
         // Cada registro en cada PC debe ser una terminal ÚNICA en la DB.
         // Si el usuario usa el mismo nombre, se crea un nuevo registro con ID único.
         // Esto evita que dos PCs compartan el mismo ID de terminal y por tanto la misma sesión de caja.
-        
+
         const { data, error } = await supabase
             .from('terminals')
-            .insert([{ 
-                name: name.trim(), 
-                location: location.trim(), 
-                is_main: isMain 
+            .insert([{
+                name: name.trim(),
+                location: location.trim(),
+                is_main: isMain
             }])
             .select()
             .single();
-        
+
         if (error) throw error;
 
         localStorage.setItem(TERMINAL_ID_KEY, data.id);
@@ -39,13 +39,13 @@ export const terminalService = {
     },
 
     async getTerminals() {
-         const { data, error } = await supabase
+        const { data, error } = await supabase
             .from('terminals')
             .select('*')
             .eq('is_active', true) // Solo terminales activas
             .order('name');
-         if (error) throw error;
-         return data;
+        if (error) throw error;
+        return data;
     },
 
     async deleteTerminal(id) {
@@ -55,16 +55,16 @@ export const terminalService = {
             .from('terminals')
             .update({ is_active: false })
             .eq('id', id);
-        
+
         if (error) throw error;
-        
+
         // Si inactivamos la terminal actual, limpiar localStorage
         if (id === this.getTerminalId()) {
             this.resetLocalTerminal();
         }
         return true;
     },
-    
+
     // Función para resetear la terminal local (útil para pruebas o reconfiguración)
     resetLocalTerminal() {
         localStorage.removeItem(TERMINAL_ID_KEY);
@@ -91,13 +91,14 @@ export const terminalService = {
 
     /**
      * Valida si el ID de terminal en localStorage realmente existe en la DB
+     * Y pertenece al usuario actual (para evitar conflictos entre usuarios)
      */
     async validateTerminalExistence() {
         const terminalId = this.getTerminalId();
         const terminalName = this.getTerminalName();
-        
+
         console.log(`[TerminalService] Validando terminal: ${terminalName} (${terminalId})`);
-        
+
         if (!terminalId || terminalId === 'undefined' || terminalId === 'null') {
             console.log('[TerminalService] No hay terminal válida configurada localmente.');
             this.resetLocalTerminal();
@@ -105,30 +106,45 @@ export const terminalService = {
         }
 
         try {
+            // Obtener el usuario actual
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError || !userData?.user) {
+                console.warn('[TerminalService] No hay usuario autenticado');
+                return false;
+            }
+
+            const currentUserId = userData.user.id;
+
             // Pequeña espera para asegurar que la sesión de Supabase esté estable
             await new Promise(resolve => setTimeout(resolve, 500));
 
             const { data, error } = await supabase
                 .from('terminals')
-                .select('id, name')
+                .select('id, name, user_id')
                 .eq('id', terminalId)
                 .maybeSingle(); // Usar maybeSingle para evitar errores si no existe
 
             if (error) {
                 console.error('[TerminalService] Error de DB validando terminal:', error);
                 // Si es un error de red o similar, no borrar configuración
-                return true; 
+                return true;
             }
 
             if (!data) {
                 console.warn(`[TerminalService] La terminal ${terminalId} no existe en la base de datos.`);
-                // Solo borrar si estamos SEGUROS de que no existe (es decir, data es null y no hay error)
                 this.resetLocalTerminal();
                 return false;
             }
 
-            console.log(`[TerminalService] Resultado validación:`, data);
-            return !!data;
+            // CRÍTICO: Verificar que la terminal pertenezca al usuario actual
+            if (data.user_id && data.user_id !== currentUserId) {
+                console.warn(`[TerminalService] La terminal ${terminalId} pertenece a otro usuario. Reseteando configuración local.`);
+                this.resetLocalTerminal();
+                return false;
+            }
+
+            console.log(`[TerminalService] Terminal validada correctamente:`, data);
+            return true;
         } catch (err) {
             console.error('[TerminalService] Error crítico en validación:', err);
             return true; // No borrar en caso de error desconocido
