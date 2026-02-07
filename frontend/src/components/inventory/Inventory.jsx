@@ -439,12 +439,18 @@ const Inventory = ({ mode = 'SERVICE' }) => {
         ];
 
         const confirm = await Swal.fire({
-            title: 'Cargar Lista de Precios',
-            text: "¿Deseas cargar los servicios predefinidos de la lista de precios? Esto no eliminará tus servicios actuales.",
-            icon: 'question',
+            title: '📋 Cargar Plantilla Inicial',
+            html: `
+                <p style="margin-bottom: 12px;">Esto agregará <strong>32 servicios de ejemplo</strong> típicos de lavandería (almohadas, cobertores, tapetes, etc.).</p>
+                <p style="color: #666; font-size: 14px;">✅ Son datos de ejemplo, NO de otro cliente</p>
+                <p style="color: #666; font-size: 14px;">✅ Puedes modificar los precios después</p>
+                <p style="color: #666; font-size: 14px;">✅ No eliminará servicios que ya tengas</p>
+            `,
+            icon: 'info',
             showCancelButton: true,
-            confirmButtonText: 'Sí, cargar',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Sí, cargar plantilla',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2563eb'
         });
 
         if (confirm.isConfirmed) {
@@ -618,7 +624,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
                         >
                             <span className="material-symbols-outlined text-[18px]">list_alt</span>
-                            <span className="hidden sm:inline">{isSeeding ? 'Cargando...' : 'Cargar Lista Precios'}</span>
+                            <span className="hidden sm:inline">{isSeeding ? 'Cargando...' : 'Plantilla Inicial'}</span>
                         </button>
                     )}
 
