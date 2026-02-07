@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminLicenseService } from '../../services/adminLicenseService';
 import { invitationService } from '../../services/invitationService';
+import { supabase } from '../../supabase';
 import Swal from 'sweetalert2';
 
 export const MasterLicenseManager = () => {
@@ -191,7 +192,7 @@ export const MasterLicenseManager = () => {
                                 type="password"
                                 value={masterPin}
                                 onChange={(e) => setMasterPin(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
                                 placeholder="******"
                             />
                         </div>
@@ -314,7 +315,7 @@ export const MasterLicenseManager = () => {
                                 type="text"
                                 value={invitationNote}
                                 onChange={(e) => setInvitationNote(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
                                 placeholder="Ej: Lavandería El Sol - Sucursal Norte"
                             />
                         </div>
@@ -334,7 +335,7 @@ export const MasterLicenseManager = () => {
                                 <input 
                                     readOnly 
                                     value={generatedCode.link} 
-                                    className="flex-1 p-2 text-xs bg-white border border-gray-300 rounded"
+                                    className="flex-1 p-2 text-xs bg-white border border-gray-300 rounded text-black"
                                 />
                                 <button
                                     onClick={() => {

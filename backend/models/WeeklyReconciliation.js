@@ -40,4 +40,8 @@ const WeeklyReconciliation = sequelize.define('WeeklyReconciliation', {
     freezeTableName: true
 });
 
+// Association
+const { Supply } = require('./Supply');
+WeeklyReconciliation.belongsTo(Supply, { foreignKey: 'supply_id', as: 'supply' });
+
 module.exports = { WeeklyReconciliation };

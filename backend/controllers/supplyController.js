@@ -115,3 +115,20 @@ exports.closeWeek = async (req, res) => {
     }
 };
 
+// Obtener historial de reconciliaciones
+exports.getReconciliationHistory = async (req, res) => {
+    try {
+        const history = await WeeklyReconciliation.findAll({
+            include: [{
+                model: Supply,
+                as: 'supply',
+                attributes: ['name']
+            }],
+            order: [['reconciliation_date', 'DESC']]
+        });
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+

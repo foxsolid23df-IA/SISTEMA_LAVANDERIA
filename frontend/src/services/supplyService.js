@@ -54,5 +54,11 @@ export const supplyService = {
         if (!response.ok) throw new Error("Error al realizar reconciliación");
         return response.json();
     },
+
+    getReconciliationHistory: async () => {
+        const response = await fetch(`${API_URL}/reconciliation/history`);
+        if (!response.ok) throw new Error("Error al obtener historial de cortes");
+        return response.json();
+    },
 };
 
