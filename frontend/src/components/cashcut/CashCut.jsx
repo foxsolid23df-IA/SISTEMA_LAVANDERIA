@@ -4,7 +4,9 @@ import { cashCutService } from '../../services/cashCutService';
 import { salesService } from '../../services/salesService';
 import { terminalService } from '../../services/terminalService';
 import { businessSettingsService } from '../../services/businessSettingsService';
+import { cashWithdrawalService } from '../../services/cashWithdrawalService'; // Import Service
 import TicketCorte from './TicketCorte';
+import CashWithdrawalModal from './CashWithdrawalModal'; // Import Modal
 import Swal from 'sweetalert2';
 import './CashCut.css';
 
@@ -20,7 +22,9 @@ export const CashCut = ({ onClose }) => {
     const [submitting, setSubmitting] = useState(false);
     const [showTicket, setShowTicket] = useState(false);
     const [cutResult, setCutResult] = useState(null);
+
     const [settings, setSettings] = useState(null);
+    const [showWithdrawalModal, setShowWithdrawalModal] = useState(false); // State for modal
     const ticketRef = useRef(null);
 
     // El resumen se carga mediante el efecto dependiente de cutType definido más abajo
@@ -45,6 +49,10 @@ export const CashCut = ({ onClose }) => {
             const cashSales = sales.filter(s => s.payment_method === 'efectivo');
             expectedMXN += cashSales.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
             
+            // Subtract Withdrawals (MXN)
+            const withdrawalsMXN = data.withdrawals?.totalMXN || 0;
+            expectedMXN -= withdrawalsMXN;
+            
             // Handle USD Sales (Add Sale Value in MXN, Subtract Change given in MXN)
             // Effectively: Net Change to MXN Drawer = SaleTotal - (USDAmount * ExchangeRate)
             // Example: Sale 100, Pay 10USD (200MXN). Change 100. Desk gets +10USD, -100MXN.
@@ -60,6 +68,7 @@ export const CashCut = ({ onClose }) => {
                 ...data,
                 totalUSD,
                 expectedMXN,
+                withdrawals: data.withdrawals || { totalMXN: 0, totalUSD: 0, count: 0 }, // Store withdrawals info
                 cardTotal: data.cardTotal || 0,
                 transferTotal: data.transferTotal || 0,
                 cashTotal: data.cashTotal || 0
@@ -260,6 +269,39 @@ export const CashCut = ({ onClose }) => {
         lockScreen();
         if (onClose) onClose();
     };
+    
+    // Función para manejar el éxito del retiro
+    const handleWithdrawalSuccess = () => {
+        loadSummary(); // Recargar el resumen para actualizar los montos esperados
+    };
+
+    // Función para exportar historial de retiros
+    const handleExportWithdrawals = async () => {
+        try {
+            // Si hay sesión, intentamos filtrar por ella, si no, traemos los del día/turno aproximado
+            // Por simplicidad, exportamos los de la sesión actual o recientes
+            let withdrawals = [];
+            if (cashSession?.id) {
+                withdrawals = await cashWithdrawalService.getWithdrawalsBySession(cashSession.id);
+            } else {
+                // Fallback: últimos 50 o por fecha
+                withdrawals = await cashWithdrawalService.getWithdrawalHistory({ 
+                    limit: 100,
+                    startDate: summary?.startTime 
+                });
+            }
+            
+            if (withdrawals.length === 0) {
+                Swal.fire('Info', 'No hay retiros registrados en este periodo', 'info');
+                return;
+            }
+            
+            cashWithdrawalService.exportToExcel(withdrawals, `Retiros_${activeStaff?.name || 'Caja'}`);
+        } catch (error) {
+            console.error('Error exportando retiros:', error);
+            Swal.fire('Error', 'No se pudo exportar el historial', 'error');
+        }
+    };
 
     // Cálculos en tiempo real para la UI
     const expectedMXN = summary?.expectedMXN || 0;
@@ -367,6 +409,25 @@ export const CashCut = ({ onClose }) => {
                 </div>
 
                 <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
+                    
+                    {/* Botones de Acción Rápida (Retiros y Exportar) */}
+                    <div className="flex gap-3 mb-2">
+                        <button 
+                            onClick={() => setShowWithdrawalModal(true)}
+                            className="flex-1 py-3 px-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-rounded">money_off</span>
+                            Registrar Retiro / Gasto
+                        </button>
+                        <button 
+                            onClick={handleExportWithdrawals}
+                            className="flex-1 py-3 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-rounded">file_download</span>
+                            Historial Retiros (Excel)
+                        </button>
+                    </div>
+
                     {/* Selector de Tipo de Corte */}
                     <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl gap-1">
                         <button 
@@ -466,6 +527,20 @@ export const CashCut = ({ onClose }) => {
                                         <div>
                                             <p className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">Dólares</p>
                                             <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">{formatMoney(summary.totalUSD, 'USD')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {summary?.withdrawals?.count > 0 && (
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-rose-100 dark:border-rose-900/30 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-rose-100 dark:bg-rose-900/30 p-2 rounded-xl">
+                                            <span className="material-symbols-rounded text-rose-600 dark:text-rose-400 text-lg">money_off</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">Retiros ({summary.withdrawals.count})</p>
+                                            <p className="text-lg font-black text-rose-600 dark:text-rose-400 leading-tight">-{formatMoney(summary.withdrawals.totalMXN)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -637,6 +712,19 @@ export const CashCut = ({ onClose }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Retiros */}
+            {showWithdrawalModal && (
+                <CashWithdrawalModal 
+                    onClose={() => setShowWithdrawalModal(false)}
+                    onSuccess={handleWithdrawalSuccess}
+                    cashSessionId={cashSession?.id}
+                    terminalId={cashSession?.terminal_id}
+                    staffId={activeStaff?.id}
+                    staffName={activeStaff?.name}
+                    maxAmount={expectedMXN} // Opcional: Advertencia si retira más de lo esperado
+                />
+            )}
         </div>
     );
 };
