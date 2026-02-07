@@ -141,6 +141,89 @@ export const MasterLicenseManager = () => {
         }
     };
 
+    const handleDeleteClient = async (profile) => {
+        // PASO 1: Primera advertencia
+        const firstConfirm = await Swal.fire({
+            title: '⚠️ ELIMINAR CLIENTE',
+            html: `
+                <div style="text-align: left; background: #fee2e2; padding: 1rem; border-radius: 8px; border: 2px solid #ef4444;">
+                    <p style="font-weight: bold; color: #991b1b; margin-bottom: 0.5rem;">¡ACCIÓN IRREVERSIBLE!</p>
+                    <p style="color: #7f1d1d; font-size: 0.9rem;">
+                        Estás a punto de eliminar permanentemente:<br/>
+                        <strong>${profile.store_name || 'Sin Nombre'}</strong><br/>
+                        (${profile.full_name} - ${profile.email})
+                    </p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Continuar con eliminación',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!firstConfirm.isConfirmed) return;
+
+        // PASO 2: Segunda confirmación con texto de verificación
+        const secondConfirm = await Swal.fire({
+            title: '🔴 CONFIRMACIÓN FINAL',
+            html: `
+                <div style="text-align: center;">
+                    <p style="color: #dc2626; font-weight: bold; font-size: 1.1rem; margin-bottom: 1rem;">
+                        Esta acción NO se puede deshacer
+                    </p>
+                    <p style="color: #374151; margin-bottom: 1rem;">
+                        Se eliminarán TODOS los datos asociados:<br/>
+                        • Perfil del usuario<br/>
+                        • Historial de órdenes<br/>
+                        • Configuraciones<br/>
+                        • Ventas y registros
+                    </p>
+                    <p style="font-weight: bold; color: #1f2937;">
+                        Escribe <span style="color: #dc2626;">ELIMINAR</span> para confirmar:
+                    </p>
+                </div>
+            `,
+            input: 'text',
+            inputPlaceholder: 'Escribe ELIMINAR',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'ELIMINAR PERMANENTEMENTE',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (value !== 'ELIMINAR') {
+                    return 'Debes escribir ELIMINAR exactamente para confirmar';
+                }
+            }
+        });
+
+        if (!secondConfirm.isConfirmed) return;
+
+        // PASO 3: Ejecutar eliminación
+        setLoading(true);
+        try {
+            const response = await adminLicenseService.deleteClient(profile.id, masterPin);
+            
+            if (response.success) {
+                Swal.fire({
+                    title: 'Cliente Eliminado',
+                    text: `${profile.store_name || profile.full_name} ha sido eliminado permanentemente del sistema.`,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981'
+                });
+                refreshProfiles();
+            } else {
+                throw new Error(response.error || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error('Error eliminando cliente:', error);
+            Swal.fire('Error', error.message || 'No se pudo eliminar el cliente.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const generateInvitation = async () => {
         if (!invitationNote.trim()) {
             return Swal.fire('Requerido', 'Ingresa una nota o nombre del cliente', 'warning');
@@ -290,6 +373,13 @@ export const MasterLicenseManager = () => {
                                                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
                                             >
                                                 Suspender
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteClient(profile)}
+                                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 shadow-sm"
+                                                title="Eliminar permanentemente"
+                                            >
+                                                🗑️ Eliminar
                                             </button>
                                         </div>
                                     </div>

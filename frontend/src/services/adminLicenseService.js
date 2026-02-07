@@ -74,5 +74,24 @@ export const adminLicenseService = {
             console.error('Error creating invitation code:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    /**
+     * Elimina permanentemente un cliente y todos sus datos asociados.
+     * ⚠️ ACCIÓN IRREVERSIBLE - Requiere rol super_admin y PIN Maestro.
+     */
+    deleteClient: async (userId, masterPin) => {
+        try {
+            const { data, error } = await supabase.rpc('delete_client_permanently', {
+                target_user_id: userId,
+                master_pin: masterPin
+            });
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error deleting client:', error);
+            return { success: false, error: error.message };
+        }
     }
 };
