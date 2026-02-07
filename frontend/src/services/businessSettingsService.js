@@ -10,7 +10,7 @@ export const businessSettingsService = {
             .select('*')
             .limit(1)
             .single();
-        
+
         if (error) {
             // Si no existe, podemos devolver un objeto vacío o null, 
             // pero si es error de conexión lanzamos error.
@@ -39,13 +39,15 @@ export const businessSettingsService = {
                     ticket_message: settingsData.ticket_message,
                     printer_width: settingsData.printer_width || 80,
                     printer_font_size: settingsData.printer_font_size || 12,
+                    printer_font_family: settingsData.printer_font_family || 'Courier New',
+                    printer_is_bold: settingsData.printer_is_bold || false,
                     printer_margin: settingsData.printer_margin || 0,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', existingSettings.id)
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } else {
@@ -60,11 +62,13 @@ export const businessSettingsService = {
                     ticket_message: settingsData.ticket_message,
                     printer_width: settingsData.printer_width || 80,
                     printer_font_size: settingsData.printer_font_size || 12,
+                    printer_font_family: settingsData.printer_font_family || 'Courier New',
+                    printer_is_bold: settingsData.printer_is_bold || false,
                     printer_margin: settingsData.printer_margin || 0
                 }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         }

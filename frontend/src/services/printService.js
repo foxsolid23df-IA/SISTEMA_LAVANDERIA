@@ -52,13 +52,13 @@ export const printService = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ htmlContent, printerName })
                 });
-                
+
                 if (!response.ok) {
                     // Si el bridge falla o no está disponible, fallback a ventana nueva (diálogo de navegador)
                     this.fallbackPrint(htmlContent);
                     return true;
                 }
-                
+
                 return await response.json();
             }
         } catch (error) {
@@ -89,17 +89,20 @@ export const printService = {
     generateTicketHtml(businessData, orderData, items) {
         const width = businessData.printer_width || 80;
         const fontSize = businessData.printer_font_size || 12;
+        const fontFamily = businessData.printer_font_family || "'Courier New', Courier, monospace";
+        const fontWeight = businessData.printer_is_bold ? 'bold' : 'normal';
 
         return `
             <html>
             <head>
                 <style>
                     body { 
-                        font-family: 'Courier New', Courier, monospace; 
+                        font-family: ${fontFamily}; 
                         width: ${width}mm; 
                         margin: 0; 
                         padding: 10px;
                         font-size: ${fontSize}px;
+                        font-weight: ${fontWeight};
                     }
                     .text-center { text-align: center; }
                     .text-right { text-align: right; }

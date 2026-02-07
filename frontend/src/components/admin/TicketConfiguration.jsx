@@ -14,6 +14,8 @@ export const TicketConfiguration = () => {
         ticket_message: '',
         printer_width: 80,
         printer_font_size: 12,
+        printer_font_family: "'Courier New', Courier, monospace",
+        printer_is_bold: false,
         printer_margin: 0,
         printer_name: ''
     });
@@ -44,6 +46,8 @@ export const TicketConfiguration = () => {
                     ticket_message: settings.ticket_message || '',
                     printer_width: settings.printer_width || 80,
                     printer_font_size: settings.printer_font_size || 12,
+                    printer_font_family: settings.printer_font_family || "'Courier New', Courier, monospace",
+                    printer_is_bold: settings.printer_is_bold || false,
                     printer_margin: settings.printer_margin || 0,
                     printer_name: settings.printer_name || ''
                 });
@@ -328,6 +332,67 @@ export const TicketConfiguration = () => {
                                     backgroundColor: '#fff'
                                 }}
                             />
+                        </div>
+
+                        <div className="form-group-config">
+                            <label htmlFor="printer_font_family" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Tipo de Fuente</label>
+                            <select
+                                id="printer_font_family"
+                                name="printer_font_family"
+                                value={formData.printer_font_family}
+                                onChange={handleChange}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    borderRadius: '10px', 
+                                    border: '2px solid #333', 
+                                    fontSize: '14px', 
+                                    fontWeight: 'bold', 
+                                    color: '#000',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="'Courier New', Courier, monospace">Monospace (Courier)</option>
+                                <option value="Arial, Helvetica, sans-serif">Sans-Serif (Arial)</option>
+                                <option value="'Times New Roman', Times, serif">Serif (Times)</option>
+                                <option value="system-ui">Sistema</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group-config">
+                            <label htmlFor="printer_is_bold" style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '5px' }}>Texto en Negrita</label>
+                            <div 
+                                onClick={() => setFormData(prev => ({ ...prev, printer_is_bold: !prev.printer_is_bold }))}
+                                style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    height: '46px',
+                                    gap: '10px',
+                                    padding: '0 15px',
+                                    border: '2px solid #000',
+                                    borderRadius: '10px',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="printer_is_bold"
+                                    name="printer_is_bold"
+                                    checked={formData.printer_is_bold}
+                                    onChange={(e) => {
+                                        // Evitar doble toggle por el onClick del div
+                                        e.stopPropagation();
+                                        setFormData(prev => ({ ...prev, printer_is_bold: e.target.checked }));
+                                    }}
+                                    style={{ width: '22px', height: '22px', cursor: 'pointer' }}
+                                />
+                                <span style={{ fontSize: '16px', fontWeight: '900', color: '#000' }}>
+                                    {formData.printer_is_bold ? 'SI' : 'NO'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

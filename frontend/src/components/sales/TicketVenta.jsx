@@ -15,6 +15,8 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
             style={{ 
                 width: settings?.printer_width ? `${settings.printer_width}mm` : '80mm',
                 fontSize: settings?.printer_font_size ? `${settings.printer_font_size}px` : '12px',
+                fontFamily: settings?.printer_font_family || "'Courier New', Courier, monospace",
+                fontWeight: settings?.printer_is_bold ? 'bold' : 'normal',
                 paddingLeft: settings?.printer_margin ? `${settings.printer_margin}px` : '0px',
                 paddingRight: settings?.printer_margin ? `${settings.printer_margin}px` : '0px',
                 margin: '0 auto',
