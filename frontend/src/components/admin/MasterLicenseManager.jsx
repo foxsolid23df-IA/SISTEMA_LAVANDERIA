@@ -224,6 +224,54 @@ export const MasterLicenseManager = () => {
         }
     };
 
+    const handleResetPassword = async (profile) => {
+        const result = await Swal.fire({
+            title: '🔐 Resetear Contraseña',
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>Cliente:</strong> ${profile.store_name || 'Sin nombre'}</p>
+                    <p><strong>Email:</strong> ${profile.email}</p>
+                    <hr style="margin: 1rem 0;"/>
+                    <p style="color: #374151;">Se enviará un correo electrónico al cliente con un enlace para crear una nueva contraseña.</p>
+                </div>
+            `,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            confirmButtonText: 'Enviar correo de reset',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        setLoading(true);
+        try {
+            const response = await adminLicenseService.resetClientPassword(profile.email, masterPin);
+            
+            if (response.success) {
+                Swal.fire({
+                    title: '✉️ Correo Enviado',
+                    html: `
+                        <p>Se ha enviado un correo a:</p>
+                        <p><strong>${profile.email}</strong></p>
+                        <p style="color: #6b7280; font-size: 0.9rem; margin-top: 1rem;">
+                            El cliente debe revisar su bandeja de entrada (y spam) para restablecer su contraseña.
+                        </p>
+                    `,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981'
+                });
+            } else {
+                throw new Error(response.error || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error('Error reseteando contraseña:', error);
+            Swal.fire('Error', error.message || 'No se pudo enviar el correo de reset.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const generateInvitation = async () => {
         if (!invitationNote.trim()) {
             return Swal.fire('Requerido', 'Ingresa una nota o nombre del cliente', 'warning');
@@ -373,6 +421,13 @@ export const MasterLicenseManager = () => {
                                                 className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 shadow-sm"
                                             >
                                                 Suspender
+                                            </button>
+                                            <button
+                                                onClick={() => handleResetPassword(profile)}
+                                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
+                                                title="Enviar correo para resetear contraseña"
+                                            >
+                                                🔑 Reset Pass
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteClient(profile)}
