@@ -43,6 +43,7 @@ export const Historial = () => {
     // Estado local de carga para tener control total y evitar bloqueos
     const [loadingData, setLoadingData] = useState(true)
     const [errorData, setErrorData] = useState(null)
+    const [isPrinting, setIsPrinting] = useState(false)
 
     // 6. HOOK PARA VERIFICAR PERMISOS
     const { canAccessReports } = useAuth()
@@ -290,11 +291,12 @@ export const Historial = () => {
 
     // FUNCIÓN PARA REIMPRIMIR TICKET DESDE HISTORIAL
     const handleReprint = async () => {
-        if (!ventaSeleccionada || !businessSettings) {
-            Swal.fire('Error', 'No se puede imprimir: Falta información de venta o configuración.', 'error');
+        if (!ventaSeleccionada || !businessSettings || isPrinting) {
+            if (!isPrinting) Swal.fire('Error', 'No se puede imprimir: Falta información de venta o configuración.', 'error');
             return;
         }
 
+        setIsPrinting(true);
         try {
             // Preparar datos para el generador de HTML
             const itemsParaTicket = ventaSeleccionada.items.map(item => ({
@@ -326,6 +328,8 @@ export const Historial = () => {
         } catch (error) {
             console.error('Error al reimprimir:', error);
             Swal.fire('Error', 'No se pudo imprimir el ticket. Verifique la impresora.', 'error');
+        } finally {
+            setIsPrinting(false);
         }
     };
 
@@ -594,11 +598,14 @@ export const Historial = () => {
 
                     <div className="px-8 py-6 bg-slate-50 dark:bg-white/5 flex justify-end gap-4">
                         <button
-                            className="bg-gray-800 text-white px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-700 transition-all active:scale-95 shadow-lg flex items-center gap-2"
+                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 ${isPrinting ? 'bg-gray-400 cursor-not-allowed text-gray-200' : 'bg-gray-800 text-white hover:bg-gray-700 active:scale-95'}`}
                             onClick={handleReprint}
+                            disabled={isPrinting}
                         >
-                            <span className="material-icons-outlined text-sm">print</span>
-                            Reimprimir Ticket
+                            <span className={`material-icons-outlined text-sm ${isPrinting ? 'animate-spin' : ''}`}>
+                                {isPrinting ? 'sync' : 'print'}
+                            </span>
+                            {isPrinting ? 'IMPRIMIENDO...' : 'REIMPRIMIR TICKET'}
                         </button>
 
                         <button 

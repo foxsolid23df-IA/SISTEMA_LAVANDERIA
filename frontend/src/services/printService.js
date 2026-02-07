@@ -38,15 +38,16 @@ export const printService = {
      */
     async print(htmlContent, printerName = null, options = {}) {
         const copies = options.copies || 1;
+        const normalizedPrinter = (printerName === 'Default' || printerName === 'default') ? null : printerName;
 
         try {
-            console.log(`[PrintService] Inicio de impresión. Copias: ${copies}, Impresora: ${printerName || 'Default'}`);
+            console.log(`[PrintService] Inicio de impresión. Copias: ${copies}, Impresora: ${normalizedPrinter || 'Default'}`);
 
             for (let i = 0; i < copies; i++) {
                 if (window.electron && window.electron.printTicket) {
                     // Modo Electron: Impresión silenciosa nativa
                     console.log(`[PrintService] Usando Electron Native Print (Copia ${i + 1}/${copies})`);
-                    const result = await window.electron.printTicket(htmlContent, printerName);
+                    const result = await window.electron.printTicket(htmlContent, normalizedPrinter);
                     if (!result.success) throw new Error(result.error);
                 } else {
                     // Modo Web: Intentar vía Backend Bridge

@@ -10,7 +10,7 @@ export class ScaleService {
 
     async connect(baudRate = 9600) {
         if (!navigator.serial) {
-            throw new Error("Web Serial API not supported in this browser.");
+            throw new Error("Web Serial API no es compatible con este navegador.");
         }
 
         try {
@@ -21,8 +21,36 @@ export class ScaleService {
         } catch (error) {
             console.error("Error connecting to scale:", error);
             this.isConnected = false;
+
+            if (error.name === 'NotFoundError') {
+                throw new Error("No se seleccionó ningún puerto.");
+            } else if (error.name === 'SecurityError') {
+                throw new Error("Permiso denegado para acceder al puerto serial.");
+            }
             throw error;
         }
+    }
+
+    /**
+     * Intenta conectar automáticamente a un puerto previamente autorizado
+     */
+    async checkPreviousConnection(baudRate = 9600) {
+        if (!navigator.serial) return false;
+
+        try {
+            const ports = await navigator.serial.getPorts();
+            if (ports.length > 0) {
+                console.log("📍 Puertos previos detectados, intentando conexión automática...");
+                this.port = ports[0];
+                await this.port.open({ baudRate });
+                this.isConnected = true;
+                return true;
+            }
+        } catch (error) {
+            console.warn("No se pudo realizar la conexión automática:", error);
+            this.isConnected = false;
+        }
+        return false;
     }
 
     // --- MODO SIMULACIÓN ---

@@ -108,10 +108,11 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
                         <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                             <span>CAMBIO:</span>
                             <span>{(() => {
-                                const recibidoMXN = venta.usar_usd 
+                                 const recibidoMXN = venta.usar_usd 
                                     ? (venta.monto_recibido * (venta.exchange_rate || 1))
                                     : venta.monto_recibido;
-                                return formatearDinero(Math.max(0, recibidoMXN - (venta.paid_amount || 0)));
+                                const baseCobro = venta.paid_amount > 0 ? venta.paid_amount : venta.total;
+                                return formatearDinero(Math.max(0, recibidoMXN - baseCobro));
                             })()}</span>
                         </div>
                     </>

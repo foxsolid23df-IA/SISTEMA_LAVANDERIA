@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.5] - 2026-02-07
+
+### Added
+
+- **Auto-Conexión de Báscula:** El sistema ahora detecta y conecta automáticamente la última báscula utilizada al iniciar la aplicación.
+- **Gestión de Errores Serial:** Mensajes amigables en español cuando falla la conexión con la báscula o se cancela el permiso.
+- **Mejora de Impresión:** Corrección en el cálculo del cambio en el ticket de venta cuando el anticipo es cero.
+- **Robustez de Hook:** Solución definitiva al error de inicialización (`ReferenceError`) que causaba pantallas negras.
+
 ## [1.3.9] - 2026-02-03
 
 ### Added

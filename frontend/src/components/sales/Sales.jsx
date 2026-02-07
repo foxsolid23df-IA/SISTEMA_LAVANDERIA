@@ -54,6 +54,7 @@ export const Sales = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [metodoPago, setMetodoPago] = useState("cash");
     const [ventaCompletada, setVentaCompletada] = useState(null);
+    const [isPrinting, setIsPrinting] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [montoRecibido, setMontoRecibido] = useState(""); /* State for Change Calculator */
     const [montoRecibidoUSD, setMontoRecibidoUSD] = useState("");
@@ -190,45 +191,40 @@ export const Sales = () => {
     };
 
     const imprimirTicket = async () => {
-        if (!ventaCompletada || !businessSettings) return;
+        if (!ventaCompletada || !businessSettings || isPrinting) return;
 
-        // Generar HTML del ticket usando el mismo generador centralizado o extrayendo el HTML actual
-        // Para consistencia con lo que se ve en pantalla, usaremos el HTML del ref
-        if (ticketRef.current) {
-            // Aseguramos que los estilos en línea se preserven o usamos el generador del servicio si es preferible
-            // Dado que TicketVenta ya tiene estilos, lo mejor es pasarle los datos al servicio generator
-            // Ojo: TicketVenta puede tener estilos específicos de React. 
-            // Para simplicidad y robustez, usaremos el generador del servicio si es posible, 
-            // pero TicketVenta tiene props complejas.
-            // Vamos a usar el contenido del ref pero envolviéndolo en una estructura limpia para impresión
-            
-            // Opción A: Usar el servicio de impresión con el HTML capturado
-            const printContent = ticketRef.current.innerHTML;
-            
-            // Construimos un HTML completo para pasar al servicio
-            const fullHtml = `
-                <html>
-                    <head>
-                        <title>Ticket #${ventaCompletada.id}</title>
-                        <style>
-                            body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
-                            .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
-                            .text-center { text-align: center; }
-                            .text-right { text-align: right; }
-                            .font-bold { font-weight: bold; }
-                            table { width: 100%; border-collapse: collapse; }
-                            td, th { vertical-align: top; }
-                            /* Asegurar que estilos de TicketVenta pasen */
-                            ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
-                        </style>
-                    </head>
-                    <body>${printContent}</body>
-                </html>
-            `;
+        setIsPrinting(true);
+        try {
+            if (ticketRef.current) {
+                const printContent = ticketRef.current.innerHTML;
+                
+                const fullHtml = `
+                    <html>
+                        <head>
+                            <title>Ticket #${ventaCompletada.id}</title>
+                            <style>
+                                body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
+                                .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
+                                .text-center { text-align: center; }
+                                .text-right { text-align: right; }
+                                .font-bold { font-weight: bold; }
+                                table { width: 100%; border-collapse: collapse; }
+                                td, th { vertical-align: top; }
+                                ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
+                            </style>
+                        </head>
+                        <body>${printContent}</body>
+                    </html>
+                `;
 
-            const copies = businessSettings.ticket_double_print ? 2 : 1;
-            
-            await printService.print(fullHtml, businessSettings.printer_name, { copies });
+                const copies = businessSettings.ticket_double_print ? 2 : 1;
+                
+                await printService.print(fullHtml, businessSettings.printer_name, { copies });
+            }
+        } catch (error) {
+            console.error("Error al imprimir:", error);
+        } finally {
+            setIsPrinting(false);
         }
     };
 
@@ -668,10 +664,13 @@ export const Sales = () => {
                         <div className="mt-8 space-y-3">
                             <button 
                                 onClick={imprimirTicket}
-                                className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all"
+                                disabled={isPrinting}
+                                className={`w-full py-4 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all ${isPrinting ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 shadow-slate-900/20'}`}
                             >
-                                <span className="material-symbols-outlined">print</span>
-                                IMPRIMIR TICKET
+                                <span className={`material-symbols-outlined ${isPrinting ? 'animate-spin' : ''}`}>
+                                    {isPrinting ? 'sync' : 'print'}
+                                </span>
+                                {isPrinting ? 'IMPRIMIENDO...' : 'IMPRIMIR TICKET'}
                             </button>
                             <button 
                                 onClick={() => setVentaCompletada(null)}

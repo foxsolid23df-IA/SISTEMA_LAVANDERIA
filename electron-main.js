@@ -110,20 +110,23 @@ ipcMain.handle('print-ticket', async (event, htmlContent, printerName) => {
 
         return new Promise((resolve) => {
             printWindow.webContents.on('did-finish-load', () => {
-                printWindow.webContents.print({
-                    silent: true,
-                    printBackground: true,
-                    deviceName: printerName || '', // Si es vacío usa la predeterminada
-                    margins: { marginType: 'none' }
-                }, (success, failureReason) => {
-                    printWindow.close();
-                    if (!success) {
-                        console.error('Error al imprimir:', failureReason);
-                        resolve({ success: false, error: failureReason });
-                    } else {
-                        resolve({ success: true });
-                    }
-                });
+                // Pequeña espera para asegurar que el contenido (especialmente imágenes) se renderice
+                setTimeout(() => {
+                    printWindow.webContents.print({
+                        silent: true,
+                        printBackground: true,
+                        deviceName: printerName || '',
+                        margins: { marginType: 'none' }
+                    }, (success, failureReason) => {
+                        printWindow.close();
+                        if (!success) {
+                            console.error('Error al imprimir:', failureReason);
+                            resolve({ success: false, error: failureReason });
+                        } else {
+                            resolve({ success: true });
+                        }
+                    });
+                }, 200);
             });
         });
     } catch (error) {

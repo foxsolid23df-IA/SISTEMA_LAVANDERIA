@@ -32,6 +32,7 @@ export const Orders = () => {
 
   // Estados para reimpresión
   const [businessSettings, setBusinessSettings] = useState(null);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [orderToPrint, setOrderToPrint] = useState(null);
   const ticketRef = useRef(null);
 
@@ -251,7 +252,10 @@ export const Orders = () => {
   };
 
   const imprimirTicket = async () => {
-    if (ticketRef.current && businessSettings) {
+    if (!ticketRef.current || !businessSettings || isPrinting) return;
+    
+    setIsPrinting(true);
+    try {
         const printContent = ticketRef.current.innerHTML;
         
         const fullHtml = `
@@ -265,7 +269,6 @@ export const Orders = () => {
                         .text-right { text-align: right; }
                         .font-bold { font-weight: bold; }
                         table { width: 100%; border-collapse: collapse; }
-                        /* Asegurar que estilos de TicketVenta pasen */
                         ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
                     </style>
                 </head>
@@ -273,9 +276,11 @@ export const Orders = () => {
             </html>
         `;
 
-        // Reimpresión suele ser 1 copia, a menos que queramos respetar la config doble.
-        // Por norma general reimpresión es manual, 1 copia está bien.
         await printService.print(fullHtml, businessSettings.printer_name, { copies: 1 });
+    } catch (error) {
+        console.error("Error al imprimir:", error);
+    } finally {
+        setIsPrinting(false);
     }
   };
 
@@ -697,12 +702,15 @@ export const Orders = () => {
                   </div>
                   <div className="mt-8 space-y-3">
                       <button 
-                          onClick={imprimirTicket}
-                          className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all"
-                      >
-                          <span className="material-symbols-outlined">print</span>
-                          REIMPRIMIR TICKET
-                      </button>
+                            className={`flex-1 py-3 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${isPrinting ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-black active:scale-95'}`}
+                            onClick={imprimirTicket}
+                            disabled={isPrinting}
+                          >
+                            <span className={`material-symbols-outlined ${isPrinting ? 'animate-spin' : ''}`}>
+                                {isPrinting ? 'sync' : 'print'}
+                            </span>
+                            {isPrinting ? 'IMPRIMIENDO...' : 'IMPRIMIR TICKET'}
+                          </button>
                       <button 
                           onClick={() => setOrderToPrint(null)}
                           className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors"
