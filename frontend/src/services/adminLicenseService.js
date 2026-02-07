@@ -88,6 +88,12 @@ export const adminLicenseService = {
             });
 
             if (error) throw error;
+
+            // La función RPC retorna JSONB con {success: bool, error?: string}
+            if (!data?.success) {
+                throw new Error(data?.error || 'Error al eliminar cliente');
+            }
+
             return { success: true, data };
         } catch (error) {
             console.error('Error deleting client:', error);
