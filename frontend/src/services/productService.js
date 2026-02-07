@@ -58,11 +58,22 @@ export const productService = {
 
         console.log('[ProductService] Obteniendo productos...');
 
-        // 2. Intentar Supabase (Nube)
+        // 2. Obtener el usuario actual para filtrar productos
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !userData?.user) {
+            console.warn('[ProductService] No hay usuario autenticado');
+            return productsCache || [];
+        }
+
+        const currentUserId = userData.user.id;
+
+        // 3. Intentar Supabase (Nube) - FILTRANDO por user_id
         try {
             const { data, error } = await supabase
                 .from('products')
                 .select('*')
+                .eq('user_id', currentUserId)
                 .order('name', { ascending: true });
 
             if (!error && data) {
@@ -76,7 +87,7 @@ export const productService = {
             console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
         }
 
-        // 3. Fallback: Intentar API Local (SQLite) solo en Electron
+        // 4. Fallback: Intentar API Local (SQLite) solo en Electron
         if (!config.isElectron) {
             console.log('[ProductService] Modo Web: Saltando fallback local.');
             return productsCache || [];
