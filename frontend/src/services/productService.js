@@ -119,11 +119,19 @@ export const productService = {
      */
     syncWithLocal: async () => {
         try {
-            // 1. Obtener datos frescos de la nube
-            const { data: cloudProducts, error } = await supabase.from('products').select('*');
+            // 1. Obtener el usuario actual
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) throw new Error("No hay una sesión activa para sincronizar.");
+
+            // 2. Obtener datos frescos de la nube FILTRADOS por user_id
+            const { data: cloudProducts, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('user_id', user.id);
+
             if (error) throw error;
 
-            // 2. Enviar al backend local para persistencia con PIN por URL para evitar bloqueos CORS
+            // 3. Enviar al backend local para persistencia con PIN por URL
             const response = await fetch(`${config.api.baseUrl}/api/admin/sync/products?masterPin=2026SOP`, {
                 method: 'POST',
                 headers: {
@@ -137,7 +145,6 @@ export const productService = {
                 console.error('[ProductService] Detalle del error de sincronización:', errorData);
                 throw new Error(errorData.error || 'Error al guardar en base de datos local');
             }
-
 
             const result = await response.json();
             return { success: true, ...result.result };

@@ -20,6 +20,7 @@ export const Sidebar = () => {
     lockScreen,
     storeName,
     activeRole,
+    cashSession,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
@@ -182,6 +183,12 @@ export const Sidebar = () => {
               {displayRole}
               <span className="bg-slate-100 dark:bg-white/5 px-1 rounded text-[8px] border border-slate-200 dark:border-white/10">v{typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1.3.1'}</span>
             </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${cashSession ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></span>
+              <span className={`text-[9px] font-black uppercase tracking-tighter ${cashSession ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                {cashSession ? 'Caja Abierta' : 'Caja Cerrada'}
+              </span>
+            </div>
           </div>
         </div>
 

@@ -215,6 +215,59 @@ function crearVentana() {
         title: 'Sistema de Ventas - Lavandería Isla Mujeres'
     });
 
+    // --- MANEJO DE BÁSCULA / PUERTO SERIAL (Web Serial API en Electron) ---
+    // Electron NO muestra el popup nativo de selección de puerto serial.
+    // Debemos manejar el evento 'select-serial-port' manualmente.
+
+    // Mantener referencia a puertos disponibles para selección dinámica
+    let availableSerialPorts = [];
+
+    // Cuando un nuevo puerto USB se conecta físicamente
+    mainWindow.webContents.session.on('serial-port-added', (event, port) => {
+        log.info(`[Báscula] 🔌 Puerto serial CONECTADO: ${JSON.stringify(port)}`);
+        availableSerialPorts.push(port);
+    });
+
+    // Cuando un puerto USB se desconecta físicamente
+    mainWindow.webContents.session.on('serial-port-removed', (event, port) => {
+        log.info(`[Báscula] ⚡ Puerto serial DESCONECTADO: ${JSON.stringify(port)}`);
+        availableSerialPorts = availableSerialPorts.filter(p => p.portId !== port.portId);
+    });
+
+    // Evento CRÍTICO: cuando el frontend llama navigator.serial.requestPort()
+    mainWindow.webContents.session.on('select-serial-port', (event, portList, webContents, callback) => {
+        event.preventDefault();
+        log.info(`[Báscula] 📋 Puertos detectados (${portList.length}): ${JSON.stringify(portList.map(p => ({ portId: p.portId, displayName: p.displayName, vendorId: p.vendorId, productId: p.productId })))}`);
+
+        if (portList && portList.length > 0) {
+            // Seleccionar el primer puerto disponible automáticamente
+            const selected = portList[0];
+            log.info(`[Báscula] ✅ Seleccionando automáticamente: portId=${selected.portId}, name=${selected.displayName || 'N/A'}`);
+            callback(selected.portId);
+        } else {
+            log.warn('[Báscula] ❌ No se encontraron puertos seriales disponibles');
+            callback('');
+        }
+    });
+
+    // PERMISOS: Autorizar 'serial' sin bloquear otros permisos del sistema
+    mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+        if (permission === 'serial') {
+            return true; // Siempre permitir serial
+        }
+        // Para cualquier otro permiso, usar el comportamiento por defecto (true)
+        return true;
+    });
+
+    // Autorizar dispositivos seriales automáticamente
+    mainWindow.webContents.session.setDevicePermissionHandler((details) => {
+        if (details.deviceType === 'serial') {
+            log.info(`[Báscula] 🔐 Permiso de dispositivo serial otorgado: ${JSON.stringify(details.device || {})}`);
+            return true;
+        }
+        return false;
+    });
+
     if (isDev) {
         mainWindow.loadURL('http://localhost:5173');
         mainWindow.webContents.openDevTools();

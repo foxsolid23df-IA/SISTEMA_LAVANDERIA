@@ -263,13 +263,14 @@ export const Orders = () => {
                 <head>
                     <title>Reimpresión Ticket #${orderToPrint.id}</title>
                     <style>
-                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 5mm; margin: 0; }
+                        body { font-family: 'Courier New', Courier, monospace; margin: 0; padding: 0; width: auto; }
                         .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
                         .text-center { text-align: center; }
                         .text-right { text-align: right; }
                         .font-bold { font-weight: bold; }
                         table { width: 100%; border-collapse: collapse; }
                         ${businessSettings.printer_is_bold ? 'body { font-weight: bold; }' : ''}
+                        @page { margin: 0; size: auto; }
                     </style>
                 </head>
                 <body>${printContent}</body>

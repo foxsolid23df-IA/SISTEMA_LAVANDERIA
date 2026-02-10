@@ -9,7 +9,7 @@ export default defineConfig({
 		'APP_VERSION': JSON.stringify(process.env.npm_package_version),
 	},
 	base: './',
-    envDir: './', // Busca las variables .env en la carpeta frontend
+	envDir: './', // Busca las variables .env en la carpeta frontend
 	build: {
 		outDir: '../dist',
 		emptyOutDir: true

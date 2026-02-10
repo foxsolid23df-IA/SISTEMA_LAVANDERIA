@@ -17,11 +17,15 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
                 fontSize: settings?.printer_font_size ? `${settings.printer_font_size}px` : '12px',
                 fontFamily: settings?.printer_font_family || "'Courier New', Courier, monospace",
                 fontWeight: settings?.printer_is_bold ? 'bold' : 'normal',
-                paddingLeft: settings?.printer_margin ? `${settings.printer_margin}px` : '0px',
-                paddingRight: settings?.printer_margin ? `${settings.printer_margin}px` : '0px',
+                paddingLeft: settings?.printer_margin ? `${settings.printer_margin}px` : '2px',
+                paddingRight: settings?.printer_margin ? `${settings.printer_margin}px` : '2px',
                 margin: '0 auto',
                 backgroundColor: 'white',
-                color: 'black'
+                color: 'black',
+                boxSizing: 'border-box',
+                overflow: 'hidden',
+                wordWrap: 'break-word',
+                whiteSpace: 'pre-wrap'
             }}
         >
             <div className="ticket-header" style={{ fontSize: 'inherit' }}>
@@ -71,11 +75,17 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
 
             <div className="ticket-productos">
                 {venta.productos.map((item, idx) => (
-                    <div key={idx} className="ticket-producto" style={{ marginBottom: '5px' }}>
-                        <div className="ticket-producto-nombre" style={{ fontWeight: 'bold', textAlign: 'left' }}>{item.name}</div>
-                        <div className="ticket-producto-detalle" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{item.quantity} {item.pricing_type === 'kg' ? 'kg' : 'pza'} x {formatearDinero(item.price)}</span>
-                            <span>{formatearDinero(item.price * item.quantity)}</span>
+                    <div key={idx} className="ticket-producto" style={{ marginBottom: '5px', borderBottom: '1px dotted #ccc', paddingBottom: '2px' }}>
+                        <div className="ticket-producto-nombre" style={{ fontWeight: 'bold', textAlign: 'left', width: '100%' }}>
+                            {item.name}
+                        </div>
+                        <div className="ticket-producto-detalle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.95em' }}>
+                            <span style={{ marginRight: '5px' }}>
+                                {item.quantity} {item.pricing_type === 'kg' ? 'kg' : 'pza'} x {formatearDinero(item.price)}
+                            </span>
+                            <span style={{ textAlign: 'right', minWidth: '60px' }}>
+                                {formatearDinero(item.price * item.quantity)}
+                            </span>
                         </div>
                     </div>
                 ))}
@@ -84,17 +94,17 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
             <div className="ticket-linea" style={{ borderBottom: '1px dashed #000', margin: '5px 0' }} />
 
             <div className="ticket-summary">
-                <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                    <span>TOTAL A PAGAR:</span>
+                <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.1em' }}>
+                    <span>TOTAL:</span>
                     <span>{formatearDinero(venta.total)}</span>
                 </div>
                 <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>PAGADO (ANTICIPO):</span>
+                    <span>PAGADO:</span>
                     <span>{formatearDinero(venta.paid_amount || 0)}</span>
                 </div>
-                <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                    <span>{saldoPendiente > 0 ? 'SALDO PENDIENTE:' : 'ORDEN PAGADA'}</span>
-                    <span>{saldoPendiente > 0 ? formatearDinero(saldoPendiente) : '$ 0.00'}</span>
+                <div className="ticket-summary-row" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '2px' }}>
+                    <span>{saldoPendiente > 0.01 ? 'PENDIENTE:' : 'PAGADO'}</span>
+                    <span>{saldoPendiente > 0.01 ? formatearDinero(saldoPendiente) : '$ 0.00'}</span>
                 </div>
 
                 {/* Mostrar cambio solo si se ingresó un monto recibido y fue pago en efectivo */}

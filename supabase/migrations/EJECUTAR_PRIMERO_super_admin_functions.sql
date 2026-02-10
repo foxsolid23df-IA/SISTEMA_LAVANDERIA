@@ -2,7 +2,8 @@
 -- SCRIPT CONSOLIDADO: TODAS LAS FUNCIONES DEL SUPER ADMIN
 -- ==========================================
 -- EJECUTAR ESTE SCRIPT COMPLETO EN SUPABASE SQL EDITOR
--- Incluye: Invitaciones, Eliminar Clientes, Validación, Trigger de Perfiles Limpios
+-- Incluye: Invitaciones, Eliminar Clientes, Limpiar Catálogo, Validación, Trigger de Perfiles Limpios
+
 
 -- ==========================================
 -- 1. FUNCIÓN: Validar Super Admin
@@ -183,8 +184,66 @@ $$;
 GRANT EXECUTE ON FUNCTION delete_client_permanently(UUID, TEXT) TO authenticated;
 
 -- ==========================================
--- 4. TRIGGER: Crear Perfil Limpio para Nuevos Usuarios
+-- 4. FUNCIÓN: Limpiar Catálogo de Cliente
 -- ==========================================
+CREATE OR REPLACE FUNCTION public.clear_client_catalog(
+    target_user_id UUID,
+    master_pin TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_deleted_count INT;
+BEGIN
+    -- 1. Validar PIN Maestro
+    IF master_pin IS NULL OR master_pin <> '2026SOP' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'PIN Maestro incorrecto');
+    END IF;
+
+    -- 2. Validar rol de Super Admin
+    IF NOT EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() AND role = 'super_admin'
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Se requiere rol super_admin');
+    END IF;
+
+    -- 3. Desvincular productos de órdenes y ventas (FK Fix)
+    -- Pone en NULL el product_id pero mantiene product_name, price, etc. en el item
+    UPDATE public.order_items 
+    SET product_id = NULL 
+    WHERE product_id IN (SELECT id FROM public.products WHERE user_id = target_user_id);
+
+    UPDATE public.sale_items 
+    SET product_id = NULL 
+    WHERE product_id IN (SELECT id FROM public.products WHERE user_id = target_user_id);
+
+    -- 4. Eliminar productos del usuario
+    DELETE FROM public.products
+    WHERE user_id = target_user_id;
+
+    GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+    -- 5. Retornar éxito
+    RETURN jsonb_build_object(
+        'success', true, 
+        'deleted_count', v_deleted_count,
+        'message', 'Catálogo limpiado correctamente'
+    );
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION clear_client_catalog(UUID, TEXT) TO authenticated;
+
+-- ==========================================
+-- 5. TRIGGER: Crear Perfil Limpio para Nuevos Usuarios
+-- ==========================================
+
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -224,8 +283,9 @@ CREATE TRIGGER on_auth_user_created
     EXECUTE FUNCTION handle_new_user();
 
 -- ==========================================
--- 5. AÑADIR COLUMNA EMAIL A PROFILES (si no existe)
+-- 6. AÑADIR COLUMNA EMAIL A PROFILES (si no existe)
 -- ==========================================
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -283,7 +343,9 @@ $$;
 COMMENT ON FUNCTION validate_super_admin IS 'Valida que el usuario actual sea super_admin con PIN Maestro correcto.';
 COMMENT ON FUNCTION create_invitation_code IS 'Crea un código de invitación de un solo uso.';
 COMMENT ON FUNCTION delete_client_permanently IS '⚠️ PELIGRO: Elimina permanentemente un cliente y TODOS sus datos.';
+COMMENT ON FUNCTION clear_client_catalog IS 'Elimina todos los productos y servicios de un cliente, desvinculándolos de órdenes previas.';
 COMMENT ON FUNCTION handle_new_user IS 'Trigger que crea un perfil LIMPIO para cada nuevo usuario registrado.';
+
 
 -- ==========================================
 -- ✅ SCRIPT COMPLETADO

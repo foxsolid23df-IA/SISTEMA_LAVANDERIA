@@ -110,18 +110,24 @@ export const printService = {
                 <style>
                     body { 
                         font-family: ${fontFamily}; 
-                        width: ${width}mm; 
+                        width: ${width}mm;
+                        max-width: 100%;
                         margin: 0; 
-                        padding: 10px;
+                        padding: 0; /* Let inner content handle padding if needed, or set small padding */
                         font-size: ${fontSize}px;
                         font-weight: ${fontWeight};
+                        box-sizing: border-box;
+                        overflow: hidden;
+                        word-wrap: break-word;
                     }
                     .text-center { text-align: center; }
                     .text-right { text-align: right; }
                     .bold { font-weight: bold; }
                     hr { border: none; border-top: 1px dashed #000; margin: 5px 0; }
-                    table { width: 100%; border-collapse: collapse; }
+                    table { width: 100%; border-collapse: collapse; table-layout: fixed; } /* Fixed layout for wrapping */
+                    td, th { vertical-align: top; overflow-wrap: break-word; word-wrap: break-word; }
                     .header-logo { max-width: 50mm; display: block; margin: 0 auto 10px; }
+                    @page { margin: 0; }
                 </style>
             </head>
             <body>

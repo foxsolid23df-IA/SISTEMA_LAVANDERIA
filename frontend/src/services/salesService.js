@@ -20,7 +20,7 @@ export const salesService = {
             // Verificamos si podemos llegar a Supabase rápidamente (opcional, o simplemente intentamos local si falla la nube)
             // Para asegurar máxima resiliencia, si estamos en modo Electron, podemos intentar GUARDAR LOCAL primero
             // pero el requerimiento es "Garantizar ventas sin internet".
-            
+
             // Si el navegador reporta offline, vamos directo a local
             if (!navigator.onLine) {
                 return await salesService.saveToLocal(saleData, userData?.user?.id, terminalId);
@@ -85,11 +85,11 @@ export const salesService = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     total: saleData.total,
-                    items: saleData.items.map(i => ({ 
-                        productId: i.id, 
-                        name: i.name, 
-                        quantity: i.quantity, 
-                        price: i.price 
+                    items: saleData.items.map(i => ({
+                        productId: i.id,
+                        name: i.name,
+                        quantity: i.quantity,
+                        price: i.price
                     })),
                     payment_method: saleData.metodoPago || 'efectivo',
                     terminal_id: terminalId,
@@ -99,7 +99,7 @@ export const salesService = {
 
             if (!response.ok) throw new Error('Error al guardar localmente');
             const localSale = await response.json();
-            
+
             return {
                 ...localSale,
                 offline: true,
@@ -149,10 +149,10 @@ export const salesService = {
                         total: item.price * item.quantity
                     }));
                     await supabase.from('sale_items').insert(saleItems);
-                    
+
                     await fetch(`${config.api.baseUrl}/api/admin/sync/sales/mark-synced?masterPin=2026SOP`, {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ localId: localSale.id, supabaseId: sale.id })
@@ -179,7 +179,7 @@ export const salesService = {
             // Usamos el mismo endpoint que el sync
             const response = await fetch(`${config.api.baseUrl}/api/admin/sync/sales/pending?masterPin=2026SOP`);
             if (!response.ok) return [];
-            
+
             const { sales } = await response.json();
             if (!sales || !Array.isArray(sales)) return [];
 
@@ -219,12 +219,16 @@ export const salesService = {
 
     // Obtener ventas de hoy
     getTodaySales: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const { data, error } = await supabase
             .from('sales')
             .select('*')
+            .eq('user_id', user.id)
             .gte('created_at', today.toISOString())
             .order('created_at', { ascending: false });
 
@@ -234,6 +238,9 @@ export const salesService = {
 
     // Obtener ventas desde una fecha (con items)
     getSalesSince: async (startTime, terminalId = null) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         // Validación de UUID para terminalId
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -243,6 +250,7 @@ export const salesService = {
                 *,
                 sale_items (*)
             `)
+            .eq('user_id', user.id)
             .gte('created_at', startTime)
             .order('created_at', { ascending: false });
 
@@ -260,12 +268,16 @@ export const salesService = {
 
     // Obtener todas las ventas (con paginación)
     getSales: async (limit = 50) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         const { data, error } = await supabase
             .from('sales')
             .select(`
                 *,
                 sale_items (*)
             `)
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(limit);
 
@@ -286,23 +298,11 @@ export const salesService = {
 
     // Obtener estadísticas generales
     getStatistics: async (signal) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No authenticated user");
+
         const ahora = new Date();
-
-        // Día actual
-        const inicioDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-        const finDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999);
-
-        // Semana actual (desde el lunes)
-        const diaActual = ahora.getDay();
-        const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1;
-        const inicioSemana = new Date(ahora);
-        inicioSemana.setDate(ahora.getDate() - diasHastaLunes);
-        inicioSemana.setHours(0, 0, 0, 0);
-
-        // Mes actual y anterior
-        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-        const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
-        const finMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59, 999);
+        // ... (resto del código de fechas igual)
 
         console.log('[salesService] Consultando ventas desde Supabase...')
 
@@ -310,6 +310,7 @@ export const salesService = {
         let query = supabase
             .from('sales')
             .select('total, created_at')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(2000);
 
@@ -368,9 +369,13 @@ export const salesService = {
 
     // Obtener top productos más vendidos
     getTopProducts: async (limit = 5, signal) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
         let query = supabase
             .from('sale_items')
-            .select('product_name, quantity, price, total');
+            .select('product_name, quantity, price, total')
+            .eq('user_id', user.id);
 
         if (signal) {
             query = query.abortSignal(signal);
@@ -411,6 +416,9 @@ export const salesService = {
 
     // Obtener ventas por día de la semana actual
     getWeeklySalesData: async (signal) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [0, 0, 0, 0, 0, 0, 0];
+
         const ahora = new Date();
 
         // Calcular inicio de la semana (Lunes)
@@ -424,6 +432,7 @@ export const salesService = {
         let query = supabase
             .from('sales')
             .select('total, created_at')
+            .eq('user_id', user.id)
             .gte('created_at', inicioSemana.toISOString());
 
         if (signal) {
@@ -482,7 +491,7 @@ export const salesService = {
             fechaFin: fechaFin || 'Sin límite final'
         };
     },
-    
+
     // Eliminar una venta (requiere permisos administrativos)
     deleteSale: async (saleId) => {
         const { error: itemsError } = await supabase

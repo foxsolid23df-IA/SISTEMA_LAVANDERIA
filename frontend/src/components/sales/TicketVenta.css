@@ -1,10 +1,28 @@
 .ticket-venta {
-    width: 280px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 13px;
-    color: #222;
+    font-size: 12px; /* Slightly reduced base size for better fit */
+    color: #000;
     background: #fff;
-    padding: 10px 0;
+    padding: 0;
+    overflow: hidden; /* Prevent overflow */
+}
+
+@media print {
+    @page {
+        margin: 0;
+        size: auto;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    .ticket-venta {
+        width: 100% !important;
+        padding-bottom: 20px; /* Space for cut */
+    }
 }
 
 .ticket-venta .ticket-header {

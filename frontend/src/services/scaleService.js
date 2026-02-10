@@ -4,35 +4,82 @@ export class ScaleService {
         this.reader = null;
         this.isConnected = false;
         this.readableStreamClosed = null;
-        this.simulationInterval = null; // Para modo simulación
+        this.simulationInterval = null;
         this.buffer = '';
     }
 
+    /**
+     * Detecta si estamos corriendo dentro de Electron
+     */
+    get isElectron() {
+        return !!(window.electron && window.electron.isElectron);
+    }
+
+    /**
+     * Conectar a la báscula serial.
+     * En Web (Chrome/Edge): muestra popup nativo de selección de puerto.
+     * En Electron (.exe): la selección es automática vía select-serial-port handler.
+     */
     async connect(baudRate = 9600) {
+        // Verificar soporte de Web Serial API
         if (!navigator.serial) {
-            throw new Error("Web Serial API no es compatible con este navegador.");
+            throw new Error(
+                this.isElectron
+                    ? "Error interno: Web Serial API no disponible en esta versión de Electron."
+                    : "Web Serial API no es compatible con este navegador. Use Chrome o Edge."
+            );
+        }
+
+        // Si ya estamos conectados, desconectar primero para evitar conflictos
+        if (this.isConnected || this.port) {
+            console.log("⚠️ Puerto previo detectado, desconectando antes de reconectar...");
+            try {
+                await this.disconnect();
+            } catch (e) {
+                console.warn("Advertencia al desconectar puerto previo:", e);
+            }
         }
 
         try {
+            console.log("🔍 Solicitando puerto serial...");
             this.port = await navigator.serial.requestPort();
+            console.log("📌 Puerto obtenido, abriendo a", baudRate, "baudios...");
             await this.port.open({ baudRate });
             this.isConnected = true;
+            console.log("✅ Báscula conectada exitosamente");
             return true;
         } catch (error) {
-            console.error("Error connecting to scale:", error);
+            console.error("❌ Error al conectar báscula:", error.name, error.message);
             this.isConnected = false;
+            this.port = null;
 
+            // Errores específicos con mensajes claros
             if (error.name === 'NotFoundError') {
-                throw new Error("No se seleccionó ningún puerto.");
-            } else if (error.name === 'SecurityError') {
+                if (this.isElectron) {
+                    throw new Error("No se detectó ninguna báscula conectada. Verifique que el cable USB esté bien conectado y reintente.");
+                }
+                throw new Error("No se seleccionó ningún puerto. Haga clic en 'Conectar Báscula' e intente de nuevo.");
+            }
+
+            if (error.name === 'InvalidStateError') {
+                throw new Error("El puerto serial ya está en uso. Cierre otras aplicaciones que usen la báscula y reintente.");
+            }
+
+            if (error.name === 'NetworkError') {
+                throw new Error("Error de comunicación con el puerto serial. Desconecte y reconecte el cable USB.");
+            }
+
+            if (error.name === 'SecurityError') {
                 throw new Error("Permiso denegado para acceder al puerto serial.");
             }
-            throw error;
+
+            throw new Error(`Error de conexión: ${error.message}`);
         }
     }
 
     /**
-     * Intenta conectar automáticamente a un puerto previamente autorizado
+     * Intenta conectar automáticamente a un puerto previamente autorizado.
+     * Esto funciona cuando el usuario ya otorgó permiso en una sesión anterior.
      */
     async checkPreviousConnection(baudRate = 9600) {
         if (!navigator.serial) return false;
@@ -40,15 +87,32 @@ export class ScaleService {
         try {
             const ports = await navigator.serial.getPorts();
             if (ports.length > 0) {
-                console.log("📍 Puertos previos detectados, intentando conexión automática...");
+                console.log("📍 Puertos previos detectados:", ports.length, "- intentando conexión automática...");
+
+                // Usar el primer puerto previamente autorizado
                 this.port = ports[0];
-                await this.port.open({ baudRate });
-                this.isConnected = true;
-                return true;
+
+                try {
+                    await this.port.open({ baudRate });
+                    this.isConnected = true;
+                    console.log("✅ Auto-conexión exitosa con puerto previo");
+                    return true;
+                } catch (openError) {
+                    // Si el puerto ya está abierto (InvalidStateError), intentar usarlo directamente
+                    if (openError.name === 'InvalidStateError') {
+                        console.log("ℹ️ Puerto ya estaba abierto, verificando si es usable...");
+                        if (this.port.readable) {
+                            this.isConnected = true;
+                            return true;
+                        }
+                    }
+                    throw openError;
+                }
             }
         } catch (error) {
-            console.warn("No se pudo realizar la conexión automática:", error);
+            console.warn("⚠️ Auto-conexión falló:", error.message);
             this.isConnected = false;
+            this.port = null;
         }
         return false;
     }
@@ -58,18 +122,9 @@ export class ScaleService {
         console.log("⚠️ Iniciando Modo Simulación de Báscula");
         this.isConnected = true;
 
-        // Simular lecturas cada 500ms
         this.simulationInterval = setInterval(() => {
-            // Generar peso aleatorio entre 0.5kg y 5.0kg
-            // Variar ligeramente para parecer real
             const randomWeight = (Math.random() * 4.5 + 0.5).toFixed(3);
-
-            // Simular formato Torrey (p.ej. "ST,GS,+  1.250kg")
-            // A veces enviamos basura o fragmentos si quisiéramos probar robustez,
-            // pero para esta prueba básica enviaremos tramas limpias.
             const simulatedData = `ST,GS,+  ${randomWeight}kg\r\n`;
-
-            // Usar el mismo parser
             const weight = this.parseWeight(simulatedData);
             if (weight !== null) {
                 onWeightRead(weight);
@@ -86,49 +141,55 @@ export class ScaleService {
             this.simulationInterval = null;
         }
 
+        // Cerrar reader primero
         if (this.reader) {
-            await this.reader.cancel();
-            await this.readableStreamClosed.catch(() => { /* Ignore the error */ });
+            try {
+                await this.reader.cancel();
+            } catch (e) { /* ignorar */ }
+            try {
+                if (this.readableStreamClosed) {
+                    await this.readableStreamClosed.catch(() => { });
+                }
+            } catch (e) { /* ignorar */ }
             this.reader = null;
+            this.readableStreamClosed = null;
         }
 
+        // Cerrar puerto
         if (this.port) {
-            await this.port.close();
+            try {
+                await this.port.close();
+            } catch (e) {
+                console.warn("Advertencia al cerrar puerto:", e.message);
+            }
             this.port = null;
         }
 
         this.isConnected = false;
+        this.buffer = '';
     }
 
     async readWeight(onWeightRead) {
-        // Si estamos en simulación, no necesitamos leer del puerto real
         if (this.simulationInterval) return;
 
         if (!this.port || !this.port.readable) {
-            throw new Error("Port not connected or not readable");
+            throw new Error("Puerto no conectado o no legible");
         }
 
         const textDecoder = new TextDecoderStream();
         this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
         this.reader = textDecoder.readable.getReader();
 
-        this.buffer = ''; // Reiniciar buffer al comenzar lectura
+        this.buffer = '';
 
         try {
             while (true) {
                 const { value, done } = await this.reader.read();
-                if (done) {
-                    break;
-                }
+                if (done) break;
+
                 if (value) {
                     this.buffer += value;
-
-                    // Procesar líneas completas
-                    // Las básculas suelen enviar \r, \n o \r\n
-                    // Usamos una regex que cubra ambos casos
                     const lines = this.buffer.split(/\r\n|\r|\n/);
-
-                    // El último elemento es el remanente (puede ser cadena vacía o incompleta)
                     this.buffer = lines.pop();
 
                     for (const line of lines) {
@@ -142,34 +203,22 @@ export class ScaleService {
                 }
             }
         } catch (error) {
-            console.error("Error reading from scale:", error);
+            console.error("Error leyendo báscula:", error);
             throw error;
         } finally {
-            if (this.reader) this.reader.releaseLock();
+            if (this.reader) {
+                try { this.reader.releaseLock(); } catch (e) { /* ignorar */ }
+            }
         }
     }
 
-
     parseWeight(data) {
-        // Torrey scales typically send data in a format like:
-        // "ST,GS,+  1.500kg" 
-        // "ST,GS,-  0.500kg" (Negative weight)
-
-        // Expresión regular mejorada:
-        // [-+]?  -> Signo opcional (+ o -)
-        // \s*    -> Espacios opcionales
-        // \d+    -> Digitos enteros
-        // \.     -> Punto decimal
-        // \d+    -> Decimales
+        // Formato Torrey: "ST,GS,+  1.500kg" o "ST,GS,-  0.500kg"
         const weightMatch = data.match(/([-+]?\s*[0-9]+\.[0-9]+)/);
 
         if (weightMatch && weightMatch[1]) {
-            // Eliminar espacios intermedios (ej: "-  0.500" -> "-0.500") para que parseFloat funcione bien
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
-
-            // Opcional: Ignorar pesos negativos si el negocio lo requiere, 
-            // pero por defecto devolvemos lo que dice la báscula.
             return weight;
         }
         return null;
@@ -177,3 +226,4 @@ export class ScaleService {
 }
 
 export const scaleService = new ScaleService();
+
