@@ -237,13 +237,23 @@ function crearVentana() {
     // Evento CRÍTICO: cuando el frontend llama navigator.serial.requestPort()
     mainWindow.webContents.session.on('select-serial-port', (event, portList, webContents, callback) => {
         event.preventDefault();
-        log.info(`[Báscula] 📋 Puertos detectados (${portList.length}): ${JSON.stringify(portList.map(p => ({ portId: p.portId, displayName: p.displayName, vendorId: p.vendorId, productId: p.productId })))}`);
+        log.info(`[Báscula] 📋 Puertos detectados (${portList.length}): ${JSON.stringify(portList.map(p => ({ portId: p.portId, displayName: p.displayName, vendorId: p.vendorId })))}`);
 
         if (portList && portList.length > 0) {
-            // Seleccionar el primer puerto disponible automáticamente
-            const selected = portList[0];
-            log.info(`[Báscula] ✅ Seleccionando automáticamente: portId=${selected.portId}, name=${selected.displayName || 'N/A'}`);
-            callback(selected.portId);
+            // ALGORITMO DE SELECCIÓN INTELIGENTE
+            // 1. Priorizar puertos con 'vendorId' definido (Dispositivos USB reales como Torrey, FTDI, Prolific)
+            // 2. Evitar puertos genéricos (COM1, COM2) que suelen ser internos y vacíos si hay opciones USB.
+
+            const usbDevice = portList.find(p => p.vendorId);
+            const targetPort = usbDevice || portList[0];
+
+            if (usbDevice) {
+                log.info(`[Báscula] ✅ Dispositivo USB detectado (Vendor: ${usbDevice.vendorId}). Seleccionando: ${usbDevice.displayName}`);
+            } else {
+                log.info(`[Báscula] ⚠️ No se detectó dispositivo USB explícito. Usando el primero disponible: ${targetPort.displayName}`);
+            }
+
+            callback(targetPort.portId);
         } else {
             log.warn('[Báscula] ❌ No se encontraron puertos seriales disponibles');
             callback('');

@@ -188,15 +188,23 @@ export class ScaleService {
                 if (done) break;
 
                 if (value) {
+                    // LOG DE RAW DATA para diagnóstico
+                    // console.log("SCALE_RAW:", JSON.stringify(value));
+
                     this.buffer += value;
                     const lines = this.buffer.split(/\r\n|\r|\n/);
-                    this.buffer = lines.pop();
+                    this.buffer = lines.pop(); // Guardar remanente incompleto
 
                     for (const line of lines) {
-                        if (line.trim().length > 0) {
-                            const weight = this.parseWeight(line);
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.length > 0) {
+                            console.log("SCALE_LINE_RECEIVED:", trimmedLine); // Ver qué llega exactamente
+                            const weight = this.parseWeight(trimmedLine);
+
                             if (weight !== null) {
                                 onWeightRead(weight);
+                            } else {
+                                console.warn("SCALE_PARSE_FAIL:", trimmedLine);
                             }
                         }
                     }
@@ -213,13 +221,21 @@ export class ScaleService {
     }
 
     parseWeight(data) {
-        // Formato Torrey: "ST,GS,+  1.500kg" o "ST,GS,-  0.500kg"
+        // INTENTO 1: Formato Torrey Estándar "ST,GS,+  1.500kg"
+        // INTENTO 2: Solo números "1.500"
+        // INTENTO 3: Formato CAS/Otros "1.500 kg"
+
+        // Busca cualquier secuencia de digitos con punto decimal
         const weightMatch = data.match(/([-+]?\s*[0-9]+\.[0-9]+)/);
 
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
-            return weight;
+
+            // Filtro de ruido: Si es NaN o número absurdo, ignorar
+            if (!isNaN(weight) && weight < 10000) {
+                return weight;
+            }
         }
         return null;
     }
