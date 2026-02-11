@@ -2,92 +2,164 @@ export class ScaleService {
     constructor() {
         this.port = null;
         this.reader = null;
-        this.writer = null;
         this.isConnected = false;
         this.readableStreamClosed = null;
         this.simulationInterval = null;
         this.pollingInterval = null;
         this.buffer = '';
+        this._isConnecting = false; // Anti-bucle: evita conexiones simultáneas
+        this._failCount = 0;        // Contador de fallos consecutivos
     }
 
-    /**
-     * Detecta si estamos corriendo dentro de Electron
-     */
     get isElectron() {
         return !!(window.electron && window.electron.isElectron);
     }
 
     /**
-     * Conectar a la báscula serial.
+     * Conectar a la báscula serial (con protección anti-bucle).
      */
     async connect(baudRate = 9600) {
+        // GUARDIA 1: Evitar conexiones simultáneas
+        if (this._isConnecting) {
+            console.warn("⏳ Conexión ya en progreso, ignorando solicitud duplicada.");
+            return false;
+        }
+
         if (!navigator.serial) {
             throw new Error(
                 this.isElectron
-                    ? "Error interno: Web Serial API no disponible en esta versión de Electron."
-                    : "Web Serial API no es compatible con este navegador. Use Chrome o Edge."
+                    ? "Error interno: Web Serial API no disponible."
+                    : "Web Serial API no es compatible. Use Chrome o Edge."
             );
         }
 
-        if (this.isConnected || this.port) {
-            console.log("⚠️ Puerto previo detectado, desconectando antes de reconectar...");
-            try {
-                await this.disconnect();
-            } catch (e) {
-                console.warn("Advertencia al desconectar puerto previo:", e);
-            }
+        // GUARDIA 2: Si ya estamos conectados, no reconectar
+        if (this.isConnected && this.port) {
+            console.log("✅ Ya conectado, no se requiere reconexión.");
+            return true;
+        }
+
+        this._isConnecting = true;
+
+        // Limpiar cualquier estado anterior COMPLETAMENTE
+        try {
+            await this._forceCleanup();
+        } catch (e) {
+            console.warn("Limpieza previa:", e);
         }
 
         try {
             console.log("🔍 Solicitando puerto serial...");
             this.port = await navigator.serial.requestPort();
-            console.log("📌 Puerto obtenido, abriendo a", baudRate, "baudios...");
-            await this.port.open({ baudRate });
-            this.isConnected = true;
-            console.log("✅ Báscula conectada exitosamente");
-            return true;
-        } catch (error) {
-            console.error("❌ Error al conectar báscula:", error.name, error.message);
 
-            // FIX CRÍTICO: Si dice que ya está abierto, asumimos que es nuestro y retornamos éxito
-            if (error.name === 'InvalidStateError' || error.message.includes('already open')) {
-                console.warn("⚠️ El puerto ya estaba abierto. Asumiendo conexión exitosa.");
+            // Verificar si el puerto ya está abierto (por sesión anterior)
+            if (this.port.readable) {
+                console.log("♻️ Puerto ya abierto desde sesión previa. Reutilizando.");
                 this.isConnected = true;
+                this._failCount = 0;
                 return true;
             }
 
-            this.isConnected = false;
-            this.port = null;
+            console.log("📌 Puerto obtenido, abriendo a", baudRate, "baudios...");
+            await this.port.open({ baudRate });
+            this.isConnected = true;
+            this._failCount = 0;
+            console.log("✅ Báscula conectada exitosamente");
+            return true;
 
-            if (error.name === 'NotFoundError') {
-                throw new Error(this.isElectron ? "No se detectó ninguna báscula conectada." : "No se seleccionó ningún puerto.");
+        } catch (error) {
+            console.error("❌ Error al conectar báscula:", error.name, error.message);
+
+            // Si el puerto ya estaba abierto (por nosotros), usarlo
+            if (error.name === 'InvalidStateError') {
+                if (this.port && this.port.readable) {
+                    console.warn("⚠️ Puerto ya abierto. Reutilizando conexión existente.");
+                    this.isConnected = true;
+                    this._failCount = 0;
+                    return true;
+                }
             }
-            if (error.name === 'NetworkError') throw new Error("Error de comunicación. Verifique el cable USB.");
-            if (error.name === 'SecurityError') throw new Error("Permiso denegado.");
 
+            this._failCount++;
+            this.isConnected = false;
+
+            // Mensaje INTELIGENTE según el tipo de error
+            if (error.name === 'NotFoundError') {
+                this.port = null;
+                throw new Error(
+                    this.isElectron
+                        ? "No se detectó ninguna báscula conectada."
+                        : "No se seleccionó ningún puerto."
+                );
+            }
+
+            if (error.name === 'NetworkError') {
+                this.port = null;
+                // DETECCIÓN DE CONFLICTO con otro programa
+                throw new Error(
+                    "No se pudo abrir el puerto serial. Posibles causas:\n" +
+                    "• Otro programa tiene la báscula abierta (ej: Eleventa, HyperTerminal).\n" +
+                    "• Desconecte y reconecte el cable USB.\n" +
+                    "• Reinicie el equipo si el problema persiste."
+                );
+            }
+
+            if (error.name === 'SecurityError') {
+                this.port = null;
+                throw new Error("Permiso denegado para acceder al puerto serial.");
+            }
+
+            this.port = null;
             throw new Error(`Error de conexión: ${error.message}`);
+
+        } finally {
+            this._isConnecting = false;
         }
     }
 
+    /**
+     * Intenta reconectar a un puerto previamente autorizado (auto-connect).
+     */
     async checkPreviousConnection(baudRate = 9600) {
         if (!navigator.serial) return false;
+        if (this._isConnecting) return false;
+
+        // Si ya hemos fallado 3+ veces, no intentar más automáticamente
+        if (this._failCount >= 3) {
+            console.warn("🛑 Demasiados fallos consecutivos. Auto-connect deshabilitado.");
+            return false;
+        }
+
         try {
             const ports = await navigator.serial.getPorts();
             if (ports.length > 0) {
                 this.port = ports[0];
+
+                // Si ya está abierto (sesión anterior), reutilizar
+                if (this.port.readable) {
+                    console.log("♻️ Puerto previo ya abierto. Reutilizando.");
+                    this.isConnected = true;
+                    return true;
+                }
+
                 try {
                     await this.port.open({ baudRate });
                     this.isConnected = true;
+                    this._failCount = 0;
                     return true;
                 } catch (openError) {
                     if (openError.name === 'InvalidStateError' && this.port.readable) {
                         this.isConnected = true;
                         return true;
                     }
-                    throw openError;
+                    // NetworkError = otro programa tiene el puerto
+                    this._failCount++;
+                    console.warn("Auto-connect falló:", openError.name);
+                    this.port = null;
                 }
             }
         } catch (error) {
+            this._failCount++;
             this.isConnected = false;
             this.port = null;
         }
@@ -106,7 +178,11 @@ export class ScaleService {
         return true;
     }
 
-    async disconnect() {
+    /**
+     * Limpieza forzada de TODOS los recursos (streams, readers, timers).
+     */
+    async _forceCleanup() {
+        // 1. Detener timers
         if (this.simulationInterval) {
             clearInterval(this.simulationInterval);
             this.simulationInterval = null;
@@ -116,58 +192,69 @@ export class ScaleService {
             this.pollingInterval = null;
         }
 
-        // Limpieza PROFUNDA del lector
+        // 2. Cancelar y liberar reader
         if (this.reader) {
             try {
-                // Forzar liberación del lock primero
                 await this.reader.cancel();
+            } catch (e) { /* ignorar */ }
+            try {
                 this.reader.releaseLock();
-            } catch (e) {
-                console.warn("⚠️ Advertencia al liberar reader:", e);
-            }
+            } catch (e) { /* ignorar */ }
             this.reader = null;
         }
 
-        // Esperar un momento a que el stream se cierre realmente
-        // antes de cerrar el puerto
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // 3. Esperar a que readableStreamClosed se resuelva
+        if (this.readableStreamClosed) {
+            try {
+                await this.readableStreamClosed;
+            } catch (e) { /* ignorar - puede ser error de cancelación */ }
+            this.readableStreamClosed = null;
+        }
 
+        // 4. Dar tiempo al sistema para liberar el stream
+        await new Promise(resolve => setTimeout(resolve, 150));
+
+        // 5. Cerrar puerto si está accesible
         if (this.port) {
             try {
-                // Solo intentar cerrar si está abierto y no bloqueado
                 if (this.port.readable && !this.port.readable.locked) {
                     await this.port.close();
+                    console.log("🔒 Puerto cerrado correctamente.");
+                } else if (!this.port.readable) {
+                    // Puerto ya cerrado
+                    console.log("🔒 Puerto ya estaba cerrado.");
                 } else {
-                    // Si está bloqueado o ya cerrado, forzamos null y dejamos que el GC actúe
-                    console.warn("⚠️ Puerto bloqueado o ya cerrado, saltando close().");
+                    console.warn("⚠️ Puerto con stream bloqueado. No se puede cerrar, se libera referencia.");
                 }
             } catch (e) {
-                console.warn("⚠️ Error al cerrar puerto físico:", e);
+                console.warn("⚠️ Error al cerrar puerto:", e.message);
             }
             this.port = null;
         }
 
-        this.isConnected = false;
         this.buffer = '';
     }
 
+    async disconnect() {
+        await this._forceCleanup();
+        this.isConnected = false;
+        this._failCount = 0;
+        console.log("🔌 Báscula desconectada.");
+    }
+
     /**
-     * Envía el comando de solicitud de peso (P) para básculas Torrey PCP/EQB
+     * Envía el comando de solicitud de peso (P\r\n) para básculas Torrey.
      */
     async sendWeightRequest() {
-        // Verificar escritura disponible y NO bloqueada
         if (!this.port || !this.port.writable || this.port.writable.locked) return;
 
         try {
             const encoder = new TextEncoder();
             const writer = this.port.writable.getWriter();
-            // Torrey usualmente requiere P + Enter (CR/LF)
-            // Probamos enviando P\r\n para mayor compatibilidad
-            console.log("📤 Enviando trigger 'P'...");
             await writer.write(encoder.encode('P\r\n'));
             writer.releaseLock();
         } catch (error) {
-            // Ignorar errores silenciosos de escritura para no saturar consola
+            // Silenciar errores de escritura para no saturar consola
         }
     }
 
@@ -175,11 +262,17 @@ export class ScaleService {
         if (this.simulationInterval) return;
         if (!this.port || !this.port.readable) throw new Error("Puerto no conectado");
 
-        // Iniciar POLLING para modelos Torrey PCP-500 (Requieren 'P' para enviar datos)
+        // Verificar que el stream no esté bloqueado por una lectura previa
+        if (this.port.readable.locked) {
+            console.warn("⚠️ Stream de lectura ya activo. Omitiendo nueva lectura.");
+            return;
+        }
+
+        // Iniciar POLLING para modelos Torrey PCP-500
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         this.pollingInterval = setInterval(() => {
             this.sendWeightRequest();
-        }, 1000); // Solicitar peso cada segundo
+        }, 1000);
 
         const textDecoder = new TextDecoderStream();
         this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
@@ -206,11 +299,16 @@ export class ScaleService {
                 }
             }
         } catch (error) {
-            console.error("Error leyendo báscula:", error);
+            if (error.message && error.message.includes('break')) {
+                console.warn("📡 Lectura interrumpida (desconexión normal).");
+            } else {
+                console.error("Error leyendo báscula:", error);
+            }
             throw error;
         } finally {
             if (this.reader) {
                 try { this.reader.releaseLock(); } catch (e) { }
+                this.reader = null;
             }
             if (this.pollingInterval) {
                 clearInterval(this.pollingInterval);
@@ -220,7 +318,6 @@ export class ScaleService {
     }
 
     parseWeight(data) {
-        // Regex mejorada: busca números con o sin signo y decimales opcionales
         const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)/);
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
@@ -232,4 +329,3 @@ export class ScaleService {
 }
 
 export const scaleService = new ScaleService();
-

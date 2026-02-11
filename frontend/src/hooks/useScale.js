@@ -8,11 +8,14 @@ export const useScale = () => {
     const [isReading, setIsReading] = useState(false);
     const [lastDataTime, setLastDataTime] = useState(null);
 
-    // Usamos ref para evitar dependencias circulares en useCallback
     const readingActive = useRef(false);
+    const autoConnectAttempted = useRef(false); // Solo intentar auto-connect UNA VEZ
 
     const startReading = useCallback(async () => {
-        if (readingActive.current) return;
+        if (readingActive.current) {
+            console.warn("⚠️ Lectura ya activa, ignorando duplicado.");
+            return;
+        }
 
         readingActive.current = true;
         setIsReading(true);
@@ -20,13 +23,17 @@ export const useScale = () => {
             await scaleService.readWeight((newWeight) => {
                 setWeight(newWeight);
                 setLastDataTime(Date.now());
+                setError(null); // Limpiar error si hay datos
             });
         } catch (err) {
             console.error("Scale reading stopped:", err);
-            // Si el error es fatal (puerto cerrado), la conexión se pierde
-            if (err.message && (err.message.includes('break') || err.message.includes('closed') || err.message.includes('disconnect'))) {
+            if (err.message && (
+                err.message.includes('break') ||
+                err.message.includes('closed') ||
+                err.message.includes('disconnect') ||
+                err.message.includes('locked')
+            )) {
                 setIsConnected(false);
-                readingActive.current = false;
             }
         } finally {
             setIsReading(false);
@@ -41,7 +48,6 @@ export const useScale = () => {
             if (connected) {
                 setIsConnected(true);
                 setLastDataTime(Date.now());
-                // Start reading automatically upon connection
                 startReading();
             }
         } catch (err) {
@@ -74,13 +80,18 @@ export const useScale = () => {
             readingActive.current = false;
             setLastDataTime(null);
             setWeight(0);
+            setError(null);
         } catch (err) {
             console.error(err);
         }
     }, []);
 
-    // Attempt auto-connect on mount
+    // Auto-connect UNA SOLA VEZ al montar el componente
     useEffect(() => {
+        // SOLO intentar una vez por sesión
+        if (autoConnectAttempted.current) return;
+        autoConnectAttempted.current = true;
+
         let mounted = true;
         const autoConnect = async () => {
             try {
@@ -90,25 +101,24 @@ export const useScale = () => {
                     startReading();
                 }
             } catch (err) {
-                console.warn("Auto-connect failed:", err);
+                console.warn("Auto-connect failed (normal si no hay báscula):", err);
+                // NO mostrar error al usuario por auto-connect fallido
             }
         };
 
-        if (!isConnected) {
-            autoConnect();
-        }
+        autoConnect();
 
         return () => {
             mounted = false;
         };
-    }, [startReading, isConnected]);
+    }, [startReading]);
 
     return {
         weight,
         isConnected,
         error,
         isReading,
-        lastDataTime, // Expose timestamp to check for stale data
+        lastDataTime,
         connect,
         connectSimulation,
         disconnect
