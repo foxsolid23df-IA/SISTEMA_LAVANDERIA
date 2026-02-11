@@ -2,9 +2,11 @@ export class ScaleService {
     constructor() {
         this.port = null;
         this.reader = null;
+        this.writer = null;
         this.isConnected = false;
         this.readableStreamClosed = null;
         this.simulationInterval = null;
+        this.pollingInterval = null;
         this.buffer = '';
     }
 
@@ -17,11 +19,8 @@ export class ScaleService {
 
     /**
      * Conectar a la báscula serial.
-     * En Web (Chrome/Edge): muestra popup nativo de selección de puerto.
-     * En Electron (.exe): la selección es automática vía select-serial-port handler.
      */
     async connect(baudRate = 9600) {
-        // Verificar soporte de Web Serial API
         if (!navigator.serial) {
             throw new Error(
                 this.isElectron
@@ -30,7 +29,6 @@ export class ScaleService {
             );
         }
 
-        // Si ya estamos conectados, desconectar primero para evitar conflictos
         if (this.isConnected || this.port) {
             console.log("⚠️ Puerto previo detectado, desconectando antes de reconectar...");
             try {
@@ -53,115 +51,71 @@ export class ScaleService {
             this.isConnected = false;
             this.port = null;
 
-            // Errores específicos con mensajes claros
             if (error.name === 'NotFoundError') {
-                if (this.isElectron) {
-                    throw new Error("No se detectó ninguna báscula conectada. Verifique que el cable USB esté bien conectado y reintente.");
-                }
-                throw new Error("No se seleccionó ningún puerto. Haga clic en 'Conectar Báscula' e intente de nuevo.");
+                throw new Error(this.isElectron ? "No se detectó ninguna báscula conectada." : "No se seleccionó ningún puerto.");
             }
-
-            if (error.name === 'InvalidStateError') {
-                throw new Error("El puerto serial ya está en uso. Cierre otras aplicaciones que usen la báscula y reintente.");
-            }
-
-            if (error.name === 'NetworkError') {
-                throw new Error("Error de comunicación con el puerto serial. Desconecte y reconecte el cable USB.");
-            }
-
-            if (error.name === 'SecurityError') {
-                throw new Error("Permiso denegado para acceder al puerto serial.");
-            }
+            if (error.name === 'InvalidStateError') throw new Error("El puerto serial ya está en uso.");
+            if (error.name === 'NetworkError') throw new Error("Error de comunicación. Verifique el cable USB.");
+            if (error.name === 'SecurityError') throw new Error("Permiso denegado.");
 
             throw new Error(`Error de conexión: ${error.message}`);
         }
     }
 
-    /**
-     * Intenta conectar automáticamente a un puerto previamente autorizado.
-     * Esto funciona cuando el usuario ya otorgó permiso en una sesión anterior.
-     */
     async checkPreviousConnection(baudRate = 9600) {
         if (!navigator.serial) return false;
-
         try {
             const ports = await navigator.serial.getPorts();
             if (ports.length > 0) {
-                console.log("📍 Puertos previos detectados:", ports.length, "- intentando conexión automática...");
-
-                // Usar el primer puerto previamente autorizado
                 this.port = ports[0];
-
                 try {
                     await this.port.open({ baudRate });
                     this.isConnected = true;
-                    console.log("✅ Auto-conexión exitosa con puerto previo");
                     return true;
                 } catch (openError) {
-                    // Si el puerto ya está abierto (InvalidStateError), intentar usarlo directamente
-                    if (openError.name === 'InvalidStateError') {
-                        console.log("ℹ️ Puerto ya estaba abierto, verificando si es usable...");
-                        if (this.port.readable) {
-                            this.isConnected = true;
-                            return true;
-                        }
+                    if (openError.name === 'InvalidStateError' && this.port.readable) {
+                        this.isConnected = true;
+                        return true;
                     }
                     throw openError;
                 }
             }
         } catch (error) {
-            console.warn("⚠️ Auto-conexión falló:", error.message);
             this.isConnected = false;
             this.port = null;
         }
         return false;
     }
 
-    // --- MODO SIMULACIÓN ---
     async connectSimulation(onWeightRead) {
-        console.log("⚠️ Iniciando Modo Simulación de Báscula");
+        console.log("⚠️ Iniciando Modo Simulación");
         this.isConnected = true;
-
         this.simulationInterval = setInterval(() => {
             const randomWeight = (Math.random() * 4.5 + 0.5).toFixed(3);
             const simulatedData = `ST,GS,+  ${randomWeight}kg\r\n`;
             const weight = this.parseWeight(simulatedData);
-            if (weight !== null) {
-                onWeightRead(weight);
-            }
+            if (weight !== null) onWeightRead(weight);
         }, 800);
-
         return true;
     }
 
     async disconnect() {
-        // Limpiar simulación si existe
         if (this.simulationInterval) {
             clearInterval(this.simulationInterval);
             this.simulationInterval = null;
         }
-
-        // Cerrar reader primero
-        if (this.reader) {
-            try {
-                await this.reader.cancel();
-            } catch (e) { /* ignorar */ }
-            try {
-                if (this.readableStreamClosed) {
-                    await this.readableStreamClosed.catch(() => { });
-                }
-            } catch (e) { /* ignorar */ }
-            this.reader = null;
-            this.readableStreamClosed = null;
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
         }
 
-        // Cerrar puerto
+        if (this.reader) {
+            try { await this.reader.cancel(); } catch (e) { }
+            this.reader = null;
+        }
+
         if (this.port) {
-            try {
-                await this.port.close();
-            } catch (e) {
-                console.warn("Advertencia al cerrar puerto:", e.message);
-            }
+            try { await this.port.close(); } catch (e) { }
             this.port = null;
         }
 
@@ -169,43 +123,52 @@ export class ScaleService {
         this.buffer = '';
     }
 
+    /**
+     * Envía el comando de solicitud de peso (P) para básculas Torrey PCP/EQB
+     */
+    async sendWeightRequest() {
+        if (!this.port || !this.port.writable) return;
+
+        try {
+            const encoder = new TextEncoder();
+            const writer = this.port.writable.getWriter();
+            await writer.write(encoder.encode('P'));
+            writer.releaseLock();
+        } catch (error) {
+            console.error("Error enviando trigger 'P' a la báscula:", error);
+        }
+    }
+
     async readWeight(onWeightRead) {
         if (this.simulationInterval) return;
+        if (!this.port || !this.port.readable) throw new Error("Puerto no conectado");
 
-        if (!this.port || !this.port.readable) {
-            throw new Error("Puerto no conectado o no legible");
-        }
+        // Iniciar POLLING para modelos Torrey PCP-500 (Requieren 'P' para enviar datos)
+        if (this.pollingInterval) clearInterval(this.pollingInterval);
+        this.pollingInterval = setInterval(() => {
+            this.sendWeightRequest();
+        }, 1000); // Solicitar peso cada segundo
 
         const textDecoder = new TextDecoderStream();
         this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
         this.reader = textDecoder.readable.getReader();
-
         this.buffer = '';
 
         try {
             while (true) {
                 const { value, done } = await this.reader.read();
                 if (done) break;
-
                 if (value) {
-                    // LOG DE RAW DATA para diagnóstico
                     console.log("SCALE_RAW:", JSON.stringify(value));
-
                     this.buffer += value;
                     const lines = this.buffer.split(/\r\n|\r|\n/);
-                    this.buffer = lines.pop(); // Guardar remanente incompleto
+                    this.buffer = lines.pop();
 
                     for (const line of lines) {
                         const trimmedLine = line.trim();
                         if (trimmedLine.length > 0) {
-                            console.log("SCALE_LINE_RECEIVED:", trimmedLine); // Ver qué llega exactamente
                             const weight = this.parseWeight(trimmedLine);
-
-                            if (weight !== null) {
-                                onWeightRead(weight);
-                            } else {
-                                console.warn("SCALE_PARSE_FAIL:", trimmedLine);
-                            }
+                            if (weight !== null) onWeightRead(weight);
                         }
                     }
                 }
@@ -215,28 +178,22 @@ export class ScaleService {
             throw error;
         } finally {
             if (this.reader) {
-                try { this.reader.releaseLock(); } catch (e) { /* ignorar */ }
+                try { this.reader.releaseLock(); } catch (e) { }
+            }
+            if (this.pollingInterval) {
+                clearInterval(this.pollingInterval);
+                this.pollingInterval = null;
             }
         }
     }
 
     parseWeight(data) {
-        // INTENTO 1: Formato Torrey Estándar "ST,GS,+  1.500kg"
-        // INTENTO 2: Solo números "1.500" o "1500"
-        // INTENTO 3: Formato CAS/Otros "1.500 kg"
-
-        // Busca cualquier secuencia de digitos (con o sin decimales)
-        // Mejorado para aceptar: "1.500", "1500", "+ 1.5", etc.
+        // Regex mejorada: busca números con o sin signo y decimales opcionales
         const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)/);
-
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
-
-            // Filtro de ruido: Si es NaN o número absurdo, ignorar
-            if (!isNaN(weight) && weight < 10000) {
-                return weight;
-            }
+            if (!isNaN(weight) && weight < 10000) return weight;
         }
         return null;
     }
