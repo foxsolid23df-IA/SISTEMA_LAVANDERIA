@@ -161,7 +161,10 @@ export class ScaleService {
         try {
             const encoder = new TextEncoder();
             const writer = this.port.writable.getWriter();
-            await writer.write(encoder.encode('P'));
+            // Torrey usualmente requiere P + Enter (CR/LF)
+            // Probamos enviando P\r\n para mayor compatibilidad
+            console.log("📤 Enviando trigger 'P'...");
+            await writer.write(encoder.encode('P\r\n'));
             writer.releaseLock();
         } catch (error) {
             // Ignorar errores silenciosos de escritura para no saturar consola
