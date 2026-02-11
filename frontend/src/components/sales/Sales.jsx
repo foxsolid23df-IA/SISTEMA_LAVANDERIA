@@ -21,7 +21,28 @@ import { useScale } from "../../hooks/useScale";
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
     const { user, cashSession } = useAuth();
-    const { weight, isConnected: isScaleConnected, connect: connectScale, connectSimulation, error: scaleError } = useScale();
+    const { weight, isConnected: isScaleConnected, connect: connectScale, connectSimulation, error: scaleError, lastDataTime } = useScale();
+    
+    // Estado para detectar si la báscula está conectada pero no envía datos
+    const [isStalled, setIsStalled] = useState(false);
+
+    useEffect(() => {
+        if (!isScaleConnected) {
+            setIsStalled(false);
+            return;
+        }
+        
+        // Si no hay lastDataTime inicial, asumimos que está esperando datos
+        // pero si ya está conectado un rato y no llega nada...
+        if (!lastDataTime) return;
+
+        const interval = setInterval(() => {
+            const stalled = Date.now() - lastDataTime > 4000;
+            setIsStalled(stalled);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastDataTime, isScaleConnected]);
 
     const { productos, loading: loadingProducts, loadProducts } = useProducts();
     const { 
@@ -304,16 +325,20 @@ export const Sales = () => {
                         }}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             isScaleConnected 
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                            : 'bg-slate-100 text-black border border-slate-300 hover:bg-slate-200'
+                                ? (isStalled 
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200 animate-pulse' 
+                                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200')
+                                : 'bg-slate-100 text-black border border-slate-300 hover:bg-slate-200'
                         }`}
-                        title={isScaleConnected ? "Báscula Conectada" : "Conectar Báscula USB (Alt+Click para Simular)"}
+                        title={isScaleConnected 
+                            ? (isStalled ? "Conectada pero sin recibir datos recientes (¿Báscula apagada?)" : "Báscula Conectada y enviando datos") 
+                            : "Conectar Báscula USB (Alt+Click para Simular)"}
                     >
                         <span className="material-symbols-outlined text-sm">
-                            {isScaleConnected ? 'scale' : 'link_off'}
+                            {isScaleConnected ? (isStalled ? 'comments_disabled' : 'scale') : 'link_off'}
                         </span>
                         {isScaleConnected 
-                            ? `Conectado: ${weight}kg` 
+                            ? (isStalled ? 'Sin Datos...' : `Peso: ${weight}kg`)
                             : 'Conectar Báscula'}
                     </button>
                 </div>

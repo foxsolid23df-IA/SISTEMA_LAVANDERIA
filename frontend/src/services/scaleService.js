@@ -189,7 +189,7 @@ export class ScaleService {
 
                 if (value) {
                     // LOG DE RAW DATA para diagnóstico
-                    // console.log("SCALE_RAW:", JSON.stringify(value));
+                    console.log("SCALE_RAW:", JSON.stringify(value));
 
                     this.buffer += value;
                     const lines = this.buffer.split(/\r\n|\r|\n/);
@@ -222,11 +222,12 @@ export class ScaleService {
 
     parseWeight(data) {
         // INTENTO 1: Formato Torrey Estándar "ST,GS,+  1.500kg"
-        // INTENTO 2: Solo números "1.500"
+        // INTENTO 2: Solo números "1.500" o "1500"
         // INTENTO 3: Formato CAS/Otros "1.500 kg"
 
-        // Busca cualquier secuencia de digitos con punto decimal
-        const weightMatch = data.match(/([-+]?\s*[0-9]+\.[0-9]+)/);
+        // Busca cualquier secuencia de digitos (con o sin decimales)
+        // Mejorado para aceptar: "1.500", "1500", "+ 1.5", etc.
+        const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)/);
 
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
