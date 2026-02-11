@@ -240,17 +240,22 @@ function crearVentana() {
         log.info(`[Báscula] 📋 Puertos detectados (${portList.length}): ${JSON.stringify(portList.map(p => ({ portId: p.portId, displayName: p.displayName, vendorId: p.vendorId })))}`);
 
         if (portList && portList.length > 0) {
-            // ALGORITMO DE SELECCIÓN INTELIGENTE
-            // 1. Priorizar puertos con 'vendorId' definido (Dispositivos USB reales como Torrey, FTDI, Prolific)
-            // 2. Evitar puertos genéricos (COM1, COM2) que suelen ser internos y vacíos si hay opciones USB.
+            // ALGORITMO DE SELECCIÓN INTELIGENTE (Versión 2.0 - Tolerante a Drivers Genéricos)
+            // 1. Buscar 'USB' en productId, vendorId o displayName (para drivers genéricos como 'USB Serial Device')
+            // 2. Priorizar VendorID explícito si existe.
+            // 3. Evitar COM1/COM2 nativos a menos que sean los únicos.
 
-            const usbDevice = portList.find(p => p.vendorId);
+            const usbDevice = portList.find(p => {
+                const rawString = JSON.stringify(p).toLowerCase();
+                return rawString.includes('usb') || (p.vendorId);
+            });
+
             const targetPort = usbDevice || portList[0];
 
             if (usbDevice) {
-                log.info(`[Báscula] ✅ Dispositivo USB detectado (Vendor: ${usbDevice.vendorId}). Seleccionando: ${usbDevice.displayName}`);
+                log.info(`[Báscula] ✅ Dispositivo USB detectado (Probable Báscula). Seleccionando: ${usbDevice.displayName || usbDevice.portId}`);
             } else {
-                log.info(`[Báscula] ⚠️ No se detectó dispositivo USB explícito. Usando el primero disponible: ${targetPort.displayName}`);
+                log.info(`[Báscula] ⚠️ No se confirmó USB explícito. Usando el primero disponible: ${targetPort.displayName || targetPort.portId}`);
             }
 
             callback(targetPort.portId);
