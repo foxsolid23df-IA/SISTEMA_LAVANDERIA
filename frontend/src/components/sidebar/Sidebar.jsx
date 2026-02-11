@@ -445,12 +445,16 @@ export const Sidebar = () => {
                 setShowCashCut(true);
                 setIsOpen(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
+                cashSession 
+                  ? "text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" 
+                  : "text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+              }`}
             >
               <span className="material-icons-outlined text-[20px]">
-                monetization_on
+                {cashSession ? 'monetization_on' : 'lock'}
               </span>
-              <span className="text-sm font-bold">Corte de Caja</span>
+              <span className="text-sm font-bold">{cashSession ? 'CAJA' : 'ABRIR CAJA'}</span>
             </button>
 
             <button

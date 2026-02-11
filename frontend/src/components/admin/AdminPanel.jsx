@@ -421,6 +421,7 @@ const CustomersView = () => {
               <th>Teléfono</th>
               <th>Email</th>
               <th>Dirección</th>
+              <th>Notas</th>
               <th>Fecha Registro</th>
             </tr>
           </thead>
@@ -430,7 +431,8 @@ const CustomersView = () => {
                 <td className="font-bold">{customer.name}</td>
                 <td><code>{customer.phone || 'N/A'}</code></td>
                 <td className="text-cyan-400">{customer.email || 'N/A'}</td>
-                <td className="text-slate-400">{customer.address || 'N/A'}</td>
+                <td className="text-slate-400 truncate max-w-[250px]" title={customer.address}>{customer.address || 'N/A'}</td>
+                <td className="text-slate-400 italic truncate max-w-[150px]" title={customer.notes}>{customer.notes || '-'}</td>
                 <td className="text-slate-400">{new Date(customer.created_at).toLocaleDateString()}</td>
               </tr>
             ))}

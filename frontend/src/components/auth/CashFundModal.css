@@ -19,6 +19,7 @@
     padding: 32px;
     width: 100%;
     max-width: 420px;
+    position: relative;
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
     animation: slideUp 0.4s ease-out;
 }
@@ -313,4 +314,36 @@
         padding: 6px 12px;
         font-size: 0.8rem;
     }
+}
+
+.cash-fund-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: #f1f5f9;
+    border: none;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.cash-fund-close:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.dark .cash-fund-close {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.dark .cash-fund-close:hover {
+    background: #450a0a;
+    color: #fca5a5;
 }

@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../hooks/useAuth';
 import './CashFundModal.css';
 
-export const CashFundModal = ({ staffName, staffId, onSessionCreated }) => {
+export const CashFundModal = ({ staffName, staffId, onSessionCreated, onClose }) => {
     const { openCashSession, isAdmin } = useAuth();
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,6 +80,11 @@ export const CashFundModal = ({ staffName, staffId, onSessionCreated }) => {
         <div className="cash-fund-overlay">
             <div className="cash-fund-modal">
                 <div className="cash-fund-header">
+                    {onClose && (
+                        <button className="cash-fund-close" onClick={onClose}>
+                             <span className="material-symbols-outlined">close</span>
+                        </button>
+                    )}
                     <div className="cash-fund-icon">💰</div>
                     <h1>Fondo de Caja Inicial</h1>
                     <p>Ingresa el monto con el que inicias tu turno</p>

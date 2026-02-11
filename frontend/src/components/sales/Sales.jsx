@@ -13,6 +13,7 @@ import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
 import Modal from "../common/Modal";
+import { CashFundModal } from "../auth/CashFundModal";
 import { ClientRegistrationModal } from "./ClientRegistrationModal";
 import VisionAIModal from "../ai/VisionAIModal";
 import "./Sales.css";
@@ -20,7 +21,8 @@ import { useScale } from "../../hooks/useScale";
 
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
-    const { user, cashSession } = useAuth();
+    const { user, cashSession, activeStaff, storeName, checkCashSession } = useAuth();
+    const [showCashFundModal, setShowCashFundModal] = useState(false);
     const { weight, isConnected: isScaleConnected, connect: connectScale, connectSimulation, error: scaleError, lastDataTime } = useScale();
     
     // Estado para detectar si la báscula está conectada pero no envía datos
@@ -144,6 +146,16 @@ export const Sales = () => {
 
     // Procesar Orden
     const handleProcessOrder = async () => {
+        if (!cashSession) {
+            Swal.fire({
+                title: 'Caja Cerrada',
+                text: 'No puedes realizar esta acción, primero debes de abrir caja',
+                icon: 'warning',
+                confirmButtonColor: '#0f172a'
+            });
+            return;
+        }
+
         if (carrito.length === 0) {
             Swal.fire('Carrito vacío', 'Agrega al menos un servicio o producto', 'warning');
             return;
@@ -281,11 +293,19 @@ export const Sales = () => {
                             </h4>
                         </div>
                     </div>
-                    {cashSession && (
+                    {cashSession ? (
                         <div className="text-right hidden sm:block">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Fondo Inicial</p>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-200">{formatearDinero(cashSession.opening_fund)}</p>
                         </div>
+                    ) : (
+                        <button 
+                            className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-amber-600/20 flex items-center gap-2 active:scale-95"
+                            onClick={() => setShowCashFundModal(true)}
+                        >
+                            <span className="material-symbols-outlined text-sm">key</span>
+                            ABRIR CAJA AHORA
+                        </button>
                     )}
                 </div>
 
@@ -745,11 +765,13 @@ export const Sales = () => {
             )}
 
             {/* MODAL NUEVO CLIENTE */}
-            <ClientRegistrationModal 
-                isOpen={isClientModalOpen}
-                onClose={() => setIsClientModalOpen(false)}
-                onClientRegistered={handleClientRegistered}
-            />
+            {isClientModalOpen && (
+                <ClientRegistrationModal 
+                    isOpen={isClientModalOpen}
+                    onClose={() => setIsClientModalOpen(false)}
+                    onClientRegistered={handleClientRegistered}
+                />
+            )}
 
             {/* MODAL IA VISION */}
             {isAIModalOpen && (
@@ -759,6 +781,19 @@ export const Sales = () => {
                     onAccept={(report) => {
                         setNotas(prev => prev ? `${prev}\n${report}` : report);
                     }}
+                />
+            )}
+
+            {/* MODAL DE FONDO DE CAJA */}
+            {showCashFundModal && (
+                <CashFundModal 
+                    staffName={activeStaff?.name || storeName || 'Operador'}
+                    staffId={activeStaff?.id}
+                    onSessionCreated={() => {
+                        checkCashSession();
+                        setShowCashFundModal(false);
+                    }}
+                    onClose={() => setShowCashFundModal(false)}
                 />
             )}
         </div>

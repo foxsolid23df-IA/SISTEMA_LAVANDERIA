@@ -84,14 +84,13 @@ const PrivateLayout = ({ children }) => {
         }
     }, [user, activeStaff, isLocked, isTerminalConfigured, isValidating]);
 
-    // Auto-apertura de caja para el Propietario (skip del modal)
-    // REGLA DE REACT: Hooks deben llamarse antes de cualquier return condicional.
-    useEffect(() => {
+    // Auto-apertura de caja para el Propietario (DESACTIVADO por solicitud de apertura obligatoria)
+    /* useEffect(() => {
         if (needsCashFund && activeStaff?.isOwner) {
             console.log('[PrivateLayout] Auto-iniciando caja para Propietario...');
             openCashSession(0).catch(err => console.error('Error auto-opening session:', err));
         }
-    }, [needsCashFund, activeStaff]);
+    }, [needsCashFund, activeStaff]); */
 
     if (loading || isValidating) return <div className="loading-screen">Verificando configuración...</div>;
     if (!user) return <Navigate to="/login" />;
@@ -104,25 +103,19 @@ const PrivateLayout = ({ children }) => {
     // Si la pantalla está bloqueada, mostrar pantalla de PIN
     if (isLocked) return <LockScreen />;
 
-    // 3. Si necesita ingresar fondo de caja y está en Ventas, mostrar modal (SOLO si no es dueño)
-    if (needsCashFund && isPOSRoute) {
-        if (activeStaff?.isOwner) {
-            // Mientras se auto-abre la sesión, mostramos un loader para evitar parpadeos
-            return <div className="loading-screen">Iniciando Turno...</div>;
-        }
-
+    // 3. Si necesita ingresar fondo de caja (DESACTIVADO DE LA RUTA PRINCIPAL)
+    // Se ha movido la lógica para que el manual sea desde dentro del sistema (Sidebar > Abrir Caja)
+    /* if (needsCashFund && isPOSRoute) {
         return (
             <CashFundModal
                 staffName={activeStaff?.name || storeName || 'Operador'}
                 staffId={activeStaff?.id}
                 onSessionCreated={(session) => {
-                    // La sesión se actualiza automáticamente en el contexto
-                    console.log('Sesión de caja creada:', session);
-                    checkCashSession(); // Actualizar estado global para cerrar modal
+                    checkCashSession();
                 }}
             />
         );
-    }
+    } */
 
     return (
         <div className="app-layout">

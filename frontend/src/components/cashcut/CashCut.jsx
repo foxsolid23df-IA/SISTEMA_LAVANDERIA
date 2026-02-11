@@ -8,10 +8,25 @@ import { cashWithdrawalService } from '../../services/cashWithdrawalService'; //
 import TicketCorte from './TicketCorte';
 import CashWithdrawalModal from './CashWithdrawalModal'; // Import Modal
 import Swal from 'sweetalert2';
-import './CashCut.css';
+import { CashFundModal } from '../auth/CashFundModal';
 
 export const CashCut = ({ onClose }) => {
-    const { activeStaff, activeRole, lockScreen, storeName, closeCashSession, cashSession } = useAuth();
+    const { activeStaff, activeRole, lockScreen, storeName, closeCashSession, cashSession, checkCashSession } = useAuth();
+
+    // Si no hay sesión activa, permitir realizar la apertura
+    if (!cashSession) {
+        return (
+            <CashFundModal 
+                staffName={activeStaff?.name || storeName || 'Operador'}
+                staffId={activeStaff?.id}
+                onSessionCreated={() => {
+                    checkCashSession();
+                    onClose();
+                }}
+                onClose={onClose}
+            />
+        );
+    }
     const [loading, setLoading] = useState(true);
     const [summary, setSummary] = useState(null);
     const [salesDetails, setSalesDetails] = useState([]);
@@ -226,7 +241,7 @@ export const CashCut = ({ onClose }) => {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Corte de Caja - ${cutType === 'dia' ? 'Cierre de Día' : 'Corte de Turno'}</title>
+                    <title>CAJA - ${cutType === 'dia' ? 'Cierre de Día' : 'Corte de Turno'}</title>
                     <style>
                         body { 
                             margin: 0; 
@@ -399,7 +414,7 @@ export const CashCut = ({ onClose }) => {
                             <span className="material-symbols-rounded text-amber-600 dark:text-amber-400 text-3xl">savings</span>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">Cierre de Caja</h1>
+                            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">CAJA</h1>
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Control de Efectivo</p>
                         </div>
                     </div>

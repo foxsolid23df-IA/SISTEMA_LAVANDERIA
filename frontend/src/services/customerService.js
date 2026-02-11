@@ -58,54 +58,6 @@ export const customerService = {
     return data;
   },
 
-  // Verificar si existe un cliente con el mismo nombre O teléfono
-  async checkDuplicate(name, phone) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw new Error("No authenticated user");
-
-    // Realizar consultas independientes para evitar errores de sintaxis con caracteres especiales en .or()
-    const queries = [];
-
-    if (name) {
-      queries.push(
-        supabase
-          .from("customers")
-          .select("id, name, phone")
-          .eq("user_id", user.id)
-          .eq("name", name) // .eq maneja correctamente espacios y caracteres
-      );
-    }
-
-    if (phone) {
-      queries.push(
-        supabase
-          .from("customers")
-          .select("id, name, phone")
-          .eq("user_id", user.id)
-          .eq("phone", phone)
-      );
-    }
-
-    if (queries.length === 0) return [];
-
-    const results = await Promise.all(queries);
-    
-    // Combinar resultados y eliminar duplicados (si el mismo cliente coincide en nombre y teléfono)
-    const allMatches = results.reduce((acc, result) => {
-        if (result.data) {
-            return [...acc, ...result.data];
-        }
-        return acc;
-    }, []);
-
-    // Desduplicar array de objetos por ID
-    const uniqueMatches = Array.from(new Map(allMatches.map(item => [item.id, item])).values());
-
-    return uniqueMatches;
-  },
-
   // Actualizar un cliente existente
   async updateCustomer(id, customerData) {
     const { data, error } = await supabase
@@ -128,5 +80,27 @@ export const customerService = {
 
     if (error) throw error;
     return true;
+  },
+
+  // Crear múltiples clientes (Carga Masiva)
+  async bulkCreateCustomers(customers) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("No authenticated user");
+
+    // Preparar datos con el user_id
+    const customersWithUser = customers.map(c => ({
+      ...c,
+      user_id: user.id
+    }));
+
+    const { data, error } = await supabase
+      .from("customers")
+      .insert(customersWithUser)
+      .select();
+
+    if (error) throw error;
+    return data;
   },
 };

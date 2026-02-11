@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { customerService } from '../../services/customerService';
 import Swal from 'sweetalert2';
-import './UserManager.css'; // Reusing styles
+import BulkCustomerImportModal from './BulkCustomerImportModal';
+import './ClientManager.css';
 
 export const ClientManager = () => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [showBulkModal, setShowBulkModal] = useState(false);
     const [editingClient, setEditingClient] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        address: ''
+        address: '',
+        email: '',
+        notes: ''
     });
 
     useEffect(() => {
@@ -22,85 +26,67 @@ export const ClientManager = () => {
 
     const loadClients = async () => {
         try {
-            setLoading(true);
             const data = await customerService.getCustomers();
             setClients(data);
         } catch (error) {
-            console.error('Error al cargar clientes:', error);
+            console.error('Error loading clients:', error);
             Swal.fire('Error', 'No se pudieron cargar los clientes', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const resetForm = () => {
-        setFormData({ name: '', phone: '', address: '' });
-        setEditingClient(null);
-    };
-
     const handleOpenModal = (client = null) => {
         if (client) {
             setEditingClient(client);
             setFormData({
-                name: client.name,
+                name: client.name || '',
                 phone: client.phone || '',
-                address: client.address || ''
+                address: client.address || '',
+                email: client.email || '',
+                notes: client.notes || ''
             });
         } else {
-            resetForm();
+            setEditingClient(null);
+            setFormData({
+                name: '',
+                phone: '',
+                address: '',
+                email: '',
+                notes: ''
+            });
         }
         setShowModal(true);
     };
 
     const handleCloseModal = () => {
         setShowModal(false);
-        resetForm();
+        setEditingClient(null);
+        setFormData({ name: '', phone: '', address: '', email: '', notes: '' });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!formData.name.trim()) {
-            Swal.fire('Error', 'El nombre es obligatorio', 'warning');
-            return;
-        }
-
         try {
             if (editingClient) {
-                // Check duplicates excluding self
-                const duplicates = await customerService.checkDuplicate(formData.name.trim(), formData.phone.trim());
-                const isDuplicate = duplicates.some(d => d.id !== editingClient.id);
-                
-                if (isDuplicate) {
-                     Swal.fire('Error', 'Ya existe otro cliente con ese nombre o teléfono', 'warning');
-                     return;
-                }
-
                 await customerService.updateCustomer(editingClient.id, formData);
-                Swal.fire('Actualizado', 'Cliente actualizado correctamente', 'success');
+                Swal.fire('Éxito', 'Cliente actualizado correctamente', 'success');
             } else {
-                // Check duplicates
-                const duplicates = await customerService.checkDuplicate(formData.name.trim(), formData.phone.trim());
-                if (duplicates.length > 0) {
-                     Swal.fire('Error', 'Ya existe un cliente con ese nombre o teléfono', 'warning');
-                     return;
-                }
-
                 await customerService.createCustomer(formData);
-                Swal.fire('Creado', 'Cliente registrado correctamente', 'success');
+                Swal.fire('Éxito', 'Cliente creado correctamente', 'success');
             }
             handleCloseModal();
             loadClients();
         } catch (error) {
-            console.error('Error al guardar:', error);
-            Swal.fire('Error', 'No se pudieron guardar los cambios', 'error');
+            console.error('Error saving client:', error);
+            Swal.fire('Error', 'No se pudo guardar el cliente', 'error');
         }
     };
 
-    const handleDelete = async (id, name) => {
+    const handleDelete = async (id) => {
         const result = await Swal.fire({
-            title: '¿Eliminar cliente?',
-            text: `Se eliminará a "${name}" del sistema. Esta acción no se puede deshacer.`,
+            title: '¿Estás seguro?',
+            text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -112,137 +98,209 @@ export const ClientManager = () => {
         if (result.isConfirmed) {
             try {
                 await customerService.deleteCustomer(id);
-                Swal.fire('Eliminado', 'Cliente eliminado', 'success');
+                Swal.fire('Eliminado', 'El cliente ha sido eliminado', 'success');
                 loadClients();
             } catch (error) {
-                console.error('Error al eliminar:', error);
+                console.error('Error deleting client:', error);
                 Swal.fire('Error', 'No se pudo eliminar el cliente', 'error');
             }
         }
     };
 
     const filteredClients = clients.filter(client => 
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.phone && client.phone.includes(searchTerm))
+        client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.phone?.includes(searchTerm) ||
+        client.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <div className="loading-state">Cargando clientes...</div>;
+    if (loading) return (
+        <div className="loading-container">
+            <div className="loader"></div>
+            <p>Cargando clientes...</p>
+        </div>
+    );
 
     return (
-        <div className="user-manager-container">
-            <header className="manager-header">
-                <div>
-                    <div className="header-badge">Control de Clientes</div>
-                    <h2>Gestión de Clientes</h2>
-                    <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                        Administra tu base de datos de clientes
-                    </p>
+        <div className="client-manager-container">
+            <div className="client-manager-header">
+                <div className="search-container">
+                    <span className="material-symbols-outlined search-icon">search</span>
+                    <input 
+                        type="text" 
+                        placeholder="Buscar por nombre, teléfono o email..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
-                <div className="flex items-center gap-3">
-                     <div className="relative">
-                        <input 
-                            type="text" 
-                            placeholder="Buscar cliente..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-14 pr-4 py-2 border rounded-xl bg-white text-slate-900 dark:bg-slate-800 dark:text-white dark:border-slate-700 w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                        />
-                        <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
-                    </div>
-                    <button className="btn-primary" onClick={() => handleOpenModal()}>
-                        + Nuevo Cliente
+                <div className="header-actions">
+                    <button className="btn-client btn-bulk" onClick={() => setShowBulkModal(true)}>
+                        <span className="material-symbols-outlined">upload_file</span>
+                        Carga Masiva
+                    </button>
+                    <button className="btn-client btn-new" onClick={() => handleOpenModal()}>
+                        <span className="material-symbols-outlined">person_add</span>
+                        Nuevo Cliente
                     </button>
                 </div>
-            </header>
+            </div>
 
-            <div className="user-list-card">
-                {filteredClients.length === 0 ? (
-                    <div className="empty-state">
-                        <p>No se encontraron clientes</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="user-table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Teléfono</th>
-                                    <th>Dirección</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredClients.map(client => (
+            <div className="client-table-card">
+                <div className="client-table-scroll">
+                    <table className="client-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente / Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Dirección</th>
+                                <th>Notas</th>
+                                <th style={{ textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredClients.length > 0 ? (
+                                filteredClients.map(client => (
                                     <tr key={client.id}>
-                                        <td className="font-medium">{client.name}</td>
-                                        <td>{client.phone || '-'}</td>
-                                        <td className="truncate max-w-xs" title={client.address}>{client.address || '-'}</td>
-                                        <td className="actions-cell">
-                                            <button
-                                                className="btn-edit"
-                                                onClick={() => handleOpenModal(client)}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                className="btn-delete"
-                                                onClick={() => handleDelete(client.id, client.name)}
-                                            >
-                                                Eliminar
-                                            </button>
+                                        <td>
+                                            <div className="name-cell">
+                                                <div className="avatar-initial">
+                                                    {(client.name || 'C').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="client-info">
+                                                    <h4>{client.name}</h4>
+                                                    <span>Registrado el {new Date(client.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {client.phone ? (
+                                                <div className="phone-badge">
+                                                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>call</span>
+                                                    {client.phone}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-500">-</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            {client.email ? (
+                                                <a href={`mailto:${client.email}`} className="email-link">
+                                                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>mail</span>
+                                                    {client.email}
+                                                </a>
+                                            ) : (
+                                                <span className="text-slate-500">-</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <div className="address-text" title={client.address}>
+                                                {client.address || 'Sin dirección'}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="notes-text" title={client.notes}>
+                                                {client.notes || '-'}
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className="actions-row">
+                                                <button className="btn-action btn-edit" onClick={() => handleOpenModal(client)} title="Editar">
+                                                    <span className="material-symbols-outlined">edit_square</span>
+                                                </button>
+                                                <button className="btn-action btn-delete" onClick={() => handleDelete(client.id)} title="Eliminar">
+                                                    <span className="material-symbols-outlined">delete</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                        No se encontraron clientes que coincidan con la búsqueda.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h3>{editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
+                <div className="client-modal-overlay">
+                    <div className="client-modal">
+                        <div className="modal-head">
+                            <h2>{editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
+                            <button className="btn-close" onClick={handleCloseModal}>
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
                         <form onSubmit={handleSubmit}>
-                            <div className="form-group">
-                                <label>Nombre completo *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="Ej: Juan Pérez"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                />
+                            <div className="modal-body">
+                                <div className="form-grid">
+                                    <div className="input-group full-width">
+                                        <label>Nombre Completo*</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                            placeholder="Nombre completo del cliente"
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Teléfono</label>
+                                        <input 
+                                            type="text" 
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                            placeholder="000 000 0000"
+                                        />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Email</label>
+                                        <input 
+                                            type="email" 
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                            placeholder="ejemplo@correo.com"
+                                        />
+                                    </div>
+                                    <div className="input-group full-width">
+                                        <label>Dirección</label>
+                                        <textarea 
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                            placeholder="Calle, Número, Colonia, Municipio..."
+                                            rows="2"
+                                        ></textarea>
+                                    </div>
+                                    <div className="input-group full-width">
+                                        <label>Notas / Observaciones</label>
+                                        <textarea 
+                                            value={formData.notes}
+                                            onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                                            placeholder="Información relevante para pedidos..."
+                                            rows="2"
+                                        ></textarea>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label>Teléfono</label>
-                                <input
-                                    type="tel"
-                                    placeholder="Ej: 55 1234 5678"
-                                    value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                />
-                            </div>
-                             <div className="form-group">
-                                <label>Dirección</label>
-                                <textarea
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white resize-none h-24"
-                                    placeholder="Dirección completa"
-                                    value={formData.address}
-                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                />
-                            </div>
-                            <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={handleCloseModal}>
-                                    Cancelar
-                                </button>
-                                <button type="submit" className="btn-primary">
-                                    {editingClient ? 'Guardar Cambios' : 'Registrar Cliente'}
+                            <div className="modal-footer">
+                                <button type="button" className="btn-client btn-cancel" onClick={handleCloseModal}>Cancelar</button>
+                                <button type="submit" className="btn-client btn-save">
+                                    {editingClient ? 'Actualizar Cliente' : 'Registrar Cliente'}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
+            )}
+            {showBulkModal && (
+                <BulkCustomerImportModal 
+                    onClose={() => setShowBulkModal(false)}
+                    onSuccess={() => loadClients()}
+                />
             )}
         </div>
     );
