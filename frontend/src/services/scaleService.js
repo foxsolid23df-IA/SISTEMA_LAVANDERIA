@@ -48,13 +48,20 @@ export class ScaleService {
             return true;
         } catch (error) {
             console.error("❌ Error al conectar báscula:", error.name, error.message);
+
+            // FIX CRÍTICO: Si dice que ya está abierto, asumimos que es nuestro y retornamos éxito
+            if (error.name === 'InvalidStateError' || error.message.includes('already open')) {
+                console.warn("⚠️ El puerto ya estaba abierto. Asumiendo conexión exitosa.");
+                this.isConnected = true;
+                return true;
+            }
+
             this.isConnected = false;
             this.port = null;
 
             if (error.name === 'NotFoundError') {
                 throw new Error(this.isElectron ? "No se detectó ninguna báscula conectada." : "No se seleccionó ningún puerto.");
             }
-            if (error.name === 'InvalidStateError') throw new Error("El puerto serial ya está en uso.");
             if (error.name === 'NetworkError') throw new Error("Error de comunicación. Verifique el cable USB.");
             if (error.name === 'SecurityError') throw new Error("Permiso denegado.");
 
@@ -109,13 +116,34 @@ export class ScaleService {
             this.pollingInterval = null;
         }
 
+        // Limpieza PROFUNDA del lector
         if (this.reader) {
-            try { await this.reader.cancel(); } catch (e) { }
+            try {
+                // Forzar liberación del lock primero
+                await this.reader.cancel();
+                this.reader.releaseLock();
+            } catch (e) {
+                console.warn("⚠️ Advertencia al liberar reader:", e);
+            }
             this.reader = null;
         }
 
+        // Esperar un momento a que el stream se cierre realmente
+        // antes de cerrar el puerto
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         if (this.port) {
-            try { await this.port.close(); } catch (e) { }
+            try {
+                // Solo intentar cerrar si está abierto y no bloqueado
+                if (this.port.readable && !this.port.readable.locked) {
+                    await this.port.close();
+                } else {
+                    // Si está bloqueado o ya cerrado, forzamos null y dejamos que el GC actúe
+                    console.warn("⚠️ Puerto bloqueado o ya cerrado, saltando close().");
+                }
+            } catch (e) {
+                console.warn("⚠️ Error al cerrar puerto físico:", e);
+            }
             this.port = null;
         }
 
@@ -127,7 +155,8 @@ export class ScaleService {
      * Envía el comando de solicitud de peso (P) para básculas Torrey PCP/EQB
      */
     async sendWeightRequest() {
-        if (!this.port || !this.port.writable) return;
+        // Verificar escritura disponible y NO bloqueada
+        if (!this.port || !this.port.writable || this.port.writable.locked) return;
 
         try {
             const encoder = new TextEncoder();
@@ -135,7 +164,7 @@ export class ScaleService {
             await writer.write(encoder.encode('P'));
             writer.releaseLock();
         } catch (error) {
-            console.error("Error enviando trigger 'P' a la báscula:", error);
+            // Ignorar errores silenciosos de escritura para no saturar consola
         }
     }
 
