@@ -72,59 +72,76 @@ const KgQuantityModal = ({ product, onAccept, onCancel }) => {
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-8">
           {/* Nombre del servicio */}
-          <div className="text-center">
-            <h2 className="text-2xl font-black text-slate-800 tracking-wide">
+          <div className="text-center px-4">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
               {displayName}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Precio unitario: {formatearDinero(product.price)} / kg
-            </p>
+            <div className="inline-block mt-2 px-3 py-1 bg-slate-100 rounded-full">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Precio: {formatearDinero(product.price)} / kg
+              </p>
+            </div>
           </div>
 
-          {/* Campos */}
-          <div className="grid grid-cols-2 gap-6">
+          {/* Sección de Entradas */}
+          <div className="space-y-6">
             {/* Cantidad del Producto */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Cantidad del Producto:
+            <div className="space-y-3">
+              <label className="block text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                Cantidad del Producto (KG)
               </label>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-center gap-4">
                 <button
+                  type="button"
                   onClick={decrement}
-                  className="w-10 h-12 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center text-slate-600 font-bold text-lg transition-all active:scale-95"
+                  className="w-14 h-14 bg-slate-100 hover:bg-slate-200 rounded-2xl flex items-center justify-center text-slate-600 font-bold text-2xl transition-all active:scale-90 border-b-4 border-slate-300 active:border-b-0"
                 >
                   −
                 </button>
-                <input
-                  ref={inputRef}
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  className="flex-1 h-12 text-center text-xl font-black text-blue-700 bg-blue-50 border-2 border-blue-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  value={quantity}
-                  onChange={(e) => handleQuantityChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                />
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    className="w-40 h-20 text-center text-4xl font-black text-blue-700 bg-blue-50 border-2 border-blue-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                    value={quantity}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                    Kilogramos
+                  </span>
+                </div>
                 <button
+                  type="button"
                   onClick={increment}
-                  className="w-10 h-12 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center text-slate-600 font-bold text-lg transition-all active:scale-95"
+                  className="w-14 h-14 bg-slate-100 hover:bg-slate-200 rounded-2xl flex items-center justify-center text-slate-600 font-bold text-2xl transition-all active:scale-90 border-b-4 border-slate-300 active:border-b-0"
                 >
                   +
                 </button>
               </div>
             </div>
 
-            {/* Importe Actual */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                Importe Actual:
+            {/* Importe Actual - Como un visor */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="block text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
+                Importe Total Calculado
               </label>
-              <div className="h-12 flex items-center justify-center bg-slate-50 border-2 border-slate-200 rounded-lg">
-                <span className="text-xl font-black text-slate-800">
-                  {formatearDinero(importe)}
-                </span>
+              <div className="bg-slate-900 rounded-2xl p-6 shadow-xl border-4 border-slate-800 relative overflow-hidden">
+                {/* Efecto de brillo de pantalla */}
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/10"></div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-emerald-500/50 material-symbols-outlined text-2xl">
+                    payments
+                  </span>
+                  <span className="text-4xl font-black text-emerald-400 font-mono tracking-tighter">
+                    {formatearDinero(importe)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
