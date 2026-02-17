@@ -17,42 +17,16 @@ import { CashFundModal } from "../auth/CashFundModal";
 import { ClientRegistrationModal } from "./ClientRegistrationModal";
 import VisionAIModal from "../ai/VisionAIModal";
 import "./Sales.css";
-import { useScale } from "../../hooks/useScale";
+import KgQuantityModal from "./KgQuantityModal";
 
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
   const { user, cashSession, activeStaff, storeName, checkCashSession } =
     useAuth();
   const [showCashFundModal, setShowCashFundModal] = useState(false);
-  const {
-    weight,
-    isConnected: isScaleConnected,
-    connect: connectScale,
-    connectSimulation,
-    error: scaleError,
-    lastDataTime,
-  } = useScale();
 
-  // Estado para detectar si la báscula está conectada pero no envía datos
-  const [isStalled, setIsStalled] = useState(false);
-
-  useEffect(() => {
-    if (!isScaleConnected) {
-      setIsStalled(false);
-      return;
-    }
-
-    // Si no hay lastDataTime inicial, asumimos que está esperando datos
-    // pero si ya está conectado un rato y no llega nada...
-    if (!lastDataTime) return;
-
-    const interval = setInterval(() => {
-      const stalled = Date.now() - lastDataTime > 4000;
-      setIsStalled(stalled);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastDataTime, isScaleConnected]);
+  // Estado para el modal de cantidad KG (reemplazo de báscula)
+  const [kgModalProduct, setKgModalProduct] = useState(null);
 
   const { productos, loading: loadingProducts, loadProducts } = useProducts();
   const {
@@ -381,49 +355,7 @@ export const Sales = () => {
               PRODUCTOS
             </button>
           </div>
-
-          <button
-            onClick={(e) => {
-              if (e.altKey || e.ctrlKey) {
-                connectSimulation();
-              } else {
-                connectScale();
-              }
-            }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              isScaleConnected
-                ? isStalled
-                  ? "bg-amber-100 text-amber-800 border border-amber-200 animate-pulse"
-                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                : "bg-slate-100 text-black border border-slate-300 hover:bg-slate-200"
-            }`}
-            title={
-              isScaleConnected
-                ? isStalled
-                  ? "Conectada pero sin recibir datos recientes (¿Báscula apagada?)"
-                  : "Báscula Conectada y enviando datos"
-                : "Conectar Báscula USB (Alt+Click para Simular)"
-            }
-          >
-            <span className="material-symbols-outlined text-sm">
-              {isScaleConnected
-                ? isStalled
-                  ? "comments_disabled"
-                  : "scale"
-                : "link_off"}
-            </span>
-            {isScaleConnected
-              ? isStalled
-                ? "Sin Datos..."
-                : `Peso: ${weight}kg`
-              : "Conectar Báscula"}
-          </button>
         </div>
-        {scaleError && (
-          <div className="text-xs text-red-600 font-bold mb-2">
-            {scaleError}
-          </div>
-        )}
 
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="relative flex-1">
@@ -463,7 +395,14 @@ export const Sales = () => {
               return (
                 <button
                   key={p.id}
-                  onClick={() => agregarProducto(p)}
+                  onClick={() => {
+                    // Si es servicio KG, abrir modal de cantidad
+                    if (p.pricing_type === "kg") {
+                      setKgModalProduct(p);
+                    } else {
+                      agregarProducto(p);
+                    }
+                  }}
                   disabled={!isService && p.stock <= 0}
                   className={`flex flex-col text-left bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all shadow-sm hover:shadow-xl group relative min-h-[140px] ${
                     !isService && p.stock <= 0
@@ -661,19 +600,6 @@ export const Sales = () => {
                   </button>
                 </div>
 
-                {isScaleConnected && item.pricing_type === "kg" && (
-                  <button
-                    onClick={() =>
-                      cambiarCantidad(item.id, parseFloat(weight) || 0)
-                    }
-                    className="w-8 h-8 flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors"
-                    title="Usar peso de báscula"
-                  >
-                    <span className="material-symbols-outlined text-lg">
-                      scale
-                    </span>
-                  </button>
-                )}
                 <button
                   onClick={() => quitarProducto(item.id)}
                   className="text-rose-400 hover:text-rose-600"
@@ -1012,6 +938,20 @@ export const Sales = () => {
             setShowCashFundModal(false);
           }}
           onClose={() => setShowCashFundModal(false)}
+        />
+      )}
+
+      {/* MODAL DE CANTIDAD KG */}
+      {kgModalProduct && (
+        <KgQuantityModal
+          product={kgModalProduct}
+          onAccept={(quantity) => {
+            agregarProducto(kgModalProduct);
+            // Después de agregar (con cantidad 1), ajustar a la cantidad real
+            cambiarCantidad(kgModalProduct.id, quantity);
+            setKgModalProduct(null);
+          }}
+          onCancel={() => setKgModalProduct(null)}
         />
       )}
     </div>
