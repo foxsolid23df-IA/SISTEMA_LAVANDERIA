@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.16] - 2026-02-17
+
+### Fixed
+
+- **Ticket de Venta:** Corrección en la alineación del encabezado y estilos inline para asegurar que la impresión sea centrada y legible.
+- **Báscula USB:** Implementación de soporte para básculas que envían datos en formato binario/HID.
+- **Robustez de Conexión:** Corrección del error "The device has been lost" que impedía reconectar la báscula sin reiniciar la aplicación.
+- **Limpieza de Estado:** El servicio de báscula ahora limpia correctamente los recursos al detectar una desconexión física.
+
 ## [1.4.5] - 2026-02-07
 
 ### Added

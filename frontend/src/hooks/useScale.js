@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { scaleService } from '../services/scaleService';
 
+// Palabras clave que indican que el dispositivo se desconectó y hay que limpiar el estado
+const DISCONNECT_KEYWORDS = ['break', 'closed', 'disconnect', 'locked', 'lost', 'detach'];
+
 export const useScale = () => {
     const [weight, setWeight] = useState(0);
     const [isConnected, setIsConnected] = useState(false);
@@ -27,13 +30,18 @@ export const useScale = () => {
             });
         } catch (err) {
             console.error("Scale reading stopped:", err);
-            if (err.message && (
-                err.message.includes('break') ||
-                err.message.includes('closed') ||
-                err.message.includes('disconnect') ||
-                err.message.includes('locked')
-            )) {
+            const msg = (err.message || '').toLowerCase();
+            const isDeviceLost = DISCONNECT_KEYWORDS.some(keyword => msg.includes(keyword));
+
+            if (isDeviceLost) {
+                console.warn("🔌 Dispositivo perdido. Limpiando estado para permitir reconexión...");
+                // Limpiar estado interno del servicio para que la reconexión funcione
+                scaleService.isConnected = false;
+                scaleService.port = null;
+                scaleService._failCount = 0;
                 setIsConnected(false);
+                setWeight(0);
+                setLastDataTime(null);
             }
         } finally {
             setIsReading(false);

@@ -285,6 +285,17 @@ export class ScaleService {
                 if (done) break;
                 if (value) {
                     console.log("SCALE_RAW:", JSON.stringify(value));
+
+                    // INTENTO 1: Parseo binario directo del valor raw completo
+                    // (para básculas HID que envían paquetes binarios sin delimitadores de línea)
+                    const binaryWeight = this.parseBinaryWeight(value);
+                    if (binaryWeight !== null) {
+                        console.log("⚖️ Peso (binario):", binaryWeight, "kg");
+                        onWeightRead(binaryWeight);
+                        continue; // No procesar como texto si el binario funcionó
+                    }
+
+                    // INTENTO 2: Parseo de texto estándar (con buffer por línea)
                     this.buffer += value;
                     const lines = this.buffer.split(/\r\n|\r|\n/);
                     this.buffer = lines.pop();
@@ -293,7 +304,10 @@ export class ScaleService {
                         const trimmedLine = line.trim();
                         if (trimmedLine.length > 0) {
                             const weight = this.parseWeight(trimmedLine);
-                            if (weight !== null) onWeightRead(weight);
+                            if (weight !== null) {
+                                console.log("⚖️ Peso (texto):", weight, "kg");
+                                onWeightRead(weight);
+                            }
                         }
                     }
                 }
@@ -304,6 +318,17 @@ export class ScaleService {
             } else {
                 console.error("Error leyendo báscula:", error);
             }
+
+            // Si el dispositivo se perdió físicamente, limpiar estado interno
+            const msg = (error.message || '').toLowerCase();
+            if (msg.includes('lost') || msg.includes('detach') || msg.includes('disconnect')) {
+                console.warn("🔌 Dispositivo perdido físicamente. Limpiando estado del servicio...");
+                this.isConnected = false;
+                this.port = null;
+                this.buffer = '';
+                this._failCount = 0;
+            }
+
             throw error;
         } finally {
             if (this.reader) {
@@ -318,11 +343,67 @@ export class ScaleService {
     }
 
     parseWeight(data) {
+        // MÉTODO 1: Parseo de texto estándar (Torrey, etc.)
+        // Formatos: "ST,GS,+ 1.500kg", "  1.234 kg", "+001.50", etc.
         const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)/);
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
             if (!isNaN(weight) && weight < 10000) return weight;
+        }
+        return null;
+    }
+
+    /**
+     * Intenta parsear datos binarios HID de básculas USB (formato crudo).
+     * Muchas básculas baratas envían paquetes HID de 6 bytes:
+     * [reportId, status, unitCode, scalingFactor, weightLowByte, weightHighByte]
+     */
+    parseBinaryWeight(rawString) {
+        try {
+            // Convertir string con caracteres de control a array de bytes
+            const bytes = [];
+            for (let i = 0; i < rawString.length; i++) {
+                bytes.push(rawString.charCodeAt(i));
+            }
+
+            // Necesitamos al menos 6 bytes para un paquete HID estándar
+            if (bytes.length < 6) return null;
+
+            // Verificar que no sea solo bytes nulos (basura)
+            const nonZero = bytes.filter(b => b !== 0);
+            if (nonZero.length < 2) return null;
+
+            // Byte 2: Status (0x04 = estable, 0x02 = en movimiento)
+            // Byte 3: Unit code (factor de escala o unidad)
+            // Byte 4-5: Peso como entero little-endian
+            const status = bytes[2];
+            const scalingByte = bytes[3];
+            const weightRaw = bytes[4] | (bytes[5] << 8);
+
+            // Solo aceptar si el status indica datos válidos (0x04 estable, 0x02 movimiento)
+            if (status !== 0x04 && status !== 0x02 && status !== 0x21) return null;
+
+            // Calcular peso según el factor de escala
+            let weight;
+            if (scalingByte === 0xFF || scalingByte === 0xFE) {
+                // Factor negativo = dividir (ej: gramos a kg)
+                const divisor = scalingByte === 0xFF ? 10 : 100;
+                weight = weightRaw / divisor;
+            } else if (scalingByte <= 4) {
+                // Factor de escala directo
+                const divisor = Math.pow(10, scalingByte);
+                weight = weightRaw / divisor;
+            } else {
+                // Sin escala, asumir gramos
+                weight = weightRaw / 1000;
+            }
+
+            if (!isNaN(weight) && weight >= 0 && weight < 10000) {
+                return parseFloat(weight.toFixed(3));
+            }
+        } catch (e) {
+            // Silenciar errores de parseo binario
         }
         return null;
     }

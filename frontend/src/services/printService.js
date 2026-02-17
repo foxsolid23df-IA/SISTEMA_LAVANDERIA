@@ -116,6 +116,7 @@ export const printService = {
                         padding: 0; /* Let inner content handle padding if needed, or set small padding */
                         font-size: ${fontSize}px;
                         font-weight: ${fontWeight};
+                        padding: ${businessData.printer_margin || 0}px;
                         box-sizing: border-box;
                         overflow: hidden;
                         word-wrap: break-word;
