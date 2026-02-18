@@ -21,6 +21,7 @@ export const Sidebar = () => {
     storeName,
     activeRole,
     cashSession,
+    adminMode,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
@@ -70,7 +71,11 @@ export const Sidebar = () => {
 
   const handleManualSync = async () => {
     if (!isOnline) {
-      Swal.fire("Sin Conexión", "Por favor conecte el equipo a internet para sincronizar.", "warning");
+      Swal.fire(
+        "Sin Conexión",
+        "Por favor conecte el equipo a internet para sincronizar.",
+        "warning",
+      );
       return;
     }
 
@@ -78,7 +83,7 @@ export const Sidebar = () => {
     try {
       // 1. Sincronizar Inventario (Nube -> Local)
       const invResult = await productService.syncWithLocal();
-      
+
       // 2. Subir Ventas Pendientes (Local -> Nube)
       const salesResult = await salesService.syncPendingSales();
 
@@ -90,11 +95,15 @@ export const Sidebar = () => {
             <li>Ventas subidas: ${salesResult.count} pendientes procesadas.</li>
           </ul>
         `,
-        icon: "success"
+        icon: "success",
       });
     } catch (error) {
       console.error("[Sidebar] Error en sincronización:", error);
-      Swal.fire("Error", "Ocurrió un fallo durante la sincronización.", "error");
+      Swal.fire(
+        "Error",
+        "Ocurrió un fallo durante la sincronización.",
+        "error",
+      );
     } finally {
       setIsSyncing(false);
     }
@@ -181,12 +190,22 @@ export const Sidebar = () => {
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
               {displayRole}
-              <span className="bg-slate-100 dark:bg-white/5 px-1 rounded text-[8px] border border-slate-200 dark:border-white/10">v{typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1.3.1'}</span>
+              <span className="bg-slate-100 dark:bg-white/5 px-1 rounded text-[8px] border border-slate-200 dark:border-white/10">
+                v{typeof APP_VERSION !== "undefined" ? APP_VERSION : "1.4.18"}
+              </span>
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${cashSession ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></span>
-              <span className={`text-[9px] font-black uppercase tracking-tighter ${cashSession ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                {cashSession ? 'Caja Abierta' : 'Caja Cerrada'}
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${adminMode ? "bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" : cashSession ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500"}`}
+              ></span>
+              <span
+                className={`text-[9px] font-black uppercase tracking-tighter ${adminMode ? "text-indigo-500" : cashSession ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}
+              >
+                {adminMode
+                  ? "MODO ADMIN"
+                  : cashSession
+                    ? "Caja Abierta"
+                    : "Caja Cerrada"}
               </span>
             </div>
           </div>
@@ -267,7 +286,6 @@ export const Sidebar = () => {
             <span className="text-sm font-bold">Catálogo de Productos</span>
           </NavLink>
 
-          
           <NavLink
             to="/insumos"
             className={({ isActive }) => `
@@ -286,10 +304,6 @@ export const Sidebar = () => {
             <span className="text-sm font-bold">Insumos (Interno)</span>
           </NavLink>
 
-
-
-
-
           <NavLink
             to="/clientes"
             className={({ isActive }) => `
@@ -302,9 +316,7 @@ export const Sidebar = () => {
                         `}
             onClick={() => setIsOpen(false)}
           >
-            <span className="material-icons-outlined text-[20px]">
-              group
-            </span>
+            <span className="material-icons-outlined text-[20px]">group</span>
             <span className="text-sm font-bold">Clientes</span>
           </NavLink>
 
@@ -436,26 +448,32 @@ export const Sidebar = () => {
               </span>
               <span className="text-sm font-bold">IA Vision</span>
             </div>
-            <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-md font-black tracking-tighter">BETA</span>
+            <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-md font-black tracking-tighter">
+              BETA
+            </span>
           </button>
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
-              onClick={() => {
-                setShowCashCut(true);
-                setIsOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
-                cashSession 
-                  ? "text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" 
-                  : "text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10"
-              }`}
-            >
-              <span className="material-icons-outlined text-[20px]">
-                {cashSession ? 'monetization_on' : 'lock'}
-              </span>
-              <span className="text-sm font-bold">{cashSession ? 'CAJA' : 'ABRIR CAJA'}</span>
-            </button>
+            {!adminMode && (
+              <button
+                onClick={() => {
+                  setShowCashCut(true);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
+                  cashSession
+                    ? "text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                    : "text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                }`}
+              >
+                <span className="material-icons-outlined text-[20px]">
+                  {cashSession ? "monetization_on" : "lock"}
+                </span>
+                <span className="text-sm font-bold">
+                  {cashSession ? "CAJA" : "ABRIR CAJA"}
+                </span>
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -473,27 +491,31 @@ export const Sidebar = () => {
                 <button
                   onClick={async () => {
                     const { value: password } = await Swal.fire({
-                      title: 'Código de Seguridad',
-                      text: 'Ingrese el código para reiniciar la caja:',
-                      input: 'password',
-                      inputPlaceholder: 'Código...',
+                      title: "Código de Seguridad",
+                      text: "Ingrese el código para reiniciar la caja:",
+                      input: "password",
+                      inputPlaceholder: "Código...",
                       inputAttributes: {
-                        autocapitalize: 'off',
-                        autocorrect: 'off'
+                        autocapitalize: "off",
+                        autocorrect: "off",
                       },
                       showCancelButton: true,
-                      confirmButtonText: 'Confirmar',
-                      cancelButtonText: 'Cancelar',
-                      confirmButtonColor: '#0f172a'
+                      confirmButtonText: "Confirmar",
+                      cancelButtonText: "Cancelar",
+                      confirmButtonColor: "#0f172a",
                     });
 
-                    if (password === '2026SOP') {
+                    if (password === "2026SOP") {
                       terminalService.resetLocalTerminal();
                       logout();
                       setIsOpen(false);
-                      Swal.fire('Éxito', 'Caja reiniciada correctamente', 'success');
+                      Swal.fire(
+                        "Éxito",
+                        "Caja reiniciada correctamente",
+                        "success",
+                      );
                     } else if (password !== undefined) {
-                      Swal.fire('Error', 'Código incorrecto', 'error');
+                      Swal.fire("Error", "Código incorrecto", "error");
                     }
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
@@ -504,7 +526,7 @@ export const Sidebar = () => {
                   </span>
                   <span className="text-sm font-bold">Reiniciar Caja</span>
                 </button>
-                
+
                 <button
                   onClick={() => {
                     logout();
@@ -525,51 +547,70 @@ export const Sidebar = () => {
         {/* Footer Controls */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-black/20 space-y-2">
           {/* Sync Status & Action */}
-          <div className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
-            isOnline 
-              ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20" 
-              : "bg-rose-50/50 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/20"
-          }`}>
+          <div
+            className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
+              isOnline
+                ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20"
+                : "bg-rose-50/50 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/20"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                <span
+                  className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                ></span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   {isOnline ? "En Línea" : "Sin Conexión"}
                 </span>
               </div>
               {isOnline && config.isElectron && (
-                <button 
+                <button
                   onClick={handleManualSync}
                   disabled={isSyncing}
                   className={`text-slate-400 hover:text-primary transition-all ${isSyncing ? "animate-spin" : ""}`}
                   title="Sincronizar Ahora"
                 >
-                  <span className="material-icons-outlined text-[18px]">sync</span>
+                  <span className="material-icons-outlined text-[18px]">
+                    sync
+                  </span>
                 </button>
               )}
             </div>
             {!isOnline && (
               <p className="text-[9px] text-rose-600 dark:text-rose-400 font-medium leading-tight">
-                Las ventas se guardarán localmente y se sincronizarán al recuperar conexión.
+                Las ventas se guardarán localmente y se sincronizarán al
+                recuperar conexión.
               </p>
             )}
           </div>
 
           <button
             className={`w-full flex items-center justify-between px-4 py-3 text-xs font-extrabold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm transition-all group ${
-              isCheckingUpdate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-emerald-500 hover:scale-[1.02]"
+              isCheckingUpdate
+                ? "opacity-50 pointer-events-none"
+                : "hover:shadow-md hover:border-emerald-500 hover:scale-[1.02]"
             }`}
             onClick={handleCheckUpdates}
           >
             <div className="flex items-center gap-2 text-slate-900 dark:text-white">
-              <span className={`material-icons-outlined text-[18px] text-emerald-600 ${isCheckingUpdate ? "animate-spin" : ""}`}>
+              <span
+                className={`material-icons-outlined text-[18px] text-emerald-600 ${isCheckingUpdate ? "animate-spin" : ""}`}
+              >
                 system_update
               </span>
               <div className="flex flex-col items-start">
-                <span className={updaterMessage.includes("Error") ? "text-red-600" : ""}>
+                <span
+                  className={
+                    updaterMessage.includes("Error") ? "text-red-600" : ""
+                  }
+                >
                   {updaterMessage || "BUSCAR ACTUALIZACIONES"}
                 </span>
-                {updaterMessage && <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Estado del sistema</span>}
+                {updaterMessage && (
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">
+                    Estado del sistema
+                  </span>
+                )}
               </div>
             </div>
           </button>
@@ -595,7 +636,12 @@ export const Sidebar = () => {
       {showCashCut && <CashCut onClose={() => setShowCashCut(false)} />}
 
       {/* Modal de IA Vision POC */}
-      {showAIModal && <VisionAIModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} />}
+      {showAIModal && (
+        <VisionAIModal
+          isOpen={showAIModal}
+          onClose={() => setShowAIModal(false)}
+        />
+      )}
     </>
   );
 };

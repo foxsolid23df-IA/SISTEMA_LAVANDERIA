@@ -21,8 +21,14 @@ import KgQuantityModal from "./KgQuantityModal";
 
 // Componente de Punto de Venta específico para Lavandería
 export const Sales = () => {
-  const { user, cashSession, activeStaff, storeName, checkCashSession } =
-    useAuth();
+  const {
+    user,
+    cashSession,
+    activeStaff,
+    storeName,
+    checkCashSession,
+    adminMode,
+  } = useAuth();
   const [showCashFundModal, setShowCashFundModal] = useState(false);
 
   // Estado para el modal de cantidad KG (reemplazo de báscula)
@@ -271,60 +277,88 @@ export const Sales = () => {
     <div className="pos-container flex flex-col h-[calc(100vh-64px)] lg:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
       <div className="flex-1 flex flex-col p-4 overflow-hidden">
-        {/* Cash Session Banner */}
-        <div
-          className={`mb-4 p-3 rounded-2xl border flex items-center justify-between transition-all ${
-            cashSession
-              ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20"
-              : "bg-amber-50/50 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/20"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                cashSession
-                  ? "bg-emerald-100 text-emerald-600"
-                  : "bg-amber-100 text-amber-600"
-              }`}
-            >
-              <span className="material-symbols-outlined">
-                {cashSession ? "lock_open" : "lock"}
-              </span>
+        {/* Cash Session / Admin Mode Banner */}
+        {adminMode && !cashSession ? (
+          <div className="mb-4 p-3 rounded-2xl border bg-slate-50/50 border-slate-200 dark:bg-slate-500/5 dark:border-slate-500/20 flex items-center justify-between transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-600">
+                <span className="material-symbols-outlined">
+                  admin_panel_settings
+                </span>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+                  Modo Administrador
+                </p>
+                <h4 className="text-sm font-bold dark:text-white">
+                  Acceso de gestión — sin caja configurada
+                </h4>
+              </div>
             </div>
-            <div>
-              <p
-                className={`text-[10px] font-black uppercase tracking-widest ${
-                  cashSession ? "text-emerald-600" : "text-amber-600"
-                }`}
-              >
-                {cashSession ? "Sesión Iniciada" : "Sesión Cerrada"}
-              </p>
-              <h4 className="text-sm font-bold dark:text-white">
-                {cashSession
-                  ? `Atiende: ${cashSession.staff_name}`
-                  : "Inicie turno para realizar ventas"}
-              </h4>
-            </div>
-          </div>
-          {cashSession ? (
             <div className="text-right hidden sm:block">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                Fondo Inicial
+                Solo lectura
               </p>
-              <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                {formatearDinero(cashSession.opening_fund)}
+              <p className="text-xs font-black text-slate-500">
+                Ventas deshabilitadas
               </p>
             </div>
-          ) : (
-            <button
-              className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-amber-600/20 flex items-center gap-2 active:scale-95"
-              onClick={() => setShowCashFundModal(true)}
-            >
-              <span className="material-symbols-outlined text-sm">key</span>
-              ABRIR CAJA AHORA
-            </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div
+            className={`mb-4 p-3 rounded-2xl border flex items-center justify-between transition-all ${
+              cashSession
+                ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20"
+                : "bg-amber-50/50 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/20"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  cashSession
+                    ? "bg-emerald-100 text-emerald-600"
+                    : "bg-amber-100 text-amber-600"
+                }`}
+              >
+                <span className="material-symbols-outlined">
+                  {cashSession ? "lock_open" : "lock"}
+                </span>
+              </div>
+              <div>
+                <p
+                  className={`text-[10px] font-black uppercase tracking-widest ${
+                    cashSession ? "text-emerald-600" : "text-amber-600"
+                  }`}
+                >
+                  {cashSession ? "Sesión Iniciada" : "Sesión Cerrada"}
+                </p>
+                <h4 className="text-sm font-bold dark:text-white">
+                  {cashSession
+                    ? `Atiende: ${cashSession.staff_name}`
+                    : "Inicie turno para realizar ventas"}
+                </h4>
+              </div>
+            </div>
+            {cashSession ? (
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                  Fondo Inicial
+                </p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">
+                  {formatearDinero(cashSession.opening_fund)}
+                </p>
+              </div>
+            ) : (
+              <button
+                className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg shadow-amber-600/20 flex items-center gap-2 active:scale-95"
+                onClick={() => setShowCashFundModal(true)}
+              >
+                <span className="material-symbols-outlined text-sm">key</span>
+                ABRIR CAJA AHORA
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
