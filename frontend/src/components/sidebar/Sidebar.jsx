@@ -18,10 +18,10 @@ export const Sidebar = () => {
     canAccessReports,
     activeStaff,
     lockScreen,
-    storeName,
     activeRole,
     cashSession,
     adminMode,
+    lockScreen,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
@@ -180,12 +180,21 @@ export const Sidebar = () => {
         </div>
 
         {/* User Info (Minimalist) */}
-        <div className="px-6 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-200 font-bold border border-slate-200 dark:border-white/5 uppercase">
+        <div
+          className="px-6 py-4 flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group relative"
+          onClick={lockScreen}
+          title="Bloquear Pantalla / Cambiar Usuario"
+        >
+          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-slate-200 font-bold border border-slate-200 dark:border-white/5 uppercase relative group-hover:border-primary transition-colors">
             {displayName.charAt(0)}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="material-icons-outlined text-white text-sm">
+                lock
+              </span>
+            </div>
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold text-primary dark:text-white truncate">
+            <span className="text-sm font-bold text-primary dark:text-white truncate group-hover:text-amber-500 transition-colors">
               {displayName}
             </span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
