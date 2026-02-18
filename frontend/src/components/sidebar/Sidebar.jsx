@@ -18,10 +18,10 @@ export const Sidebar = () => {
     canAccessReports,
     activeStaff,
     lockScreen,
+    storeName,
     activeRole,
     cashSession,
     adminMode,
-    lockScreen,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
