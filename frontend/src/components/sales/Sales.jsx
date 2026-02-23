@@ -78,6 +78,9 @@ export const Sales = () => {
   // Modo de Venta (Filtro Principal)
   const [saleMode, setSaleMode] = useState("SERVICE"); // 'SERVICE' o 'PRODUCT'
 
+  // Mobile Cart State
+  const [showMobileCart, setShowMobileCart] = useState(false);
+
   // Referencias
   const ticketRef = useRef(null);
 
@@ -410,7 +413,7 @@ export const Sales = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-24 lg:pb-0 custom-scrollbar">
           {loadingProducts ? (
             <div className="col-span-full flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
@@ -509,15 +512,65 @@ export const Sales = () => {
         </div>
       </div>
 
+      {/* Botón Flotante para Carrito en Móviles */}
+      {!showMobileCart && (
+        <div className="lg:hidden fixed bottom-4 left-4 right-4 z-[90]">
+          <button
+            onClick={() => setShowMobileCart(true)}
+            className="w-full bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between font-black active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">
+                shopping_cart
+              </span>
+              <span>
+                Ver Orden (
+                {carrito.reduce((acc, item) => acc + item.quantity, 0)})
+              </span>
+            </div>
+            <span className="text-xl">{formatearDinero(total)}</span>
+          </button>
+        </div>
+      )}
+
+      {/* OVERLAY PARA MÓVILES */}
+      {showMobileCart && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[95] lg:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setShowMobileCart(false)}
+        />
+      )}
+
       {/* PANEL DERECHO: CARRITO Y ORDEN */}
-      <div className="w-full lg:w-[450px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl z-10">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
+      <div
+        className={`
+        fixed inset-x-0 bottom-0 z-[100] bg-white dark:bg-slate-900 flex-col h-[85vh] rounded-t-3xl shadow-2xl
+        transition-transform duration-300 ease-in-out
+        ${showMobileCart ? "translate-y-0" : "translate-y-full"}
+        lg:static lg:translate-y-0 lg:w-[450px] lg:h-full lg:border-l lg:border-slate-200 dark:border-slate-800 lg:flex lg:rounded-none lg:shadow-none lg:z-10
+      `}
+      >
+        {/* Agarradera para móviles */}
+        <div
+          className="lg:hidden flex justify-center py-3 cursor-pointer"
+          onClick={() => setShowMobileCart(false)}
+        >
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full"></div>
+        </div>
+
+        <div className="p-4 lg:p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10 rounded-t-3xl lg:rounded-none">
+          <h2 className="text-lg lg:text-xl font-bold dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-emerald-500">
               shopping_basket
             </span>
             Nueva Orden
           </h2>
+          <button
+            className="lg:hidden p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-full bg-slate-100 dark:bg-slate-800"
+            onClick={() => setShowMobileCart(false)}
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
         </div>
 
         {/* SECCIÓN CLIENTE (Movido arriba) */}

@@ -47,3 +47,42 @@
     filter: none;
     padding: 0;
 }
+
+/* Kanban Styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.kanban-column {
+  transition: background-color 0.2s;
+}
+.kanban-column.drag-over {
+  background-color: rgba(16, 185, 129, 0.1); /* Emerald-500/10 */
+  border: 1px dashed #10b981;
+}
+
+.kanban-card {
+  user-select: none;
+}
+.kanban-card:active {
+  cursor: grabbing;
+}
+
+/* Delivery Chip Animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

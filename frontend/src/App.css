@@ -187,7 +187,7 @@ body {
 
 /* 1. Base: < 1024px (móvil/tablet) */
 :root {
-  --header-height: 56px;
+  --header-height: 64px;
   --spacing-xl: 1.25rem;
   --font-3xl: 1.5rem;
   --font-2xl: 1.25rem;

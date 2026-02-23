@@ -21,6 +21,18 @@ export const Orders = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(null);
 
+  // New States for Enhancements
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'kanban'
+  const [filterEmployee, setFilterEmployee] = useState("");
+  const [filterServiceType, setFilterServiceType] = useState(""); // 'kg' | 'unit'
+  const [employees, setEmployees] = useState([]);
+
+  // Filtros avanzados (Bug 3)
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState(""); // efectivo, tarjeta, transferencia
+  const [paymentStatus, setPaymentStatus] = useState(""); // pending, paid
+
   // Estados para liquidación de pago
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [orderToLiquidate, setOrderToLiquidate] = useState(null);
@@ -43,12 +55,14 @@ export const Orders = () => {
         orderService.getOrders(),
         exchangeRateService.getActiveRate(),
         businessSettingsService.getSettings(),
+        staffService.getStaff(),
       ]);
       setOrders(resp[0]);
       if (resp[1] && resp[1].is_active) {
         setExchangeRate(resp[1]);
       }
       setBusinessSettings(resp[2]);
+      setEmployees(resp[3] || []);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -358,8 +372,123 @@ export const Orders = () => {
       if (orderDate > endDate) return false;
     }
 
+    // 4. Filtro por Monto
+    if (minAmount && order.total < parseFloat(minAmount)) return false;
+    if (maxAmount && order.total > parseFloat(maxAmount)) return false;
+
+    // 5. Filtro por Método de Pago
+    if (paymentMethod && order.payment_method !== paymentMethod) return false;
+
+    // 6. Filtro por Estado de Pago
+    if (paymentStatus) {
+      const balance = order.total - (order.paid_amount || 0);
+      const isPaid = order.payment_status === "paid" || balance <= 0;
+      if (paymentStatus === "paid" && !isPaid) return false;
+      if (paymentStatus === "pending" && isPaid) return false;
+    }
+
+    // 7. Filtro por Empleado
+    if (filterEmployee) {
+      if (order.user_id !== filterEmployee) return false;
+    }
+
+    // 8. Filtro por Tipo de Servicio
+    if (filterServiceType) {
+      const hasType = order.order_items?.some(
+        (item) => item.pricing_type === filterServiceType,
+      );
+      if (!hasType) return false;
+    }
+
     return true;
   });
+
+  const getEmployeeName = (userId) => {
+    const emp = employees.find((e) => e.user_id === userId);
+    return emp ? emp.name : "Sistema";
+  };
+
+  // Kanban Logic
+  const handleDragStart = (e, order) => {
+    e.dataTransfer.setData("orderId", order.id);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, newStatus) => {
+    e.preventDefault();
+    const orderId = parseInt(e.dataTransfer.getData("orderId"));
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || order.status === newStatus) return;
+    await handleStatusChange(order, newStatus);
+  };
+
+  const KanbanColumn = ({ status, title }) => {
+    const columnOrders = filteredOrders.filter((o) => o.status === status);
+    return (
+      <div
+        className="kanban-column bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 min-w-[280px] flex-1 flex flex-col h-full border border-slate-200 dark:border-slate-700"
+        onDragOver={handleDragOver}
+        onDrop={(e) => handleDrop(e, status)}
+      >
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">
+            {title}
+          </h3>
+          <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {columnOrders.length}
+          </span>
+        </div>
+        <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+          {columnOrders.map((order) => (
+            <div
+              key={order.id}
+              className="kanban-card bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm cursor-move hover:shadow-md transition-all active:cursor-grabbing"
+              draggable
+              onDragStart={(e) => handleDragStart(e, order)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-white text-xs">
+                    #{order.id} - {order.customers?.name.split(" ")[0]}
+                  </h4>
+                  <p className="text-[10px] text-slate-500">
+                    {order.order_items?.length} items •{" "}
+                    {formatearDinero(order.total)}
+                  </p>
+                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    👤 {getEmployeeName(order.user_id)}
+                  </p>
+                </div>
+              </div>
+              {order.notes && (
+                <div className="text-[10px] text-slate-400 italic bg-slate-50 dark:bg-slate-900 rounded p-1 mb-2">
+                  "{order.notes.substring(0, 30)}..."
+                </div>
+              )}
+              <div className="flex justify-end gap-1">
+                <button
+                  onClick={() => handleReprint(order)}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    print
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+          {columnOrders.length === 0 && (
+            <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+              <span className="text-xs text-slate-400">Sin órdenes</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Función para exportar a Excel detallado
   const exportToExcel = () => {
@@ -445,6 +574,24 @@ export const Orders = () => {
             </button>
           ))}
         </div>
+        <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-emerald-100 text-emerald-600" : "text-slate-400 hover:text-emerald-500"}`}
+            title="Vista Grid"
+          >
+            <span className="material-symbols-outlined text-xl">grid_view</span>
+          </button>
+          <button
+            onClick={() => setViewMode("kanban")}
+            className={`p-2 rounded-lg transition-all ${viewMode === "kanban" ? "bg-emerald-100 text-emerald-600" : "text-slate-400 hover:text-emerald-500"}`}
+            title="Vista Kanban"
+          >
+            <span className="material-symbols-outlined text-xl">
+              view_kanban
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* BARRA DE HERRAMIENTAS DE FILTROS Y EXPORTACIÓN */}
@@ -490,7 +637,7 @@ export const Orders = () => {
 
         {/* Filtros Expandibles (Rango de Fechas) */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in slide-in-from-top-2">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] uppercase font-bold text-slate-400">
                 Desde
@@ -517,6 +664,101 @@ export const Orders = () => {
                 }
               />
             </div>
+
+            {/* Filtros avanzados (Bug 3) */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold text-slate-400">
+                Monto
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  className="w-1/2 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  className="w-1/2 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  value={maxAmount}
+                  onChange={(e) => setMaxAmount(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold text-slate-400">
+                Pago
+              </label>
+              <div className="flex gap-2">
+                <select
+                  className="w-1/2 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="">Método...</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+                <select
+                  className="w-1/2 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value)}
+                >
+                  <option value="">Estado...</option>
+                  <option value="paid">Pagado</option>
+                  <option value="pending">Pendiente</option>
+                </select>
+              </div>
+            </div>
+            {/* Nuevos Filtros: Empleado y Tipo de Servicio */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold text-slate-400">
+                Empleado
+              </label>
+              <select
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                value={filterEmployee}
+                onChange={(e) => setFilterEmployee(e.target.value)}
+              >
+                <option value="" className="text-slate-900 dark:text-white">
+                  Todos
+                </option>
+                {employees.map((emp) => (
+                  <option
+                    key={emp.id}
+                    value={emp.user_id}
+                    className="text-slate-900 bg-white"
+                  >
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase font-bold text-slate-400">
+                Tipo Servicio
+              </label>
+              <select
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                value={filterServiceType}
+                onChange={(e) => setFilterServiceType(e.target.value)}
+              >
+                <option value="" className="text-slate-900 dark:text-white">
+                  Todos
+                </option>
+                <option value="kg" className="text-slate-900 dark:text-white">
+                  Por Kilo
+                </option>
+                <option value="unit" className="text-slate-900 dark:text-white">
+                  Por Pieza
+                </option>
+              </select>
+            </div>
           </div>
         )}
       </div>
@@ -524,6 +766,13 @@ export const Orders = () => {
       {loading ? (
         <div className="flex justify-center p-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+        </div>
+      ) : viewMode === "kanban" ? (
+        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)] items-start">
+          <KanbanColumn status="received" title="Recibido" />
+          <KanbanColumn status="processing" title="En Lavado" />
+          <KanbanColumn status="ready" title="Listo P/ Entrega" />
+          <KanbanColumn status="delivered" title="Entregado" />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -540,6 +789,10 @@ export const Orders = () => {
                   setFilter("all");
                   setSearchTerm("");
                   setDateRange({ start: "", end: "" });
+                  setMinAmount("");
+                  setMaxAmount("");
+                  setPaymentMethod("");
+                  setPaymentStatus("");
                 }}
                 className="mt-4 text-emerald-500 font-bold hover:underline"
               >
@@ -559,9 +812,16 @@ export const Orders = () => {
                     >
                       {statusLabels[order.status]?.label}
                     </span>
+
                     <h3 className="text-sm font-bold mt-2 text-slate-800 dark:text-white uppercase">
                       #{order.id.toString().slice(-6)} - {order.customers?.name}
                     </h3>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[10px]">
+                        person
+                      </span>
+                      {getEmployeeName(order.user_id)}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] text-slate-400">Prometido</p>
@@ -570,6 +830,7 @@ export const Orders = () => {
                     >
                       {new Date(order.promised_at).toLocaleDateString()}
                     </p>
+                    <div className="flex justify-end mt-1"></div>
                   </div>
                 </div>
 
