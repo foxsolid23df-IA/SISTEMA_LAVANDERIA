@@ -12,15 +12,9 @@ export const businessSettingsService = {
             .from('business_settings')
             .select('*')
             .eq('user_id', user.id)
-            .limit(1)
-            .single();
+            .maybeSingle();
 
-        if (error) {
-            if (error.code === 'PGRST116') { // Código de 'No rows found'
-                return null;
-            }
-            throw error;
-        }
+        if (error) throw error;
         return data;
     },
 

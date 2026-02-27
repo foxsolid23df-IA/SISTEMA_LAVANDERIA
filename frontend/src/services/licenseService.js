@@ -9,6 +9,11 @@ export const licenseService = {
      * Sincroniza la fecha de expiración desde Supabase al backend local (Electron)
      */
     syncLicenseWithLocal: async () => {
+        // --- AJUSTE PARA VERCEL / WEB ---
+        if (!config.isElectron) {
+            return null;
+        }
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
