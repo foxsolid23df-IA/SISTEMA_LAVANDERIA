@@ -1,19 +1,21 @@
-
 import { supabase } from '../supabase';
 
 export const businessSettingsService = {
-    // Obtener la configuración del negocio
+    // Obtener la configuración del negocio del cliente actual
     getSettings: async () => {
-        // Obtenemos el primer registro, ya que asumimos una sola configuración por app
+        // 1. Obtener el usuario actual
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) throw new Error("No hay una sesión activa");
+
+        // Obtenemos el registro de configuración específico de este usuario
         const { data, error } = await supabase
             .from('business_settings')
             .select('*')
+            .eq('user_id', user.id)
             .limit(1)
             .single();
 
         if (error) {
-            // Si no existe, podemos devolver un objeto vacío o null, 
-            // pero si es error de conexión lanzamos error.
             if (error.code === 'PGRST116') { // Código de 'No rows found'
                 return null;
             }
@@ -24,49 +26,48 @@ export const businessSettingsService = {
 
     // Actualizar o crear la configuración
     saveSettings: async (settingsData) => {
+        // 1. Obtener el usuario actual
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) throw new Error("No hay una sesión activa");
+
         // Primero intentamos obtener el registro existente
         const existingSettings = await businessSettingsService.getSettings();
 
-        if (existingSettings) {
-            // Actualizar
+        // Limpiamos los campos que se guardarán
+        const payloadToSave = {
+            name: settingsData.name,
+            address: settingsData.address,
+            phone: settingsData.phone,
+            logo_url: settingsData.logo_url,
+            ticket_message: settingsData.ticket_message,
+            printer_width: settingsData.printer_width || 80,
+            printer_font_size: settingsData.printer_font_size || 12,
+            printer_font_family: settingsData.printer_font_family || 'Courier New',
+            printer_is_bold: settingsData.printer_is_bold || false,
+            printer_margin: settingsData.printer_margin || 0,
+            ticket_double_print: settingsData.ticket_double_print || false,
+            updated_at: new Date().toISOString()
+        };
+
+        if (existingSettings && existingSettings.id) {
+            // Actualizar el de este usuario en concreto
             const { data, error } = await supabase
                 .from('business_settings')
-                .update({
-                    name: settingsData.name,
-                    address: settingsData.address,
-                    phone: settingsData.phone,
-                    logo_url: settingsData.logo_url,
-                    ticket_message: settingsData.ticket_message,
-                    printer_width: settingsData.printer_width || 80,
-                    printer_font_size: settingsData.printer_font_size || 12,
-                    printer_font_family: settingsData.printer_font_family || 'Courier New',
-                    printer_is_bold: settingsData.printer_is_bold || false,
-                    printer_margin: settingsData.printer_margin || 0,
-                    ticket_double_print: settingsData.ticket_double_print || false,
-                    updated_at: new Date().toISOString()
-                })
+                .update(payloadToSave)
                 .eq('id', existingSettings.id)
+                .eq('user_id', user.id)
                 .select()
                 .single();
 
             if (error) throw error;
             return data;
         } else {
-            // Crear nuevo
+            // Crear nuevo y atarlo al usuario en concreto
             const { data, error } = await supabase
                 .from('business_settings')
                 .insert([{
-                    name: settingsData.name,
-                    address: settingsData.address,
-                    phone: settingsData.phone,
-                    logo_url: settingsData.logo_url,
-                    ticket_message: settingsData.ticket_message,
-                    printer_width: settingsData.printer_width || 80,
-                    printer_font_size: settingsData.printer_font_size || 12,
-                    printer_font_family: settingsData.printer_font_family || 'Courier New',
-                    printer_is_bold: settingsData.printer_is_bold || false,
-                    printer_margin: settingsData.printer_margin || 0,
-                    ticket_double_print: settingsData.ticket_double_print || false
+                    ...payloadToSave,
+                    user_id: user.id
                 }])
                 .select()
                 .single();

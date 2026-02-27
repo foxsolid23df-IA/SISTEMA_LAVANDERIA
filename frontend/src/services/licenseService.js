@@ -65,15 +65,18 @@ export const licenseService = {
             if (!response.ok) throw new Error('Offline');
 
             const health = await response.json();
-            const expiresAt = health.license_expires_at ? new Date(health.license_expires_at) : null;
+            let expiresAt = health.license_expires_at ? new Date(health.license_expires_at) : null;
             const now = new Date();
 
-            if (!expiresAt) {
-                // Si no hay fecha local, pero hay internet, intentamos sincronizar
-                if (navigator.onLine) {
-                    const newExpiry = await licenseService.syncLicenseWithLocal();
-                    if (newExpiry) return { isValid: new Date(newExpiry) > now, expiresAt: new Date(newExpiry), isOffline: false };
+            // Si no hay fecha local o ya expiró, y hay internet, re-sincronizamos
+            if ((!expiresAt || expiresAt <= now) && navigator.onLine) {
+                const newExpiry = await licenseService.syncLicenseWithLocal();
+                if (newExpiry) {
+                    expiresAt = new Date(newExpiry);
                 }
+            }
+
+            if (!expiresAt) {
                 return { isValid: false, expiresAt: null, message: "No se encontró registro de licencia local." };
             }
 

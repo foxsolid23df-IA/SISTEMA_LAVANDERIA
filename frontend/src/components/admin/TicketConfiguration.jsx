@@ -17,7 +17,6 @@ export const TicketConfiguration = () => {
     printer_is_bold: false,
     printer_margin: 0,
     printer_name: "",
-    printer_name: "",
     ticket_double_print: false,
   });
   const [printersList, setPrintersList] = useState([]);
@@ -51,7 +50,6 @@ export const TicketConfiguration = () => {
             settings.printer_font_family || "'Courier New', Courier, monospace",
           printer_is_bold: settings.printer_is_bold || false,
           printer_margin: settings.printer_margin || 0,
-          printer_name: settings.printer_name || "",
           printer_name: settings.printer_name || "",
           ticket_double_print: settings.ticket_double_print || false,
         });
