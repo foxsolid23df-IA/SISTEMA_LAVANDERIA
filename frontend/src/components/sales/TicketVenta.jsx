@@ -186,6 +186,27 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
           style={{
             display: "flex",
             justifyContent: "space-between",
+            fontSize: "0.8em",
+            textTransform: "uppercase",
+            marginTop: "2px",
+          }}
+        >
+          <span>MÉTODO PAGO:</span>
+          <span>
+            {venta.metodo_pago === "cash"
+              ? "EFECTIVO"
+              : venta.metodo_pago === "card"
+                ? "TARJETA"
+                : venta.metodo_pago === "transferencia"
+                  ? "TRANSFERENCIA"
+                  : venta.metodo_pago || "N/A"}
+          </span>
+        </div>
+        <div
+          className="ticket-summary-row"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
             fontWeight: "bold",
             marginTop: "2px",
           }}

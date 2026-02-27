@@ -955,7 +955,7 @@ export const Sales = () => {
                 </h4>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button
                   onClick={() => {
                     setMetodoPago("cash");
@@ -966,7 +966,9 @@ export const Sales = () => {
                   <span className="material-symbols-outlined text-3xl">
                     payments
                   </span>
-                  <span className="text-xs font-bold uppercase">Efectivo</span>
+                  <span className="text-[10px] font-bold uppercase">
+                    Efectivo
+                  </span>
                 </button>
                 <button
                   onClick={() => {
@@ -978,7 +980,23 @@ export const Sales = () => {
                   <span className="material-symbols-outlined text-3xl">
                     credit_card
                   </span>
-                  <span className="text-xs font-bold uppercase">Tarjeta</span>
+                  <span className="text-[10px] font-bold uppercase">
+                    Tarjeta
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMetodoPago("transferencia");
+                    setUsarUSD(false);
+                  }}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${metodoPago === "transferencia" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "border-slate-100 dark:border-slate-800 text-slate-400"}`}
+                >
+                  <span className="material-symbols-outlined text-3xl">
+                    account_balance
+                  </span>
+                  <span className="text-[10px] font-bold uppercase">
+                    Transf.
+                  </span>
                 </button>
 
                 {exchangeRate && (
@@ -987,7 +1005,7 @@ export const Sales = () => {
                       setMetodoPago("cash");
                       setUsarUSD(true);
                     }}
-                    className={`col-span-2 flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${usarUSD ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600" : "border-slate-100 dark:border-slate-800 text-slate-400"}`}
+                    className={`col-span-full flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${usarUSD ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600" : "border-slate-100 dark:border-slate-800 text-slate-400"}`}
                   >
                     <span className="material-symbols-outlined text-xl">
                       currency_exchange
