@@ -9,6 +9,7 @@ import { productService } from "../../services/productService";
 import { businessSettingsService } from "../../services/businessSettingsService";
 import { exchangeRateService } from "../../services/exchangeRateService";
 import { printService } from "../../services/printService";
+import { useSettings } from "../../contexts/SettingsContext";
 import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
@@ -76,7 +77,14 @@ export const Sales = () => {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   // Modo de Venta (Filtro Principal)
-  const [saleMode, setSaleMode] = useState("SERVICE"); // 'SERVICE' o 'PRODUCT'
+  const [saleMode, setSaleMode] = useState("SERVICE"); // 'SERVICE', 'PRODUCT' o 'COMMON'
+
+  // Estado para Producto Común
+  const [commonProductForm, setCommonProductForm] = useState({
+    description: "",
+    quantity: 1,
+    price: "",
+  });
 
   // Mobile Cart State
   const [showMobileCart, setShowMobileCart] = useState(false);
@@ -100,17 +108,13 @@ export const Sales = () => {
     });
   }, [productos, searchTerm, filterCategory, saleMode]);
 
-  // Estados de configuración
-  const [businessSettings, setBusinessSettings] = useState(null);
+  // Estados de configuración (Settings vaticano desde Context)
+  const { settings: businessSettings, loading: loadingSettings } =
+    useSettings();
   const [exchangeRate, setExchangeRate] = useState(null);
 
   // Cargar configuración al iniciar
   useEffect(() => {
-    businessSettingsService
-      .getSettings()
-      .then(setBusinessSettings)
-      .catch((err) => console.error("Error loading business settings:", err));
-
     exchangeRateService
       .getActiveRate()
       .then((rate) => {
@@ -137,6 +141,48 @@ export const Sales = () => {
     setClienteSeleccionado(newClient);
     setBusquedaCliente(newClient.name);
     setIsClientModalOpen(false);
+  };
+
+  const handleAddCommonProduct = () => {
+    if (!commonProductForm.description || !commonProductForm.price) {
+      Swal.fire("Incompleto", "Favor de llenar todos los campos", "warning");
+      return;
+    }
+
+    const price = parseFloat(commonProductForm.price);
+    const quantity = parseFloat(commonProductForm.quantity) || 1;
+
+    if (isNaN(price) || price <= 0) {
+      Swal.fire(
+        "Precio Inválido",
+        "El precio debe ser un número mayor a 0",
+        "error",
+      );
+      return;
+    }
+
+    const item = {
+      id: `common-${Date.now()}`,
+      name: commonProductForm.description.toUpperCase(),
+      price: price,
+      type: "PRODUCT",
+      pricing_type: "unit",
+      is_common: true,
+      stock: 999999,
+    };
+
+    agregarProducto(item, quantity);
+    setCommonProductForm({ description: "", quantity: 1, price: "" });
+
+    Swal.fire({
+      icon: "success",
+      title: "Agregado",
+      text: "Producto añadido a la orden",
+      timer: 1500,
+      showConfirmButton: false,
+      position: "top-end",
+      toast: true,
+    });
   };
 
   // Procesar Orden
@@ -180,7 +226,7 @@ export const Sales = () => {
       const orderData = {
         customer_id: clienteSeleccionado.id,
         items: carrito.map((item) => ({
-          product_id: item.id,
+          product_id: String(item.id).startsWith("common-") ? null : item.id,
           product_name: item.name,
           quantity: item.quantity,
           price: item.price,
@@ -391,30 +437,147 @@ export const Sales = () => {
               </span>
               PRODUCTOS
             </button>
+            <button
+              onClick={() => setSaleMode("COMMON")}
+              className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black transition-all ${
+                saleMode === "COMMON"
+                  ? "bg-white dark:bg-slate-800 text-rose-600 shadow-lg"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">add_box</span>
+              PRODUCTO COMÚN
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10">
-              search
-            </span>
-            <input
-              type="text"
-              className="w-full pl-16 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-slate-900 font-bold dark:text-white"
-              placeholder={
-                saleMode === "SERVICE"
-                  ? "Buscar servicio (Lavado, Secado, Planchado)..."
-                  : "Buscar producto por nombre o código..."
-              }
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {saleMode !== "COMMON" && (
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10">
+                search
+              </span>
+              <input
+                type="text"
+                className="w-full pl-16 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-slate-900 font-bold dark:text-white"
+                placeholder={
+                  saleMode === "SERVICE"
+                    ? "Buscar servicio (Lavado, Secado, Planchado)..."
+                    : "Buscar producto por nombre o código..."
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-24 lg:pb-0 custom-scrollbar">
-          {loadingProducts ? (
+          {saleMode === "COMMON" ? (
+            <div className="col-span-full bg-white dark:bg-slate-900 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+              <div className="w-full max-w-md space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/10 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <span className="material-symbols-outlined text-4xl">
+                      add_shopping_cart
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white">
+                    Agregar Producto Común
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-tight">
+                    Ítem que no figura en el catálogo
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      Descripción del Producto
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white font-bold transition-all transition-all"
+                      placeholder="Ej. Jabón extra, Suavizante especial..."
+                      value={commonProductForm.description}
+                      onChange={(e) =>
+                        setCommonProductForm((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        Cantidad
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white font-bold transition-all"
+                        value={commonProductForm.quantity}
+                        onChange={(e) =>
+                          setCommonProductForm((prev) => ({
+                            ...prev,
+                            quantity: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                        Precio Unitario
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
+                          $
+                        </span>
+                        <input
+                          type="number"
+                          className="w-full pl-8 pr-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white font-bold transition-all"
+                          placeholder="0.00"
+                          value={commonProductForm.price}
+                          onChange={(e) =>
+                            setCommonProductForm((prev) => ({
+                              ...prev,
+                              price: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() =>
+                      setCommonProductForm({
+                        description: "",
+                        quantity: 1,
+                        price: "",
+                      })
+                    }
+                    className="flex-1 px-6 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddCommonProduct}
+                    className="flex-[2] px-6 py-4 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/30 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      add_circle
+                    </span>
+                    Aceptar y Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : loadingProducts ? (
             <div className="col-span-full flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
             </div>

@@ -31,6 +31,7 @@ import Maintenance from "../components/admin/Maintenance";
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
+import { SettingsProvider } from "../contexts/SettingsContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
 import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
@@ -182,175 +183,177 @@ export const Routing = () => {
           path="/*"
           element={
             <AuthProvider>
-              <ProductProvider>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route
-                    path="/register/:invitationCode?"
-                    element={<Login />}
-                  />
+              <SettingsProvider>
+                <ProductProvider>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route
+                      path="/register/:invitationCode?"
+                      element={<Login />}
+                    />
 
-                  <Route
-                    path="/"
-                    element={
-                      <PrivateLayout>
-                        <Sales />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/ventas"
-                    element={
-                      <PrivateLayout>
-                        <Sales />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/servicios"
-                    element={
-                      <PrivateLayout>
-                        <Inventory mode="SERVICE" />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/productos"
-                    element={
-                      <PrivateLayout>
-                        <Inventory mode="PRODUCT" />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/"
+                      element={
+                        <PrivateLayout>
+                          <Sales />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/ventas"
+                      element={
+                        <PrivateLayout>
+                          <Sales />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/servicios"
+                      element={
+                        <PrivateLayout>
+                          <Inventory mode="SERVICE" />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/productos"
+                      element={
+                        <PrivateLayout>
+                          <Inventory mode="PRODUCT" />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/insumos"
-                    element={
-                      <PrivateLayout>
-                        <SupplyInventory />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/insumos"
+                      element={
+                        <PrivateLayout>
+                          <SupplyInventory />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/historial"
-                    element={
-                      <PrivateLayout>
-                        <Historial />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/ordenes"
-                    element={
-                      <PrivateLayout>
-                        <Orders />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/estadisticas"
-                    element={
-                      <PrivateLayout>
-                        <Stats />
-                      </PrivateLayout>
-                    }
-                  />
-                  <Route
-                    path="/clientes"
-                    element={
-                      <PrivateLayout>
-                        <ClientManager />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/historial"
+                      element={
+                        <PrivateLayout>
+                          <Historial />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/ordenes"
+                      element={
+                        <PrivateLayout>
+                          <Orders />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/estadisticas"
+                      element={
+                        <PrivateLayout>
+                          <Stats />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/clientes"
+                      element={
+                        <PrivateLayout>
+                          <ClientManager />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  {/* Panel de Administración solo para Admin */}
-                  <Route
-                    path="/admin"
-                    element={
-                      <PrivateLayout>
-                        <AdminRoute>
-                          <AdminPanel />
-                        </AdminRoute>
-                      </PrivateLayout>
-                    }
-                  />
+                    {/* Panel de Administración solo para Admin */}
+                    <Route
+                      path="/admin"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <AdminPanel />
+                          </AdminRoute>
+                        </PrivateLayout>
+                      }
+                    />
 
-                  {/* Gestión de Usuarios solo para Admin */}
-                  <Route
-                    path="/usuarios"
-                    element={
-                      <PrivateLayout>
-                        <AdminRoute>
-                          <UserManager />
-                        </AdminRoute>
-                      </PrivateLayout>
-                    }
-                  />
+                    {/* Gestión de Usuarios solo para Admin */}
+                    <Route
+                      path="/usuarios"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <UserManager />
+                          </AdminRoute>
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/configuracion-dolares"
-                    element={
-                      <PrivateLayout>
-                        <ExchangeRateSettings />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/configuracion-dolares"
+                      element={
+                        <PrivateLayout>
+                          <ExchangeRateSettings />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/precios"
-                    element={
-                      <PrivateLayout>
-                        <PriceConfiguration />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/precios"
+                      element={
+                        <PrivateLayout>
+                          <PriceConfiguration />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/configuracion-ticket"
-                    element={
-                      <PrivateLayout>
-                        <TicketConfiguration />
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/configuracion-ticket"
+                      element={
+                        <PrivateLayout>
+                          <TicketConfiguration />
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="/soporte-tecnico-especializado-foxsolid"
-                    element={
-                      <PrivateLayout>
-                        <AdminRoute>
-                          <Maintenance />
-                        </AdminRoute>
-                      </PrivateLayout>
-                    }
-                  />
+                    <Route
+                      path="/soporte-tecnico-especializado-foxsolid"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <Maintenance />
+                          </AdminRoute>
+                        </PrivateLayout>
+                      }
+                    />
 
-                  {/* Ruta Secreta Super Admin */}
-                  <Route
-                    path="/super-admin/licencias"
-                    element={
-                      <PrivateLayout>
-                        <SuperAdminRoute>
-                          <MasterLicenseManager />
-                        </SuperAdminRoute>
-                      </PrivateLayout>
-                    }
-                  />
+                    {/* Ruta Secreta Super Admin */}
+                    <Route
+                      path="/super-admin/licencias"
+                      element={
+                        <PrivateLayout>
+                          <SuperAdminRoute>
+                            <MasterLicenseManager />
+                          </SuperAdminRoute>
+                        </PrivateLayout>
+                      }
+                    />
 
-                  <Route
-                    path="*"
-                    element={
-                      <div style={{ padding: "2rem", textAlign: "center" }}>
-                        <h1>Error 404</h1>
-                        <p>Página no encontrada</p>
-                        <Link to="/">Volver al Inicio</Link>
-                      </div>
-                    }
-                  />
-                </Routes>
-              </ProductProvider>
+                    <Route
+                      path="*"
+                      element={
+                        <div style={{ padding: "2rem", textAlign: "center" }}>
+                          <h1>Error 404</h1>
+                          <p>Página no encontrada</p>
+                          <Link to="/">Volver al Inicio</Link>
+                        </div>
+                      }
+                    />
+                  </Routes>
+                </ProductProvider>
+              </SettingsProvider>
             </AuthProvider>
           }
         />

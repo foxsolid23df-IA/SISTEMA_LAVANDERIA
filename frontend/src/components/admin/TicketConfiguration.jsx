@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { businessSettingsService } from "../../services/businessSettingsService";
+import { useSettings } from "../../contexts/SettingsContext";
 import { printService } from "../../services/printService";
 import "./TicketConfiguration.css";
 
 export const TicketConfiguration = () => {
+  const { settings, updateSettings, loading: loadingContext } = useSettings();
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -24,41 +25,33 @@ export const TicketConfiguration = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadSettings();
+    if (settings) {
+      setFormData({
+        name: settings.name || "",
+        address: settings.address || "",
+        phone: settings.phone || "",
+        logo_url: settings.logo_url || "",
+        ticket_message: settings.ticket_message || "",
+        printer_width: settings.printer_width || 80,
+        printer_font_size: settings.printer_font_size || 12,
+        printer_font_family:
+          settings.printer_font_family || "'Courier New', Courier, monospace",
+        printer_is_bold: settings.printer_is_bold || false,
+        printer_margin: settings.printer_margin || 0,
+        printer_name: settings.printer_name || "",
+        ticket_double_print: settings.ticket_double_print || false,
+      });
+    }
+    setLoading(loadingContext);
     loadPrinters();
-  }, []);
+  }, [settings, loadingContext]);
 
   const loadPrinters = async () => {
-    const list = await printService.getPrinters();
-    setPrintersList(list);
-  };
-
-  const loadSettings = async () => {
     try {
-      setLoading(true);
-      const settings = await businessSettingsService.getSettings();
-      if (settings) {
-        setFormData({
-          name: settings.name || "",
-          address: settings.address || "",
-          phone: settings.phone || "",
-          logo_url: settings.logo_url || "",
-          ticket_message: settings.ticket_message || "",
-          printer_width: settings.printer_width || 80,
-          printer_font_size: settings.printer_font_size || 12,
-          printer_font_family:
-            settings.printer_font_family || "'Courier New', Courier, monospace",
-          printer_is_bold: settings.printer_is_bold || false,
-          printer_margin: settings.printer_margin || 0,
-          printer_name: settings.printer_name || "",
-          ticket_double_print: settings.ticket_double_print || false,
-        });
-      }
-    } catch (error) {
-      console.error("Error cargando configuración:", error);
-      Swal.fire("Error", "No se pudo cargar la configuración", "error");
-    } finally {
-      setLoading(false);
+      const list = await printService.getPrinters();
+      setPrintersList(list);
+    } catch (e) {
+      console.error("Error loading printers:", e);
     }
   };
 
@@ -74,13 +67,13 @@ export const TicketConfiguration = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await businessSettingsService.saveSettings(formData);
+      await updateSettings(formData);
       Swal.fire({
-        title: "Guardado",
-        text: "La configuración del ticket ha sido actualizada",
+        title: "¡Configuración Guardada!",
+        text: "Los cambios se han sincronizado con todos tus usuarios registrados en Gestión de Usuarios.",
         icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        timer: 3000,
+        showConfirmButton: true,
       });
     } catch (error) {
       console.error("Error guardando configuración:", error);

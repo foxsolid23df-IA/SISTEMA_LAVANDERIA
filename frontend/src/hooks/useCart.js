@@ -7,26 +7,27 @@ export const useCart = (mostrarError) => {
     const [carrito, setCarrito] = useState([])
 
     // 3. FUNCIÓN PARA AGREGAR UN PRODUCTO AL CARRITO
-    const agregarProducto = (producto) => {
+    const agregarProducto = (producto, initialQuantity = 1) => {
         setCarrito(carritoAnterior => {
             // Buscar si el producto ya está en el carrito
             const productoExistente = carritoAnterior.find(item => item.id === producto.id)
 
             if (productoExistente) {
+                const qtyToAdd = parseFloat(initialQuantity) || 1;
                 // Si es un servicio (cobro por kg o unitario sin stock crítico), simplemente incrementamos
                 if (producto.type === 'SERVICE') {
                     return carritoAnterior.map(item =>
                         item.id === producto.id
-                            ? { ...item, quantity: item.quantity + 1 }
+                            ? { ...item, quantity: item.quantity + qtyToAdd }
                             : item
                     )
                 }
 
                 // Si es producto físico, verificar stock
-                if (productoExistente.quantity < producto.stock) {
+                if (productoExistente.quantity + qtyToAdd <= producto.stock) {
                     return carritoAnterior.map(item =>
                         item.id === producto.id
-                            ? { ...item, quantity: item.quantity + 1 }
+                            ? { ...item, quantity: item.quantity + qtyToAdd }
                             : item
                     )
                 } else {
@@ -35,13 +36,14 @@ export const useCart = (mostrarError) => {
                 }
             } else {
                 // Si no existe, verificar si es servicio o tiene stock
-                if (producto.type === 'SERVICE' || producto.stock > 0) {
+                const qtyToAdd = parseFloat(initialQuantity) || 1;
+                if (producto.type === 'SERVICE' || producto.stock >= qtyToAdd) {
                     return [...carritoAnterior, {
                         ...producto,
-                        quantity: 1
+                        quantity: qtyToAdd
                     }]
                 } else {
-                    mostrarError?.(`${producto.name} está sin stock`)
+                    mostrarError?.(`${producto.name} está sin stock o cantidad excede disponible`)
                     return carritoAnterior
                 }
             }

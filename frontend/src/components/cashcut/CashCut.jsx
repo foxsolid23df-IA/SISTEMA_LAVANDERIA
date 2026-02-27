@@ -3,7 +3,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { cashCutService } from "../../services/cashCutService";
 import { salesService } from "../../services/salesService";
 import { terminalService } from "../../services/terminalService";
-import { businessSettingsService } from "../../services/businessSettingsService";
+import { useSettings } from "../../contexts/SettingsContext";
 import { cashWithdrawalService } from "../../services/cashWithdrawalService"; // Import Service
 import { printService } from "../../services/printService";
 import TicketCorte from "./TicketCorte";
@@ -47,7 +47,7 @@ export const CashCut = ({ onClose }) => {
   const [showTicket, setShowTicket] = useState(false);
   const [cutResult, setCutResult] = useState(null);
 
-  const [settings, setSettings] = useState(null);
+  const { settings, loading: loadingSettings } = useSettings();
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false); // State for modal
   const ticketRef = useRef(null);
 
@@ -385,19 +385,6 @@ export const CashCut = ({ onClose }) => {
   useEffect(() => {
     loadSummary();
   }, [cutType]);
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    try {
-      const data = await businessSettingsService.getSettings();
-      setSettings(data);
-    } catch (error) {
-      console.error("Error cargando configuración:", error);
-    }
-  };
 
   if (loading && !summary) {
     return (
