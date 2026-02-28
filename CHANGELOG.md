@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.20] - 2026-02-28
+
+### Added
+
+- **Insumos Internos (Control Pro):** Implementación de funciones avanzadas de edición y borrado en el Resumen de Existencias.
+- **Edición Flex:** Capacidad para ajustar manualmente el Stock Actual, Nombre, Unidad y Stock Mínimo (reservado para Gerente y Admin).
+- **Seguridad y Validación:** Sistema de doble confirmación por texto para eliminación de insumos, evitando acciones accidentales.
+- **Borrado Suave:** Integración de borrado lógico (is_active) para mantener la integridad referencial en reportes históricos.
+- **Multi-Entorno:** Optimización garantizada para ejecución estable tanto en versión Web como instalador `.exe`.
+
 ## [1.4.16] - 2026-02-17
 
 ### Fixed

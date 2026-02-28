@@ -10,6 +10,7 @@ export const supplyService = {
             .from('supplies')
             .select('*')
             .eq('user_id', user.id)
+            .not('is_active', 'eq', false) // Use .not to handle cases where is_active is null before migration is complete
             .order('name', { ascending: true });
 
         if (error) throw error;
@@ -35,6 +36,44 @@ export const supplyService = {
 
         if (error) throw error;
         return data;
+    },
+
+    // Actualizar nombre, unidad y min_stock
+    update: async (id, supplyData) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No hay una sesión activa para actualizar insumos.");
+
+        const { data, error } = await supabase
+            .from('supplies')
+            .update({
+                name: supplyData.name,
+                unit_measure: supplyData.unit_measure,
+                min_stock: parseFloat(supplyData.min_stock || 0),
+                current_stock: parseFloat(supplyData.current_stock || 0)
+            })
+            .eq('id', id)
+            .eq('user_id', user.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    // Borrado suave
+    delete: async (id) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No hay una sesión activa para borrar insumos.");
+
+        // Realizar un borrado suave actualizando is_active a false
+        const { data, error } = await supabase
+            .from('supplies')
+            .update({ is_active: false })
+            .eq('id', id)
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+        return true;
     },
 
     // Registrar entrada (vinculado a user_id)
