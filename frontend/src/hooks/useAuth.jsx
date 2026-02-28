@@ -302,8 +302,7 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar permisos basados en el empleado ACTIVO
   const activeRole = activeStaff?.role || "cajero";
-  const canAccessAdmin =
-    !!user || activeStaff?.isOwner || activeRole === "admin";
+  const canAccessAdmin = activeStaff?.isOwner || activeRole === "admin";
   const canAccessReports = canAccessAdmin || activeRole === "gerente";
 
   // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios

@@ -276,7 +276,7 @@ export const salesService = {
             .select(`
                 *,
                 sale_items (*),
-                staff:user_id (name, email)
+                staff:user_id (name:full_name, email)
             `)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
