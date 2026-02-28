@@ -301,62 +301,85 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Verificar permisos basados en el empleado ACTIVO
-  // Verificar permisos: El dueño tiene acceso total por defecto si está logueado con cuenta principal
   const activeRole = activeStaff?.role || "cajero";
   const canAccessAdmin =
     !!user || activeStaff?.isOwner || activeRole === "admin";
   const canAccessReports = canAccessAdmin || activeRole === "gerente";
 
-  const value = {
-    // Usuario autenticado de Supabase (dueño de la tienda)
-    user: user ? { ...user, ...profile } : null,
-    token: session?.access_token,
+  // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios
+  const memoizedUser = React.useMemo(
+    () => (user ? { ...user, ...profile } : null),
+    [user, profile],
+  );
 
-    // Funciones de auth principales
-    login,
-    signUp,
-    logout,
-    loading,
+  // Memoizar el valor del contexto
+  const value = React.useMemo(
+    () => ({
+      // Usuario autenticado de Supabase (dueño de la tienda)
+      user: memoizedUser,
+      token: session?.access_token,
 
-    // PERMISOS basados en el empleado activo
-    isAdmin: canAccessAdmin, // Solo propietario o admin pueden gestionar usuarios
-    canAccessReports: canAccessReports, // Gerentes pueden ver reportes
-    activeRole, // Rol del empleado actual
+      // Funciones de auth principales
+      login,
+      signUp,
+      logout,
+      loading,
 
-    // Sistema de empleados
-    activeStaff, // Quien está operando la caja actualmente
-    isLocked, // Si la pantalla está bloqueada
-    loginWithPin, // Login de empleado por PIN
-    lockScreen, // Bloquear pantalla
-    unlockAsOwner, // Desbloquear como propietario
+      // PERMISOS basados en el empleado activo
+      isAdmin: canAccessAdmin, // Solo propietario o admin pueden gestionar usuarios
+      canAccessReports: canAccessReports, // Gerentes pueden ver reportes
+      activeRole, // Rol del empleado actual
 
-    // Seguridad Avanzada 2026
-    updateProfile, // Actualizar datos del perfil
-    verifyMasterPin, // Validar PIN Maestro
-    verifyRecoveryCode, // Validar Código de Recuperación
+      // Sistema de empleados
+      activeStaff, // Quien está operando la caja actualmente
+      isLocked, // Si la pantalla está bloqueada
+      loginWithPin, // Login de empleado por PIN
+      lockScreen, // Bloquear pantalla
+      unlockAsOwner, // Desbloquear como propietario
 
-    // Sistema de sesión de caja (fondo de caja)
-    cashSession, // Sesión de caja activa
-    needsCashFund, // Si necesita ingresar fondo de caja
-    checkCashSession, // Verificar si hay sesión activa
-    openCashSession, // Abrir sesión con fondo inicial
-    closeCashSession, // Cerrar sesión de caja
+      // Seguridad Avanzada 2026
+      updateProfile, // Actualizar datos del perfil
+      verifyMasterPin, // Validar PIN Maestro
+      verifyRecoveryCode, // Validar Código de Recuperación
 
-    // Modo Admin (sin terminal/caja)
-    adminMode, // Si está en modo admin sin caja
-    setAdminMode: (value) => {
-      setAdminMode(value);
-      if (value) {
-        sessionStorage.setItem("adminMode", "true");
-      } else {
-        sessionStorage.removeItem("adminMode");
-      }
-    },
+      // Sistema de sesión de caja (fondo de caja)
+      cashSession, // Sesión de caja activa
+      needsCashFund, // Si necesita ingresar fondo de caja
+      checkCashSession, // Verificar si hay sesión activa
+      openCashSession, // Abrir sesión con fondo inicial
+      closeCashSession, // Cerrar sesión de caja
 
-    // Info de la tienda
-    storeName: profile?.store_name,
-    masterPinConfigured: !!profile?.master_pin,
-  };
+      // Modo Admin (sin terminal/caja)
+      adminMode, // Si está en modo admin sin caja
+      setAdminMode: (value) => {
+        setAdminMode(value);
+        if (value) {
+          sessionStorage.setItem("adminMode", "true");
+        } else {
+          sessionStorage.removeItem("adminMode");
+        }
+      },
+
+      // Info de la tienda
+      storeName: profile?.store_name,
+      masterPinConfigured: !!profile?.master_pin,
+    }),
+    [
+      memoizedUser,
+      session?.access_token,
+      loading,
+      canAccessAdmin,
+      canAccessReports,
+      activeRole,
+      activeStaff,
+      isLocked,
+      cashSession,
+      needsCashFund,
+      adminMode,
+      profile?.store_name,
+      profile?.master_pin,
+    ],
+  );
 
   return (
     <AuthContext.Provider value={value}>

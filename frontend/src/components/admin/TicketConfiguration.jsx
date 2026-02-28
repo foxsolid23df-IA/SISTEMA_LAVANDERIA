@@ -21,7 +21,6 @@ export const TicketConfiguration = () => {
     ticket_double_print: false,
   });
   const [printersList, setPrintersList] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -42,9 +41,12 @@ export const TicketConfiguration = () => {
         ticket_double_print: settings.ticket_double_print || false,
       });
     }
-    setLoading(loadingContext);
     loadPrinters();
-  }, [settings, loadingContext]);
+  }, [settings]);
+
+  useEffect(() => {
+    loadPrinters();
+  }, []); // Cargar impresoras solo una vez al montar, settings se encarga del resto si cambia
 
   const loadPrinters = async () => {
     try {
@@ -95,8 +97,19 @@ export const TicketConfiguration = () => {
     }
   };
 
-  if (loading)
-    return <div className="p-8 text-center">Cargando configuración...</div>;
+  // No mostramos pantalla de carga SI ya tenemos settings para evitar el 'parpadeo'
+  // Solo bloqueamos la UI si es la carga inicial (loadingContext es true y no hay settings)
+  if (loadingContext && !settings)
+    return (
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[1050] p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
+          <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">
+            Cargando configuración...
+          </p>
+        </div>
+      </div>
+    );
 
   return (
     <div className="ticket-config-container">

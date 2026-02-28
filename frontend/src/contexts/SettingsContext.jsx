@@ -24,7 +24,10 @@ export const SettingsProvider = ({ children }) => {
     }
 
     try {
-      setLoading(true);
+      // Solo activamos loadingContext si no tenemos settings (carga inicial)
+      // Usamos el estado actual de settings de la clausura
+      setLoading((prev) => (!settings && prev === false ? true : prev));
+
       const data = await businessSettingsService.getSettings();
       setSettings(data);
     } catch (error) {
@@ -32,7 +35,7 @@ export const SettingsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user]); // settings NO debe ser dependencia para evitar bucles
 
   useEffect(() => {
     loadSettings();
