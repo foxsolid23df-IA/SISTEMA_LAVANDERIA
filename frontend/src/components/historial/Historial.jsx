@@ -19,12 +19,14 @@ import { productService } from "../../services/productService";
 import { staffService } from "../../services/staffService";
 import { printService } from "../../services/printService"; // Importado para reimpresión
 import { businessSettingsService } from "../../services/businessSettingsService"; // Importado para configuración
+import { cashCutService } from "../../services/cashCutService"; // Importado para historial de cortes
+import TicketCorte from "../cashcut/TicketCorte"; // Importado para reimpresión de cortes
 import Modal from "../common/Modal";
 import Swal from "sweetalert2";
 
 export const Historial = () => {
   // MODO DE REPORTE (A solicitud del usuario: Reportes Separados)
-  const [reportMode, setReportMode] = useState("SERVICES"); // 'SERVICES' (Lavandería) o 'PRODUCTS' (Ventas)
+  const [reportMode, setReportMode] = useState("SERVICES"); // 'SERVICES', 'PRODUCTS' o 'CASH_CUTS'
 
   // 1. ESTADOS PRINCIPALES
   const [productos, setProductos] = useState([]); // Lista de productos para mostrar en el modal
@@ -120,10 +122,14 @@ export const Historial = () => {
       );
 
       // Cargar datos según el modo
-      const serviceCall =
-        reportMode === "SERVICES"
-          ? orderService.getOrders()
-          : salesService.getSales(1000);
+      let serviceCall;
+      if (reportMode === "SERVICES") {
+        serviceCall = orderService.getOrders();
+      } else if (reportMode === "PRODUCTS") {
+        serviceCall = salesService.getSales(1000);
+      } else if (reportMode === "CASH_CUTS") {
+        serviceCall = cashCutService.getCashCuts({ limit: 200 });
+      }
 
       const dataPromise = Promise.all([
         serviceCall,
@@ -139,26 +145,53 @@ export const Historial = () => {
         : [];
 
       // Transformación unificada para el resto del componente
-      const transaccionesTransformadas = dataSegura.map((t) => ({
-        id: t.id,
-        total: t.total,
-        paidAmount: t.paid_amount || t.total,
-        createdAt: t.created_at,
-        customerName: t.customers?.name || "Público General",
-        employeeName: t.staff?.name || "Sistema",
-        paymentMethod: t.payment_method || "efectivo",
-        status: t.status || "completed",
-        isOrder: reportMode === "SERVICES",
-        items: (t.order_items || t.sale_items || []).map((item) => ({
-          id: item.id,
-          productId: item.product_id || null,
-          productName: item.product_name || "Sin nombre",
-          name: item.product_name || "Sin nombre",
-          quantity: item.quantity || 0,
-          price: item.price || 0,
-          total: item.total || 0,
-        })),
-      }));
+      const transaccionesTransformadas = dataSegura.map((t) => {
+        if (reportMode === "CASH_CUTS") {
+          return {
+            id: t.id,
+            total: t.sales_total,
+            actualCash: t.actual_cash,
+            expectedCash: t.expected_cash,
+            difference: t.difference,
+            createdAt: t.created_at,
+            employeeName: t.staff_name || "Desconocido",
+            paymentMethod: t.cut_type === "dia" ? "Cierre Día" : "Corte Turno",
+            status: "completed",
+            isCut: true,
+            opening_fund: t.opening_fund,
+            salesCount: t.sales_count,
+            cardTotal: t.card_total,
+            transferTotal: t.transfer_total,
+            expectedUSD: t.expected_usd,
+            actualUSD: t.actual_usd,
+            differenceUSD: t.difference_usd,
+            notes: t.notes,
+            terminal_id: t.terminal_id,
+            items: [], // Los cortes no tienen items en el mismo sentido
+          };
+        }
+
+        return {
+          id: t.id,
+          total: t.total,
+          paidAmount: t.paid_amount || t.total,
+          createdAt: t.created_at,
+          customerName: t.customers?.name || "Público General",
+          employeeName: t.staff?.name || "Sistema",
+          paymentMethod: t.payment_method || "efectivo",
+          status: t.status || "completed",
+          isOrder: reportMode === "SERVICES",
+          items: (t.order_items || t.sale_items || []).map((item) => ({
+            id: item.id,
+            productId: item.product_id || null,
+            productName: item.product_name || "Sin nombre",
+            name: item.product_name || "Sin nombre",
+            quantity: item.quantity || 0,
+            price: item.price || 0,
+            total: item.total || 0,
+          })),
+        };
+      });
 
       const productosSeguros = Array.isArray(productosData)
         ? productosData
@@ -194,6 +227,12 @@ export const Historial = () => {
 
   // 9. FUNCIÓN PARA ABRIR EL MODAL DE DETALLES
   const verDetalles = (venta) => {
+    if (venta.isCut) {
+      setVentaSeleccionada(venta);
+      setMostrarModal(true);
+      return;
+    }
+
     const ventaConNombres = {
       ...venta,
       items: venta.items.map((item) => {
@@ -355,6 +394,11 @@ export const Historial = () => {
         Cantidad: contarProductos(venta.items),
         Total: venta.total,
         "Total Formateado": formatearDinero(venta.total),
+        Tipo: venta.isCut
+          ? venta.paymentMethod
+          : venta.isOrder
+            ? "Servicio"
+            : "Venta",
       };
     });
 
@@ -396,44 +440,73 @@ export const Historial = () => {
 
     setIsPrinting(true);
     try {
-      // Preparar datos para el generador de HTML
-      const itemsParaTicket = ventaSeleccionada.items.map((item) => ({
-        quantity: item.quantity,
-        name: item.productName || item.name || "Producto",
-        price: item.price,
-      }));
+      if (ventaSeleccionada.isCut) {
+        // Lógica específica para reimprimir cortes
+        const width = businessSettings?.printer_width || 80;
+        const fontSize = businessSettings?.printer_font_size || 12;
+        const fontFamily =
+          businessSettings?.printer_font_family ||
+          "'Courier New', Courier, monospace";
+        const fontWeight = businessSettings?.printer_is_bold
+          ? "bold"
+          : "normal";
 
-      // Generar HTML
-      const ticketHtml = printService.generateTicketHtml(
-        businessSettings,
-        { id: ventaSeleccionada.id, total: ventaSeleccionada.total },
-        itemsParaTicket,
-      );
+        // Usamos una aproximación recreando el HTML que generaría TicketCorte si estuviera montado
+        // o mejor aún, si lo tenemos en el modal, podemos usar refs.
+        // Pero para simplificar en el servicio de impresión:
+        const ticketHtml = `
+                <html>
+                    <body style="width: ${width}mm; font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: ${fontWeight};">
+                        <div style="text-align: center;">
+                            <h2 style="margin: 0;">${businessSettings?.name || "LAVANDERIA"}</h2>
+                            <p style="margin: 5px 0;">${ventaSeleccionada.paymentMethod.toUpperCase()}</p>
+                            <p style="font-size: 0.8em;">Reimpresión: ${formatearFechaHora(new Date())}</p>
+                        </div>
+                        <hr />
+                        <p>Fecha Original: ${formatearFechaHora(ventaSeleccionada.createdAt)}</p>
+                        <p>Operador: ${ventaSeleccionada.employeeName}</p>
+                        <hr />
+                        <p>Ventas: ${ventaSeleccionada.salesCount}</p>
+                        <p>Total Ventas: ${formatearDinero(ventaSeleccionada.total)}</p>
+                        <hr />
+                        <p><b>ESPERADO: ${formatearDinero(ventaSeleccionada.expectedCash)}</b></p>
+                        <p><b>CONTADO: ${formatearDinero(ventaSeleccionada.actualCash)}</b></p>
+                        <p><b>DIFERENCIA: ${formatearDinero(ventaSeleccionada.difference)}</b></p>
+                        ${ventaSeleccionada.notes ? `<p>Notas: ${ventaSeleccionada.notes}</p>` : ""}
+                    </body>
+                </html>
+            `;
 
-      // Imprimir (1 copia para reimpresión)
-      const result = await printService.print(
-        ticketHtml,
-        businessSettings.printer_name,
-        { copies: 1 },
-      );
-
-      if (result) {
-        Swal.fire({
-          icon: "success",
-          title: "Imprimiendo...",
-          showConfirmButton: false,
-          timer: 1500,
-        });
+        await printService.print(ticketHtml, businessSettings?.printer_name);
       } else {
-        throw new Error("Error en el servicio de impresión");
+        // Lógica existente para ventas/servicios
+        const itemsParaTicket = ventaSeleccionada.items.map((item) => ({
+          quantity: item.quantity,
+          name: item.productName || item.name || "Producto",
+          price: item.price,
+        }));
+
+        const ticketHtml = printService.generateTicketHtml(
+          businessSettings,
+          { id: ventaSeleccionada.id, total: ventaSeleccionada.total },
+          itemsParaTicket,
+        );
+
+        await printService.print(ticketHtml, businessSettings.printer_name, {
+          copies: 1,
+        });
       }
+
+      Swal.fire({
+        title: "¡Reimpreso!",
+        text: "El ticket ha sido enviado a la impresora.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     } catch (error) {
       console.error("Error al reimprimir:", error);
-      Swal.fire(
-        "Error",
-        "No se pudo imprimir el ticket. Verifique la impresora.",
-        "error",
-      );
+      Swal.fire("Error", "No se pudo conectar con la impresora", "error");
     } finally {
       setIsPrinting(false);
     }
@@ -480,6 +553,15 @@ export const Historial = () => {
                   shopping_bag
                 </span>
                 Ventas Directas
+              </button>
+              <button
+                onClick={() => setReportMode("CASH_CUTS")}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${reportMode === "CASH_CUTS" ? "bg-white dark:bg-slate-700 shadow-md text-slate-900 dark:text-white border-none" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+              >
+                <span className="material-icons-outlined text-[16px]">
+                  account_balance_wallet
+                </span>
+                Cierres de Caja
               </button>
             </div>
 
@@ -634,9 +716,11 @@ export const Historial = () => {
             </div>
             <div className="flex-1 text-center">Método Pago</div>
             <div className="flex-1 text-center">
-              {reportMode === "SERVICES"
-                ? "Resumen de Orden"
-                : "Resumen de Venta"}
+              {reportMode === "CASH_CUTS"
+                ? "Estado / Diferencia"
+                : reportMode === "SERVICES"
+                  ? "Resumen de Orden"
+                  : "Resumen de Venta"}
             </div>
             <div className="w-32"></div>
           </div>
@@ -696,22 +780,44 @@ export const Historial = () => {
                     </span>
                   </div>
                   <div className="flex-1 text-center">
-                    <p className="text-[15px] font-medium text-slate-600 dark:text-slate-300">
-                      {contarProductos(venta.items)}{" "}
-                      {contarProductos(venta.items) === 1
-                        ? reportMode === "SERVICES"
-                          ? "servicio"
-                          : "producto"
-                        : reportMode === "SERVICES"
-                          ? "servicios"
-                          : "productos"}
-                      <span className="mx-3 text-slate-300 dark:text-slate-700">
-                        |
-                      </span>
-                      <span className="text-primary dark:text-white font-black">
-                        {formatearDinero(venta.total)}
-                      </span>
-                    </p>
+                    {venta.isCut ? (
+                      <p className="text-[14px] font-medium">
+                        <span
+                          className={
+                            venta.difference === 0
+                              ? "text-green-500"
+                              : "text-red-500"
+                          }
+                        >
+                          {venta.difference === 0
+                            ? "✓ Cuadrado"
+                            : `Diferencia: ${formatearDinero(venta.difference)}`}
+                        </span>
+                        <span className="mx-3 text-slate-300 dark:text-slate-700">
+                          |
+                        </span>
+                        <span className="text-primary dark:text-white font-black">
+                          {formatearDinero(venta.total)}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-[15px] font-medium text-slate-600 dark:text-slate-300">
+                        {contarProductos(venta.items)}{" "}
+                        {contarProductos(venta.items) === 1
+                          ? reportMode === "SERVICES"
+                            ? "servicio"
+                            : "producto"
+                          : reportMode === "SERVICES"
+                            ? "servicios"
+                            : "productos"}
+                        <span className="mx-3 text-slate-300 dark:text-slate-700">
+                          |
+                        </span>
+                        <span className="text-primary dark:text-white font-black">
+                          {formatearDinero(venta.total)}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   <div className="w-32 flex justify-end gap-2">
                     <button
@@ -863,59 +969,89 @@ export const Historial = () => {
               </div>
             </div>
 
-            {/* Products List */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center px-2">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                  Productos (
-                  {ventaSeleccionada &&
-                    contarProductos(ventaSeleccionada.items)}
-                  )
-                </h3>
+            {/* Products List or Cut Details */}
+            {ventaSeleccionada && ventaSeleccionada.isCut ? (
+              <div className="flex justify-center bg-white p-6 rounded-xl border border-slate-200 shadow-inner overflow-y-auto max-h-[400px]">
+                <TicketCorte
+                  cutResult={{
+                    ...ventaSeleccionada,
+                    staffName: ventaSeleccionada.employeeName,
+                    salesTotal: ventaSeleccionada.total,
+                    salesCount: ventaSeleccionada.salesCount,
+                    opening_fund: ventaSeleccionada.opening_fund,
+                    expectedCash: ventaSeleccionada.expectedCash,
+                    actualCash: ventaSeleccionada.actualCash,
+                    difference: ventaSeleccionada.difference,
+                    expectedUSD: ventaSeleccionada.expectedUSD,
+                    actualUSD: ventaSeleccionada.actualUSD,
+                    differenceUSD: ventaSeleccionada.differenceUSD,
+                    notes: ventaSeleccionada.notes,
+                    cardTotal: ventaSeleccionada.cardTotal,
+                    transferTotal: ventaSeleccionada.transferTotal,
+                    terminal_id: ventaSeleccionada.terminal_id,
+                  }}
+                  settings={businessSettings}
+                  cutType={
+                    ventaSeleccionada.paymentMethod === "Cierre Día"
+                      ? "dia"
+                      : "turno"
+                  }
+                />
               </div>
-
-              <div className="bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5 overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100/50 dark:bg-white/5 border-b border-slate-200/50 dark:border-white/5">
-                    <tr>
-                      <th className="px-5 py-3">Artículo</th>
-                      <th className="px-5 py-3 text-center">Cant.</th>
-                      <th className="px-5 py-3 text-right">Precio</th>
-                      <th className="px-5 py-3 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center px-2">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Productos (
                     {ventaSeleccionada &&
-                      ventaSeleccionada.items.map((item, index) => (
-                        <tr
-                          key={index}
-                          className="text-slate-700 dark:text-white"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex flex-col">
-                              <span className="font-bold">
-                                {item.productName || item.name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                #{item.barcode || "S/N"}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4 text-center font-medium capitalize prose-sm">
-                            x{item.quantity}
-                          </td>
-                          <td className="px-5 py-4 text-right font-medium">
-                            {formatearDinero(item.price)}
-                          </td>
-                          <td className="px-5 py-4 text-right font-black">
-                            {formatearDinero(item.price * item.quantity)}
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                      contarProductos(ventaSeleccionada.items)}
+                    )
+                  </h3>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5 overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100/50 dark:bg-white/5 border-b border-slate-200/50 dark:border-white/5">
+                      <tr>
+                        <th className="px-5 py-3">Artículo</th>
+                        <th className="px-5 py-3 text-center">Cant.</th>
+                        <th className="px-5 py-3 text-right">Precio</th>
+                        <th className="px-5 py-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {ventaSeleccionada &&
+                        ventaSeleccionada.items.map((item, index) => (
+                          <tr
+                            key={index}
+                            className="text-slate-700 dark:text-white"
+                          >
+                            <td className="px-5 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold">
+                                  {item.productName || item.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  #{item.barcode || "S/N"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-center font-medium capitalize prose-sm">
+                              x{item.quantity}
+                            </td>
+                            <td className="px-5 py-4 text-right font-medium">
+                              {formatearDinero(item.price)}
+                            </td>
+                            <td className="px-5 py-4 text-right font-black">
+                              {formatearDinero(item.price * item.quantity)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="px-8 py-6 bg-slate-50 dark:bg-white/5 flex justify-end gap-4">
