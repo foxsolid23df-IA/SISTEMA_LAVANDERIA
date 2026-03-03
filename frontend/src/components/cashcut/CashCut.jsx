@@ -168,7 +168,8 @@ export const CashCut = ({ onClose }) => {
           return;
         }
         */
-
+        /*
+        // Comentado para permitir cerrar el día incluso con otras cajas abiertas según requerimiento
         const blockingSessions = await cashCutService.checkBlockingSessions();
         if (blockingSessions.length > 0) {
           const sessionList = blockingSessions
@@ -188,6 +189,7 @@ export const CashCut = ({ onClose }) => {
           });
           return;
         }
+        */
       }
     } catch (error) {
       console.error("Error en validaciones de cierre:", error);
