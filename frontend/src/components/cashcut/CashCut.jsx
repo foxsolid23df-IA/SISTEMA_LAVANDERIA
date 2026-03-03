@@ -156,6 +156,8 @@ export const CashCut = ({ onClose }) => {
     // Validaciones para Cierre de Día
     try {
       if (cutType === "dia") {
+        /*
+        // Comentado para permitir cierre desde cualquier equipo según requerimiento
         const isMain = await terminalService.checkIfMainTerminal();
         if (!isMain) {
           Swal.fire(
@@ -165,6 +167,7 @@ export const CashCut = ({ onClose }) => {
           );
           return;
         }
+        */
 
         const blockingSessions = await cashCutService.checkBlockingSessions();
         if (blockingSessions.length > 0) {

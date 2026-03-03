@@ -99,7 +99,7 @@ export const TerminalSetup = ({ onTerminalConfigured, isAdmin }) => {
               </span>
             </label>
             <p className="text-xs text-slate-500 mt-1 ml-7">
-              Solo la caja principal puede realizar el Cierre de Día.
+              Cualquier equipo puede realizar el cierre de día.
             </p>
           </div>
 
