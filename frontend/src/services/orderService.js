@@ -151,7 +151,7 @@ export const orderService = {
   // Obtener órdenes desde una fecha
   async getOrdersSince(startTime, terminalId = null) {
     if (!startTime) return [];
-    
+
     let query = supabase
       .from('orders')
       .select(`
@@ -184,5 +184,168 @@ export const orderService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  // --- MÉTODOS PARA ESTADÍSTICAS Y AUDITORÍA ---
+
+  // Eliminar una orden (requiere permisos administrativos)
+  async deleteOrder(orderId) {
+    // Primero eliminar los items de la orden
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (itemsError) throw itemsError;
+
+    // Luego eliminar la orden
+    const { error: orderError } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (orderError) throw orderError;
+    return true;
+  },
+
+  // Obtener estadísticas generales de órdenes
+  async getStatistics(signal) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No authenticated user");
+
+    const ahora = new Date();
+
+    // Usar instancias separadas para evitar mutación
+    const inicioDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0).toISOString();
+    const finDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59, 999).toISOString();
+
+    const diaActual = ahora.getDay();
+    const diferencia = diaActual === 0 ? 6 : diaActual - 1;
+    const inicioSemana = new Date(ahora);
+    inicioSemana.setDate(ahora.getDate() - diferencia);
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+
+    let query = supabase
+      .from('orders')
+      .select('total, paid_amount, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(2000);
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data: todasOrdenes, error } = await query;
+    if (error) throw error;
+
+    const calculos = (data) => ({
+      count: data.length,
+      total: data.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0),
+      collected: data.reduce((sum, o) => sum + (parseFloat(o.paid_amount) || 0), 0)
+    });
+
+    const totales = calculos(todasOrdenes);
+    const hoy = calculos(todasOrdenes.filter(o => new Date(o.created_at) >= new Date(inicioDelDia)));
+    const semana = calculos(todasOrdenes.filter(o => new Date(o.created_at) >= inicioSemana));
+    const mes = calculos(todasOrdenes.filter(o => new Date(o.created_at) >= new Date(inicioMes)));
+
+    return {
+      ordenesTotales: totales.count,
+      ingresosTotales: totales.total,
+      recaudadoTotal: totales.collected,
+      ordenesDeHoy: hoy.count,
+      ingresosDeHoy: hoy.total,
+      recaudadoHoy: hoy.collected,
+      ordenesSemana: semana.count,
+      ingresosSemana: semana.total,
+      ingresosMes: mes.total
+    };
+  },
+
+  // Obtener top servicios más solicitados
+  async getTopServices(limit = 5, signal) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    let query = supabase
+      .from('order_items')
+      .select('product_name, quantity, price, total')
+      .eq('user_id', user.id);
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data: items, error } = await query;
+    if (error) throw error;
+
+    const serviciosMap = {};
+    items.forEach(item => {
+      const nombre = item.product_name;
+      if (!serviciosMap[nombre]) {
+        serviciosMap[nombre] = { name: nombre, cantidad: 0, ingresos: 0 };
+      }
+      serviciosMap[nombre].cantidad += parseFloat(item.quantity) || 0;
+      serviciosMap[nombre].ingresos += parseFloat(item.total) || 0;
+    });
+
+    return Object.values(serviciosMap)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, limit)
+      .map((s, i) => ({ id: i + 1, ...s }));
+  },
+
+  // Ventas semanales de órdenes
+  async getWeeklyOrdersData(signal) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [0, 0, 0, 0, 0, 0, 0];
+
+    const ahora = new Date();
+    const diaActual = ahora.getDay();
+    const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1;
+    const inicioSemana = new Date(ahora);
+    inicioSemana.setDate(ahora.getDate() - diasHastaLunes);
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    let query = supabase
+      .from('orders')
+      .select('total, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', inicioSemana.toISOString());
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data: orders, error } = await query;
+    if (error) throw error;
+
+    const data = [0, 0, 0, 0, 0, 0, 0];
+    orders.forEach(o => {
+      const d = (new Date(o.created_at).getDay() + 6) % 7; // Lun=0...Dom=6
+      data[d] += parseFloat(o.total) || 0;
+    });
+    return data;
+  },
+
+  // Estadísticas por rango para órdenes
+  async getStatisticsByDateRange(fechaInicio, fechaFin, signal) {
+    let query = supabase.from('orders').select('total, paid_amount, created_at');
+    if (fechaInicio) query = query.gte('created_at', fechaInicio);
+    if (fechaFin) {
+      const d = new Date(fechaFin);
+      d.setHours(23, 59, 59, 999);
+      query = query.lte('created_at', d.toISOString());
+    }
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return {
+      ventasEnRango: data.length,
+      ingresosEnRango: data.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0),
+      recaudadoEnRango: data.reduce((sum, o) => sum + (parseFloat(o.paid_amount) || 0), 0),
+      fechaInicio: fechaInicio || 'Inicio',
+      fechaFin: fechaFin || 'Fin'
+    };
   }
 };

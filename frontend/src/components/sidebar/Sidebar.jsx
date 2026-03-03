@@ -112,37 +112,47 @@ export const Sidebar = () => {
   return (
     <>
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-[1001]">
-        <button className="p-2 text-slate-500" onClick={toggleSidebar}>
-          <span className="material-icons-outlined text-[24px]">
-            {isOpen ? "close" : "menu"}
-          </span>
-        </button>
-        <div className="flex items-center gap-2 font-bold text-lg tracking-tight text-black dark:text-white">
-          <span className="bg-primary text-white p-1 rounded">
-            <span className="material-icons-outlined block text-[18px]">
-              point_of_sale
-            </span>
-          </span>
-          <span>{storeName || "POS Store"}</span>
-        </div>
-        <div className="flex items-center gap-1">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-auto min-h-16 pt-[env(safe-area-inset-top)] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-[2000]">
+        <div className="flex items-center h-16 w-full justify-between">
           <button
-            className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors"
-            onClick={toggleDarkMode}
-            title="Cambiar Tema"
+            className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+            onClick={toggleSidebar}
           >
-            <span className="material-icons-outlined text-[22px]">
-              {document.documentElement.classList.contains("dark")
-                ? "light_mode"
-                : "dark_mode"}
+            <span className="material-icons-outlined text-[28px] font-bold">
+              {isOpen ? "close" : "menu"}
             </span>
           </button>
-          <button className="p-2 text-slate-500" onClick={lockScreen}>
-            <span className="material-icons-outlined text-[24px]">
-              account_circle
+          <div className="flex items-center gap-2 font-bold text-lg tracking-tight text-black dark:text-white">
+            <span className="bg-primary text-white p-1 rounded shadow-sm">
+              <span className="material-icons-outlined block text-[18px]">
+                point_of_sale
+              </span>
             </span>
-          </button>
+            <span className="truncate max-w-[120px] sm:max-w-none">
+              {storeName || "POS Store"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors h-12 w-12 flex items-center justify-center"
+              onClick={toggleDarkMode}
+              title="Cambiar Tema"
+            >
+              <span className="material-icons-outlined text-[24px]">
+                {document.documentElement.classList.contains("dark")
+                  ? "light_mode"
+                  : "dark_mode"}
+              </span>
+            </button>
+            <button
+              className="p-2 text-slate-500 h-12 w-12 flex items-center justify-center"
+              onClick={lockScreen}
+            >
+              <span className="material-icons-outlined text-[24px]">
+                account_circle
+              </span>
+            </button>
+          </div>
         </div>
       </header>
 

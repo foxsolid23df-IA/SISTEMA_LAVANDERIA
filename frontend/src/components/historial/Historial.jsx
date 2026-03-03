@@ -14,6 +14,7 @@ import {
 } from "../../utils";
 import { exportToExcel } from "../../utils/exportToExcel";
 import { salesService } from "../../services/salesService";
+import { orderService } from "../../services/orderService";
 import { productService } from "../../services/productService";
 import { staffService } from "../../services/staffService";
 import { printService } from "../../services/printService"; // Importado para reimpresión
@@ -22,23 +23,23 @@ import Modal from "../common/Modal";
 import Swal from "sweetalert2";
 
 export const Historial = () => {
+  // MODO DE REPORTE (A solicitud del usuario: Reportes Separados)
+  const [reportMode, setReportMode] = useState("SERVICES"); // 'SERVICES' (Lavandería) o 'PRODUCTS' (Ventas)
+
   // 1. ESTADOS PRINCIPALES
   const [productos, setProductos] = useState([]); // Lista de productos para mostrar en el modal
-  const [ventas, setVentas] = useState([]); // Lista de todas las ventas
+  const [ventas, setVentas] = useState([]); // Lista de todas las ventas/órdenes
   const [ventasFiltradas, setVentasFiltradas] = useState([]); // Ventas después de filtrar
 
-  // Filtros adicionales (Bug 2)
   const [empleados, setEmpleados] = useState([]);
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
   const [filtroMetodoPago, setFiltroMetodoPago] = useState("");
-
-  // 2. ESTADOS PARA PAGINACIÓN
-  const [paginaActual, setPaginaActual] = useState(1); // Página actual
-  const ventasPorPagina = 8; // Cantidad de ventas por página
+  const [paginaActual, setPaginaActual] = useState(1);
+  const ventasPorPagina = 8;
 
   // 3. ESTADOS PARA EL MODAL DE DETALLES
-  const [mostrarModal, setMostrarModal] = useState(false); // Si se muestra el modal
-  const [ventaSeleccionada, setVentaSeleccionada] = useState(null); // Venta del modal
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
 
   // Estado para configuración de negocio (necesario para el ticket)
   const [businessSettings, setBusinessSettings] = useState(null);
@@ -46,15 +47,14 @@ export const Historial = () => {
   // 4. HOOK PARA FILTRADO POR FECHAS
   const dateFilter = useDateFilter();
 
-  // 5. HOOK PARA MANEJAR LLAMADAS AL BACKEND (Solo para acciones puntuales si se requiere, no para carga inicial)
-  const { ejecutarPeticion, limpiarError } = useApi();
+  // 5. HOOK PARA MANEJAR LLAMADAS AL BACKEND
+  const { ejecutarPeticion } = useApi();
 
-  // Estado local de carga para tener control total y evitar bloqueos
+  // Estado local de carga
   const [loadingData, setLoadingData] = useState(true);
   const [errorData, setErrorData] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // 6. HOOK PARA VERIFICAR PERMISOS
   const { canAccessReports } = useAuth();
 
   // 6.b EFECTO PARA SUPRIMIR ERRORES DE ABORTO
@@ -85,8 +85,7 @@ export const Historial = () => {
     };
   }, []);
 
-  // Cargar configuración al montar
-  // Cargar empleados al montar para el filtro (Bug 2)
+  // Cargar empleados y configuración al montar
   useEffect(() => {
     const loadStaff = async () => {
       try {
@@ -108,74 +107,82 @@ export const Historial = () => {
     loadSettings();
   }, []);
 
-  // 7. FUNCIÓN PARA CARGAR TODAS LAS VENTAS DESDE SUPABASE
+  // 7. FUNCIÓN PARA CARGAR TODAS LAS VENTAS/ÓRDENES DESDE SUPABASE
   const cargarVentasYProductos = async () => {
-    // Usar estado local
     setLoadingData(true);
     setErrorData(null);
+    setVentas([]);
+    setVentasFiltradas([]);
 
     try {
-      // Timeout de seguridad por si Supabase se cuelga
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Tiempo de espera agotado")), 15000),
       );
 
+      // Cargar datos según el modo
+      const serviceCall =
+        reportMode === "SERVICES"
+          ? orderService.getOrders()
+          : salesService.getSales(1000);
+
       const dataPromise = Promise.all([
-        salesService.getSales(1000),
+        serviceCall,
         productService.getProducts(),
       ]);
 
       const resultados = await Promise.race([dataPromise, timeoutPromise]);
-
       if (!isMountedRef.current) return;
 
-      const [ventasData, productosData] = resultados;
+      const [transaccionesData, productosData] = resultados;
+      const dataSegura = Array.isArray(transaccionesData)
+        ? transaccionesData
+        : [];
 
-      // Validar que ventasData sea un array
-      const ventasSeguras = Array.isArray(ventasData) ? ventasData : [];
-
-      const ventasTransformadas = ventasSeguras.map((venta) => ({
-        id: venta.id,
-        total: venta.total,
-        createdAt: venta.created_at,
-        // Mapear nuevos campos (Bug 2)
-        employeeName: venta.staff?.name || "Sistema",
-        paymentMethod: venta.payment_method || "efectivo",
-        items: (venta.sale_items || []).map((item) => ({
+      // Transformación unificada para el resto del componente
+      const transaccionesTransformadas = dataSegura.map((t) => ({
+        id: t.id,
+        total: t.total,
+        paidAmount: t.paid_amount || t.total,
+        createdAt: t.created_at,
+        customerName: t.customers?.name || "Público General",
+        employeeName: t.staff?.name || "Sistema",
+        paymentMethod: t.payment_method || "efectivo",
+        status: t.status || "completed",
+        isOrder: reportMode === "SERVICES",
+        items: (t.order_items || t.sale_items || []).map((item) => ({
           id: item.id,
           productId: item.product_id || null,
-          productName: item.product_name || "Producto sin nombre",
-          name: item.product_name || "Producto sin nombre",
-          barcode: item.barcode || "",
+          productName: item.product_name || "Sin nombre",
+          name: item.product_name || "Sin nombre",
           quantity: item.quantity || 0,
           price: item.price || 0,
           total: item.total || 0,
         })),
       }));
 
-      // Validar que productosData sea un array
       const productosSeguros = Array.isArray(productosData)
         ? productosData
         : [];
 
-      setVentas(ventasTransformadas);
-      setVentasFiltradas(ventasTransformadas);
+      setVentas(transaccionesTransformadas);
+      setVentasFiltradas(transaccionesTransformadas);
       setProductos(productosSeguros);
     } catch (error) {
       if (!isMountedRef.current) return;
-      console.error("Error cargando ventas y productos:", error);
-      setErrorData(
-        "No se pudieron cargar las transacciones. Intenta recargar.",
-      );
-      setVentas([]);
-      setVentasFiltradas([]);
-      setProductos([]);
+      console.error("Error cargando datos:", error);
+      setErrorData("No se pudieron cargar los datos. Verifica tu conexión.");
     } finally {
-      if (isMountedRef.current) {
-        setLoadingData(false);
-      }
+      if (isMountedRef.current) setLoadingData(false);
     }
   };
+
+  // Recargar cuando cambie el modo
+  useEffect(() => {
+    setFiltroEmpleado("");
+    setFiltroMetodoPago("");
+    dateFilter.limpiarFiltros();
+    cargarVentasYProductos();
+  }, [reportMode]);
 
   // 8. FUNCIÓN PARA LIMPIAR FILTROS
   const limpiarFiltros = () => {
@@ -245,10 +252,17 @@ export const Historial = () => {
 
         if (confirm.isConfirmed) {
           try {
-            await salesService.deleteSale(saleId);
+            if (reportMode === "SERVICES") {
+              await orderService.deleteOrder(saleId);
+            } else {
+              await salesService.deleteSale(saleId);
+            }
             Swal.fire({
               title: "Eliminado",
-              text: "El reporte de venta ha sido eliminado exitosamente.",
+              text:
+                reportMode === "SERVICES"
+                  ? "La orden de servicio ha sido eliminada exitosamente."
+                  : "El reporte de venta ha sido eliminado exitosamente.",
               icon: "success",
               confirmButtonColor: "#000000",
             });
@@ -272,13 +286,18 @@ export const Historial = () => {
     }
   };
 
-  // 11. FUNCIÓN PARA FILTRAR LAS VENTAS POR FECHAS
-  // 11. FUNCIÓN PARA FILTRAR LAS VENTAS (Fechas + Empleado + Método Pago)
+  // 11. FUNCIÓN PARA FILTRAR LAS VENTAS (Fechas + Empleado/Cliente + Método Pago)
   const filtrarVentas = useCallback(() => {
     let filtradas = dateFilter.filtrarPorFecha(ventas);
 
     if (filtroEmpleado) {
-      filtradas = filtradas.filter((v) => v.employeeName === filtroEmpleado);
+      if (reportMode === "SERVICES") {
+        // En modo servicios, filtrar por nombre del cliente
+        filtradas = filtradas.filter((v) => v.customerName === filtroEmpleado);
+      } else {
+        // En modo productos, filtrar por nombre del empleado
+        filtradas = filtradas.filter((v) => v.employeeName === filtroEmpleado);
+      }
     }
 
     if (filtroMetodoPago) {
@@ -294,6 +313,7 @@ export const Historial = () => {
     dateFilter.filtrarPorFecha,
     filtroEmpleado,
     filtroMetodoPago,
+    reportMode,
   ]);
 
   // 12. CALCULAR VENTAS PARA LA PÁGINA ACTUAL
@@ -426,34 +446,63 @@ export const Historial = () => {
         <div className="max-w-5xl mx-auto w-full flex justify-between items-start">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">
-              Registro de Ventas
+              Registro de{" "}
+              {reportMode === "SERVICES" ? "Lavandería" : "Ventas Directas"}
             </p>
             <h1 className="text-4xl font-black text-primary dark:text-white tracking-tight">
-              Auditoría de Historial
+              {reportMode === "SERVICES"
+                ? "Auditoría de Servicios"
+                : "Auditoría de Ventas"}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-              Revisa y gestiona las transacciones realizadas
+              {reportMode === "SERVICES"
+                ? "Revision de órdenes y servicios de lavandería realizados"
+                : "Revision de ventas directas de productos y artículos realizados"}
             </p>
           </div>
-          <button
-            onClick={() => {
-              document.documentElement.classList.toggle("dark");
-              localStorage.setItem(
-                "theme",
-                document.documentElement.classList.contains("dark")
-                  ? "dark"
-                  : "light",
-              );
-              // Re-render workaround for native elements
-              window.dispatchEvent(new Event("storage"));
-            }}
-            className="hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
-          >
-            <span className="material-icons-outlined text-[18px]">
-              dark_mode
-            </span>
-            <span>Modo Oscuro</span>
-          </button>
+          <div className="flex items-center gap-4">
+            {/* TOGGLE DE MODO (Reportes Separados) */}
+            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <button
+                onClick={() => setReportMode("SERVICES")}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${reportMode === "SERVICES" ? "bg-white dark:bg-slate-700 shadow-md text-slate-900 dark:text-white border-none" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+              >
+                <span className="material-icons-outlined text-[16px]">
+                  local_laundry_service
+                </span>
+                Servicios
+              </button>
+              <button
+                onClick={() => setReportMode("PRODUCTS")}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${reportMode === "PRODUCTS" ? "bg-white dark:bg-slate-700 shadow-md text-slate-900 dark:text-white border-none" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+              >
+                <span className="material-icons-outlined text-[16px]">
+                  shopping_bag
+                </span>
+                Ventas Directas
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                document.documentElement.classList.toggle("dark");
+                localStorage.setItem(
+                  "theme",
+                  document.documentElement.classList.contains("dark")
+                    ? "dark"
+                    : "light",
+                );
+                // Re-render workaround for native elements
+                window.dispatchEvent(new Event("storage"));
+              }}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md transition-all text-slate-600 dark:text-slate-300 font-bold text-xs"
+            >
+              <span className="material-icons-outlined text-[18px]">
+                dark_mode
+              </span>
+              <span>Modo Oscuro</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -489,7 +538,7 @@ export const Historial = () => {
             </div>
             <div className="flex-1 min-w-[200px]">
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">
-                Empleado:
+                {reportMode === "SERVICES" ? "Cliente:" : "Empleado:"}
               </label>
               <div className="relative">
                 <select
@@ -497,12 +546,31 @@ export const Historial = () => {
                   value={filtroEmpleado}
                   onChange={(e) => setFiltroEmpleado(e.target.value)}
                 >
-                  <option value="">Todos los empleados</option>
-                  {empleados.map((emp) => (
-                    <option key={emp.id} value={emp.name}>
-                      {emp.name}
-                    </option>
-                  ))}
+                  {reportMode === "SERVICES" ? (
+                    <>
+                      <option value="">Todos los clientes</option>
+                      {[
+                        ...new Set(
+                          ventas.map((v) => v.customerName).filter(Boolean),
+                        ),
+                      ]
+                        .sort()
+                        .map((nombre) => (
+                          <option key={nombre} value={nombre}>
+                            {nombre}
+                          </option>
+                        ))}
+                    </>
+                  ) : (
+                    <>
+                      <option value="">Todos los empleados</option>
+                      {empleados.map((emp) => (
+                        <option key={emp.id} value={emp.name}>
+                          {emp.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -561,9 +629,15 @@ export const Historial = () => {
           {/* Table Header */}
           <div className="flex-shrink-0 flex justify-between items-center px-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
             <div className="flex-1">Fecha y Hora</div>
-            <div className="flex-1">Empleado</div>
-            <div className="flex-1">Método Pago</div>
-            <div className="flex-1 text-center">Resumen de Venta</div>
+            <div className="flex-1 text-center">
+              {reportMode === "SERVICES" ? "Cliente" : "Empleado"}
+            </div>
+            <div className="flex-1 text-center">Método Pago</div>
+            <div className="flex-1 text-center">
+              {reportMode === "SERVICES"
+                ? "Resumen de Orden"
+                : "Resumen de Venta"}
+            </div>
             <div className="w-32"></div>
           </div>
 
@@ -582,7 +656,9 @@ export const Historial = () => {
                 history
               </span>
               <p className="text-slate-400 font-medium">
-                No se encontraron ventas en este periodo
+                No se encontraron{" "}
+                {reportMode === "SERVICES" ? "servicios" : "ventas"} en este
+                periodo
               </p>
             </div>
           ) : (
@@ -599,7 +675,9 @@ export const Historial = () => {
                   </div>
                   <div className="flex-1 text-center">
                     <p className="text-[13px] font-medium text-slate-600 dark:text-slate-300">
-                      {venta.employeeName}
+                      {reportMode === "SERVICES"
+                        ? venta.customerName
+                        : venta.employeeName}
                     </p>
                   </div>
                   <div className="flex-1 text-center">
@@ -621,8 +699,12 @@ export const Historial = () => {
                     <p className="text-[15px] font-medium text-slate-600 dark:text-slate-300">
                       {contarProductos(venta.items)}{" "}
                       {contarProductos(venta.items) === 1
-                        ? "producto"
-                        : "productos"}
+                        ? reportMode === "SERVICES"
+                          ? "servicio"
+                          : "producto"
+                        : reportMode === "SERVICES"
+                          ? "servicios"
+                          : "productos"}
                       <span className="mx-3 text-slate-300 dark:text-slate-700">
                         |
                       </span>

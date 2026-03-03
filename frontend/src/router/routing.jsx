@@ -37,6 +37,7 @@ import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
 import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
 import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
+import { LatencyIndicator } from "../components/common/LatencyIndicator";
 
 const PrivateLayout = ({ children }) => {
   const {
@@ -159,6 +160,7 @@ const PrivateLayout = ({ children }) => {
       <main className="main-content">
         <LicenseGuard>{children}</LicenseGuard>
         <ScrollTopButton />
+        <LatencyIndicator />
       </main>
     </div>
   );

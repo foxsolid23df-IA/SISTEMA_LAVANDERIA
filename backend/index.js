@@ -23,16 +23,13 @@ require('./models/WeeklyReconciliation'); // <--- Reconciliación Semanal
 // Crear la app de Express
 const app = express();
 
-// Configurar CORS para producción
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:3001'],
-    credentials: true,
-    optionsSuccessStatus: 200
-};
-
-// En modo Electron, permitir todas las conexiones locales y encabezados necesarios
+// Configurar CORS de forma dinámica para reflejar el origen y permitir Capacitor, Web y Electron
 app.use(cors({
-    origin: '*',
+    origin: function (origin, callback) {
+        // Permite cualquier origen dinámicamente (reflejando el origin original). 
+        // Soluciona el error de "credentials: true" con origin "*" en Capacitor.
+        callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-master-pin'],
     credentials: true

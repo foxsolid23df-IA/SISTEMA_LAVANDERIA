@@ -1,0 +1,60 @@
+.latency-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4b5563;
+    z-index: 9999;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.latency-indicator:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.latency-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+}
+
+/* Animación de pulso para cuando está crítico o checando */
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes pulse-gray {
+    0% { box-shadow: 0 0 0 0 rgba(128, 128, 128, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(128, 128, 128, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(128, 128, 128, 0); }
+}
+
+.latency-dot.error {
+    animation: pulse-red 2s infinite;
+}
+
+.latency-dot.checking {
+    animation: pulse-gray 1.5s infinite;
+}
+
+/* Para modo oscuro en la app */
+:root[class~="dark"] .latency-indicator {
+    background: rgba(31, 41, 55, 0.9);
+    color: #e5e7eb;
+    border-color: rgba(75, 85, 99, 0.5);
+}
