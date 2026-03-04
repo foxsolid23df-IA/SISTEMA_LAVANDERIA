@@ -237,6 +237,7 @@ export const CashCut = ({ onClose }) => {
         startTime: summary.startTime,
         salesCount: summary.salesCount,
         salesTotal: summary.salesTotal,
+        cashTotal: summary.cashTotal,
         expectedCash: summary.expectedMXN,
         actualCash: parseFloat(actualCash) || 0,
         difference: diffMXN,
@@ -255,6 +256,7 @@ export const CashCut = ({ onClose }) => {
       setCutResult({
         ...savedCut,
         ...cutData,
+        withdrawals: summary.withdrawals,
         endTime: new Date().toISOString(),
         difference: diffMXN,
         differenceUSD: diffUSD,

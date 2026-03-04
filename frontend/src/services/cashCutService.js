@@ -239,6 +239,16 @@ export const cashCutService = {
 
                 console.log(`[CashCut] Fetching day summary since: ${startTime}`);
 
+                // Load all withdrawals since the last day cut
+                const allWithdrawals = await cashWithdrawalService.getWithdrawalHistory({ startDate: startTime, limit: 1000 });
+                const totalMXN = allWithdrawals.reduce((sum, w) => sum + (parseFloat(w.amount) || 0), 0);
+                withdrawals = {
+                    totalMXN,
+                    totalUSD: 0,
+                    count: allWithdrawals.length,
+                    details: allWithdrawals // <-- Agregamos el array para que el ticket pueda iterar sobre él
+                };
+
                 const cloudSales = await salesService.getSalesSince(startTime, null);
                 const cloudOrders = await orderService.getOrdersSince(startTime);
 

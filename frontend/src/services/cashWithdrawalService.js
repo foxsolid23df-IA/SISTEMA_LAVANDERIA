@@ -49,7 +49,7 @@ export const cashWithdrawalService = {
     getTotalWithdrawalsBySession: async (sessionId) => {
         const { data, error } = await supabase
             .from('cash_withdrawals')
-            .select('amount, currency')
+            .select('*')
             .eq('cash_session_id', sessionId);
 
         if (error) throw error;
@@ -62,7 +62,7 @@ export const cashWithdrawalService = {
             .filter(w => w.currency === 'USD')
             .reduce((sum, w) => sum + parseFloat(w.amount), 0);
 
-        return { totalMXN, totalUSD, count: data?.length || 0 };
+        return { totalMXN, totalUSD, count: data?.length || 0, details: data || [] };
     },
 
     /**
