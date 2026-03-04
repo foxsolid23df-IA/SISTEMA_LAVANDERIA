@@ -303,7 +303,35 @@ export const AuthProvider = ({ children }) => {
   // Verificar permisos basados en el empleado ACTIVO
   const activeRole = activeStaff?.role || "cajero";
   const canAccessAdmin = activeStaff?.isOwner || activeRole === "admin";
-  const canAccessReports = canAccessAdmin || activeRole === "gerente";
+
+  // Mapear los nuevos permisos granulares si existen, si no, usar defaults
+  const canAccessReports =
+    activeStaff?.permissions?.can_see_reports ??
+    (canAccessAdmin || activeRole === "gerente");
+
+  const canManageInventory =
+    activeStaff?.permissions?.can_manage_inventory ??
+    (canAccessAdmin || activeRole === "gerente");
+
+  const canManageStaff =
+    activeStaff?.permissions?.can_manage_staff ?? canAccessAdmin;
+
+  const canDeleteOrders =
+    activeStaff?.permissions?.can_delete_orders ?? canAccessAdmin;
+
+  const canProcessOrders =
+    activeStaff?.permissions?.can_process_orders ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "operador");
+
+  const canDeliverOrders =
+    activeStaff?.permissions?.can_deliver_orders ??
+    (canAccessAdmin ||
+      activeRole === "gerente" ||
+      activeRole === "repartidor" ||
+      activeRole === "cajero");
+
+  const canVoidSales =
+    activeStaff?.permissions?.can_void_sales ?? canAccessAdmin;
 
   // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios
   const memoizedUser = React.useMemo(
@@ -325,8 +353,14 @@ export const AuthProvider = ({ children }) => {
       loading,
 
       // PERMISOS basados en el empleado activo
-      isAdmin: canAccessAdmin, // Solo propietario o admin pueden gestionar usuarios
-      canAccessReports: canAccessReports, // Gerentes pueden ver reportes
+      isAdmin: canManageStaff || canAccessAdmin, // Permitimos que isAdmin se base en canManageStaff temporalmente para retrocompatibilidad
+      canAccessReports,
+      canManageInventory,
+      canManageStaff,
+      canDeleteOrders,
+      canProcessOrders,
+      canDeliverOrders,
+      canVoidSales,
       activeRole, // Rol del empleado actual
 
       // Sistema de empleados
@@ -369,6 +403,12 @@ export const AuthProvider = ({ children }) => {
       loading,
       canAccessAdmin,
       canAccessReports,
+      canManageInventory,
+      canManageStaff,
+      canDeleteOrders,
+      canProcessOrders,
+      canDeliverOrders,
+      canVoidSales,
       activeRole,
       activeStaff,
       isLocked,

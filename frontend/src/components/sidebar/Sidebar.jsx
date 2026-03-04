@@ -16,6 +16,7 @@ export const Sidebar = () => {
     logout,
     isAdmin,
     canAccessReports,
+    canManageInventory,
     activeStaff,
     lockScreen,
     storeName,
@@ -269,59 +270,63 @@ export const Sidebar = () => {
             <span className="text-sm font-bold">Gestión de Órdenes</span>
           </NavLink>
 
-          <NavLink
-            to="/servicios"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              local_laundry_service
-            </span>
-            <span className="text-sm font-bold">Catálogo de Servicios</span>
-          </NavLink>
+          {canManageInventory && (
+            <>
+              <NavLink
+                to="/servicios"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px]">
+                  local_laundry_service
+                </span>
+                <span className="text-sm font-bold">Catálogo de Servicios</span>
+              </NavLink>
 
-          <NavLink
-            to="/productos"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              shopping_bag
-            </span>
-            <span className="text-sm font-bold">Catálogo de Productos</span>
-          </NavLink>
+              <NavLink
+                to="/productos"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px]">
+                  shopping_bag
+                </span>
+                <span className="text-sm font-bold">Catálogo de Productos</span>
+              </NavLink>
 
-          <NavLink
-            to="/insumos"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              inventory_2
-            </span>
-            <span className="text-sm font-bold">Insumos (Interno)</span>
-          </NavLink>
+              <NavLink
+                to="/insumos"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px]">
+                  inventory_2
+                </span>
+                <span className="text-sm font-bold">Insumos (Interno)</span>
+              </NavLink>
+            </>
+          )}
 
           <NavLink
             to="/clientes"

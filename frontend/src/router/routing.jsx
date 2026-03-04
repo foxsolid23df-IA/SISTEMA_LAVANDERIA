@@ -171,6 +171,11 @@ const AdminRoute = ({ children }) => {
   return isAdmin ? children : <Navigate to="/" />;
 };
 
+const InventoryRoute = ({ children }) => {
+  const { canManageInventory } = useAuth();
+  return canManageInventory ? children : <Navigate to="/" />;
+};
+
 export const Routing = () => {
   return (
     <HashRouter>
@@ -214,7 +219,9 @@ export const Routing = () => {
                       path="/servicios"
                       element={
                         <PrivateLayout>
-                          <Inventory mode="SERVICE" />
+                          <InventoryRoute>
+                            <Inventory mode="SERVICE" />
+                          </InventoryRoute>
                         </PrivateLayout>
                       }
                     />
@@ -222,7 +229,9 @@ export const Routing = () => {
                       path="/productos"
                       element={
                         <PrivateLayout>
-                          <Inventory mode="PRODUCT" />
+                          <InventoryRoute>
+                            <Inventory mode="PRODUCT" />
+                          </InventoryRoute>
                         </PrivateLayout>
                       }
                     />
@@ -231,7 +240,9 @@ export const Routing = () => {
                       path="/insumos"
                       element={
                         <PrivateLayout>
-                          <SupplyInventory />
+                          <InventoryRoute>
+                            <SupplyInventory />
+                          </InventoryRoute>
                         </PrivateLayout>
                       }
                     />

@@ -10,8 +10,8 @@ export const SupplyInventory = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history
 
-  const { isAdmin, activeRole } = useAuth();
-  const canEditOrDelete = isAdmin || activeRole === "gerente";
+  const { isAdmin, activeRole, canManageInventory } = useAuth();
+  const canEditOrDelete = canManageInventory;
 
   // Estados para filtros de historial
   const [searchTerm, setSearchTerm] = useState("");
