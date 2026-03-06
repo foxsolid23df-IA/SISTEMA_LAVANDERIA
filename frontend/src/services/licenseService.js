@@ -57,11 +57,19 @@ export const licenseService = {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return { isValid: false, isOffline: false, message: "No autenticado." };
 
-                // 1. Verificar si es super admin (Bypass)
-                const { data: profile } = await supabase.from('profiles').select('role, license_expires_at').eq('id', user.id).single();
-                if (profile?.role === 'super_admin') {
+                // 1. Verificar si es super admin en la nueva tabla (bypass total)
+                const { data: superAdmin } = await supabase
+                    .from('super_admins')
+                    .select('id')
+                    .eq('email', user.email)
+                    .maybeSingle();
+
+                if (superAdmin) {
                     return { isValid: true, isOffline: false, message: "Modo SuperAdmin Activo" };
                 }
+
+                // Si no es super admin, buscamos su perfil regular
+                const { data: profile } = await supabase.from('profiles').select('role, license_expires_at').eq('id', user.id).maybeSingle();
 
                 // 2. Buscar en invitation_codes (Prioridad según la guía corporativa)
                 const { data: invCode, error: invError } = await supabase
