@@ -20,18 +20,68 @@ export const adminLicenseService = {
     },
 
     /**
+     * Obtiene la lista de administradores del portal.
+     * Solo funciona si el usuario actual es super_admin (por RLS).
+     */
+    getSuperAdmins: async () => {
+        try {
+            const { data, error } = await supabase
+                .from('super_admins')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error fetching super admins:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Crea un nuevo administrador con acceso al portal (sin crear tienda).
+     */
+    createSuperAdmin: async (email, password, masterPin) => {
+        try {
+            const { data, error } = await supabase.functions.invoke('admin-create-superadmin', {
+                body: { email, password, master_pin: masterPin }
+            });
+
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Error al crear administrador');
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error creating super admin:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
      * Actualiza la fecha de vencimiento de la licencia de un usuario.
      */
     updateLicense: async (userId, newDate, masterPin) => {
         try {
-            const { data, error } = await supabase.rpc('update_license_expiry', {
+            const { error } = await supabase.rpc('update_license_expiry', {
                 target_user_id: userId,
                 new_expiry: newDate,
                 master_pin: masterPin
             });
 
             if (error) throw error;
-            return { success: true, data };
+
+            // También actualizar en invitation_codes (Prioridad del SuperAdmin Portal corporativo)
+            // Ya que is_super_admin() aplica en RLS, la actualización directa está permitida
+            const { error: invError } = await supabase
+                .from('invitation_codes')
+                .update({ expires_at: newDate })
+                .eq('used_by', userId);
+
+            if (invError) {
+                console.warn("Fallo al actualizar invitation_codes, puede que no exista código para este user:", invError);
+            }
+
+            return { success: true };
         } catch (error) {
             console.error('Error updating license:', error);
             return { success: false, error: error.message };

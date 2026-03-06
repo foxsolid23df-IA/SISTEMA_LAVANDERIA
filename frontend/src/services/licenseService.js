@@ -53,7 +53,48 @@ export const licenseService = {
     checkLicense: async () => {
         // --- AJUSTE PARA VERCEL / WEB ---
         if (!config.isElectron) {
-            return { isValid: true, isOffline: false, message: "Modo Supervisión Web Activo" };
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return { isValid: false, isOffline: false, message: "No autenticado." };
+
+                // 1. Verificar si es super admin (Bypass)
+                const { data: profile } = await supabase.from('profiles').select('role, license_expires_at').eq('id', user.id).single();
+                if (profile?.role === 'super_admin') {
+                    return { isValid: true, isOffline: false, message: "Modo SuperAdmin Activo" };
+                }
+
+                // 2. Buscar en invitation_codes (Prioridad según la guía corporativa)
+                const { data: invCode, error: invError } = await supabase
+                    .from('invitation_codes')
+                    .select('expires_at')
+                    .eq('used_by', user.id)
+                    .single();
+
+                const now = new Date();
+                let expiresAt = null;
+
+                if (!invError && invCode && invCode.expires_at) {
+                    expiresAt = new Date(invCode.expires_at);
+                } else if (profile?.license_expires_at) {
+                    // Fallback a profile si no se usó código de invitación
+                    expiresAt = new Date(profile.license_expires_at);
+                }
+
+                if (!expiresAt) {
+                    return { isValid: false, expiresAt: null, message: "No se encontró registro de licencia." };
+                }
+
+                const isValid = expiresAt > now;
+                return {
+                    isValid,
+                    expiresAt,
+                    isOffline: false,
+                    message: isValid ? "Licencia válida" : "La licencia ha expirado."
+                };
+            } catch (err) {
+                console.error('[LicenseService] Error verificando licencia web:', err);
+                return { isValid: false, isOffline: false, message: "Error al validar la licencia." };
+            }
         }
 
         try {
