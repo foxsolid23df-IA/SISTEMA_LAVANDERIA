@@ -541,30 +541,40 @@ export const MasterLicenseManager = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-            Panel Super Admin
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 w-full max-w-md">
+          <div className="flex justify-center mb-4">
+            <span className="material-icons-outlined text-4xl text-blue-600">
+              lock_open
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-center text-gray-800">
+            Desbloqueo de Seguridad
           </h2>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <p className="text-sm text-gray-500 text-center mb-6">
+            Ingresa tu PIN Maestro para interactuar con la base de datos
+            corporativa.
+          </p>
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                PIN Maestro
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                PIN Maestro de Operaciones
               </label>
               <input
                 type="password"
                 value={masterPin}
                 onChange={(e) => setMasterPin(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black bg-white"
-                placeholder="******"
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black bg-gray-50 text-center text-xl tracking-widest"
+                placeholder="••••••"
+                required
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
-              {loading ? "Verificando..." : "Acceder"}
+              {loading ? "Verificando Credencial..." : "Desbloquear Portal"}
             </button>
           </form>
         </div>
@@ -573,12 +583,16 @@ export const MasterLicenseManager = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Gestión de Licencias
-        </h1>
-        <p className="text-gray-600">Panel de Control Maestro</p>
+    <div className="bg-transparent">
+      <header className="mb-6 flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+            Base de Datos Corporativa
+          </h1>
+          <p className="text-slate-500 font-medium mt-1">
+            Gestión de licencias, usuarios y configuraciones maestras
+          </p>
+        </div>
       </header>
 
       <div className="mb-6">

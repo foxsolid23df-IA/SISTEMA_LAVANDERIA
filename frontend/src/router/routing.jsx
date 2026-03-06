@@ -38,6 +38,8 @@ import { AdminPanel } from "../components/admin/AdminPanel";
 import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
 import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
 import { LatencyIndicator } from "../components/common/LatencyIndicator";
+import { SuperAdminLogin } from "../components/auth/SuperAdminLogin";
+import { SuperAdminLayout } from "../components/common/SuperAdminLayout";
 
 const PrivateLayout = ({ children }) => {
   const {
@@ -184,6 +186,19 @@ export const Routing = () => {
         {/* Pantalla Cliente: Independiente de AuthProvider y ProductProvider */}
         <Route path="/customer-display" element={<CustomerDisplay />} />
         <Route path="/mobile-capture/:sessionId" element={<MobileCapture />} />
+
+        {/* Rutas Exclusivas SuperAdmin */}
+        <Route path="/portal-maestro" element={<SuperAdminLogin />} />
+        <Route
+          path="/super-admin/*"
+          element={
+            <SuperAdminLayout>
+              <Routes>
+                <Route path="licencias" element={<MasterLicenseManager />} />
+              </Routes>
+            </SuperAdminLayout>
+          }
+        />
 
         {/* Rutas de la Aplicación Principal */}
         <Route
@@ -342,17 +357,7 @@ export const Routing = () => {
                       }
                     />
 
-                    {/* Ruta Secreta Super Admin */}
-                    <Route
-                      path="/super-admin/licencias"
-                      element={
-                        <PrivateLayout>
-                          <SuperAdminRoute>
-                            <MasterLicenseManager />
-                          </SuperAdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
+                    {/* Rutas eliminadas de SuperAdmin (movidas fuera de PrivateLayout) */}
 
                     <Route
                       path="*"
