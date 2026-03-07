@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     if (!master_pin || master_pin !== EXPECTED_PIN) {
       return new Response(
         JSON.stringify({ success: false, error: 'PIN Maestro incorrecto' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -34,14 +34,14 @@ Deno.serve(async (req) => {
     if (!user_id || !new_password) {
       return new Response(
         JSON.stringify({ success: false, error: 'Faltan parámetros requeridos' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     if (new_password.length < 6) {
       return new Response(
         JSON.stringify({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ success: false, error: 'No autorizado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -68,26 +68,26 @@ Deno.serve(async (req) => {
     if (userError || !caller) {
       return new Response(
         JSON.stringify({ success: false, error: 'Usuario no autenticado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
-    // Verificar rol del caller
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', caller.id)
+    // Usar Admin API para cambiar la contraseña y verificar rol
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Verificar rol del caller en la tabla super_admins
+    const { data: superAdminRecord, error: saError } = await supabaseAdmin
+      .from('super_admins')
+      .select('id')
+      .eq('email', caller.email)
       .single()
 
-    if (profileError || profile?.role !== 'super_admin') {
+    if (saError || !superAdminRecord) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Se requiere rol super_admin' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        JSON.stringify({ success: false, error: 'Se requiere estar registrado como super_admin' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
-
-    // Usar Admin API para cambiar la contraseña
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
     
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user_id,
@@ -98,20 +98,20 @@ Deno.serve(async (req) => {
       console.error('Error updating password:', updateError)
       return new Response(
         JSON.stringify({ success: false, error: updateError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     return new Response(
       JSON.stringify({ success: true, message: 'Contraseña actualizada exitosamente' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
   } catch (error) {
     console.error('Edge function error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Error interno' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   }
 })

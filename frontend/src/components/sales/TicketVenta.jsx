@@ -91,7 +91,10 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
           className="ticket-orden"
           style={{ fontWeight: "bold", fontSize: "1.1em" }}
         >
-          ORDEN #{venta.id.toString().slice(-6).toUpperCase()}
+          ORDEN #
+          {venta.folio
+            ? venta.folio.toString().padStart(6, "0")
+            : venta.id.toString().slice(-6).toUpperCase()}
         </div>
         <div
           className="ticket-fecha"

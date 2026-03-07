@@ -237,7 +237,10 @@ export const Sales = () => {
         payment_method: usarUSD ? "usd_cash" : metodoPago,
         payment_status:
           (parseFloat(anticipo) || 0) >= total ? "paid" : "pending",
-        promised_at: new Date(fechaEntrega).toISOString(),
+        promised_at: (() => {
+          const [year, month, day] = fechaEntrega.split("-");
+          return new Date(year, month - 1, day, 12, 0, 0).toISOString();
+        })(),
         notes: notas,
         status: "processing", // Auto-send to washing
         cash_session_id: cashSession?.id,
@@ -886,29 +889,16 @@ export const Sales = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-black uppercase tracking-widest">
-                Entrega
-              </label>
-              <input
-                type="date"
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-black dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
-                value={fechaEntrega}
-                onChange={(e) => setFechaEntrega(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-black uppercase tracking-widest">
-                Paga con (Anticipo)
-              </label>
-              <input
-                type="number"
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white font-bold text-emerald-600"
-                value={anticipo}
-                onChange={(e) => setAnticipo(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-black uppercase tracking-widest">
+              Entrega
+            </label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-500 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-black dark:text-white font-black shadow-md cursor-pointer date-input-highlight transition-all"
+              value={fechaEntrega}
+              onChange={(e) => setFechaEntrega(e.target.value)}
+            />
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -953,6 +943,30 @@ export const Sales = () => {
                 <h4 className="text-4xl font-black text-black dark:text-white">
                   {formatearDinero(total)}
                 </h4>
+              </div>
+
+              <div className="relative">
+                <label className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-2 block">
+                  Paga con (Anticipo)
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 font-bold text-emerald-600">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    className="w-full pl-8 pr-20 py-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-black dark:text-white font-black text-xl"
+                    value={anticipo}
+                    onChange={(e) => setAnticipo(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <button
+                    onClick={() => setAnticipo(total)}
+                    className="absolute right-3 bg-emerald-200 text-emerald-800 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-emerald-300 transition-colors"
+                  >
+                    TOTAL
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

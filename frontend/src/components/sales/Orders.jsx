@@ -76,6 +76,9 @@ export const Orders = () => {
 
   const handleStatusChange = async (order, newStatus) => {
     const orderId = order.id;
+    const orderNumber = order.folio
+      ? order.folio.toString().padStart(6, "0")
+      : order.id.toString().slice(-6).toUpperCase();
     const balance = order.total - (order.paid_amount || 0);
     const isPaid = order.payment_status === "paid" || balance <= 0;
 
@@ -116,7 +119,7 @@ export const Orders = () => {
       if (isPaid) {
         Swal.fire({
           title: "Orden Pagada",
-          text: `La orden #${orderId.toString().slice(-6)} ha sido ${actionText}. El pago está completo.`,
+          text: `La orden #${orderNumber} ha sido ${actionText}. El pago está completo.`,
           icon: "success",
           timer: 3000,
           toast: true,
@@ -127,7 +130,7 @@ export const Orders = () => {
         if (newStatus === "delivered") {
           const result = await Swal.fire({
             title: "¡Saldo Pendiente!",
-            text: `La orden #${orderId.toString().slice(-6)} tiene un saldo de ${formatearDinero(balance)}. ¿Confirmar entrega sin liquidar?`,
+            text: `La orden #${orderNumber} tiene un saldo de ${formatearDinero(balance)}. ¿Confirmar entrega sin liquidar?`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Sí, entregar",
@@ -249,7 +252,7 @@ export const Orders = () => {
 
       Swal.fire({
         title: "¡Pago Liquidado!",
-        text: `La orden #${orderToLiquidate.id.toString().slice(-6)} ha sido pagada totalmente.`,
+        text: `La orden #${orderToLiquidate.folio ? orderToLiquidate.folio.toString().padStart(6, "0") : orderToLiquidate.id.toString().slice(-6).toUpperCase()} ha sido pagada totalmente.`,
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
@@ -452,7 +455,11 @@ export const Orders = () => {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h4 className="font-bold text-slate-800 dark:text-white text-xs">
-                    #{order.id} - {order.customers?.name.split(" ")[0]}
+                    #
+                    {order.folio
+                      ? order.folio.toString().padStart(6, "0")
+                      : order.id.toString().slice(-6).toUpperCase()}{" "}
+                    - {order.customers?.name.split(" ")[0]}
                   </h4>
                   <p className="text-[10px] text-slate-500">
                     {order.order_items?.length} items •{" "}
@@ -814,7 +821,11 @@ export const Orders = () => {
                     </span>
 
                     <h3 className="text-sm font-bold mt-2 text-slate-800 dark:text-white uppercase">
-                      #{order.id.toString().slice(-6)} - {order.customers?.name}
+                      #
+                      {order.folio
+                        ? order.folio.toString().padStart(6, "0")
+                        : order.id.toString().slice(-6).toUpperCase()}{" "}
+                      - {order.customers?.name}
                     </h3>
                     <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                       <span className="material-symbols-outlined text-[10px]">

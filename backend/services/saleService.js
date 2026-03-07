@@ -32,14 +32,32 @@ async function crearVenta(datosVenta) {
 
     if (errorStock) throw errorStock;
 
+    // Calcular el siguiente folio consecutivo
+    const maxFolioSale = await Sale.findOne({
+        order: [['folio', 'DESC']],
+        where: { folio: { [Op.not]: null } }
+    });
+
+    let nextFolio = 1;
+    if (maxFolioSale && maxFolioSale.folio) {
+        nextFolio = maxFolioSale.folio + 1;
+    } else {
+        // Fallback para cuando recién se agrega la columna (usar el ID máximo + 1)
+        const maxIdSale = await Sale.findOne({ order: [['id', 'DESC']] });
+        if (maxIdSale) {
+            nextFolio = maxIdSale.id + 1;
+        }
+    }
+
     const now = new Date().toISOString();
     const venta = await Sale.create({
+        folio: nextFolio,
         total,
         items: JSON.stringify(items),
         createdAt: now
     });
 
-    return { id: venta.id, total, items, createdAt: now };
+    return { id: venta.id, folio: venta.folio, total, items, createdAt: now };
 }
 
 // 2. OBTENER TODAS LAS VENTAS (más recientes primero) con paginación

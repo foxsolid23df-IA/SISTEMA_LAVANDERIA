@@ -22,32 +22,36 @@ Deno.serve(async (req) => {
 
     // Validar PIN Maestro
     if (!master_pin || master_pin !== EXPECTED_PIN) {
+      console.log('Error: PIN Maestro incorrecto');
       return new Response(
         JSON.stringify({ success: false, error: 'PIN Maestro incorrecto' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     if (!email || !password) {
+      console.log('Error: Faltan email o password');
       return new Response(
         JSON.stringify({ success: false, error: 'Faltan parámetros requeridos: email y password' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     if (password.length < 6) {
+      console.log('Error: Password muy corto');
       return new Response(
         JSON.stringify({ success: false, error: 'La contraseña debe tener al menos 6 caracteres' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     // Obtener token del usuario que hace la petición
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.log('Error: No Authorization header');
       return new Response(
         JSON.stringify({ success: false, error: 'No autorizado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -62,72 +66,78 @@ Deno.serve(async (req) => {
 
     const { data: { user: caller }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !caller) {
+      console.log('Error: Usuario no autenticado (token inválido o expirado)', userError);
       return new Response(
         JSON.stringify({ success: false, error: 'Usuario no autenticado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', caller.id)
+    // Para más seguridad, leemos con service key sabiendo que el caller autenticado es dueño del token
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
+    const { data: superAdminRecord, error: saError } = await supabaseAdmin
+      .from('super_admins')
+      .select('id')
+      .eq('email', caller.email)
       .single()
 
-    if (profileError || profile?.role !== 'super_admin') {
+    if (saError || !superAdminRecord) {
+      console.log('Error: Caller no está en la tabla super_admins', saError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Se requiere rol super_admin' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+        JSON.stringify({ success: false, error: 'Se requiere estar registrado como super_admin' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
-    // Cliente Admin para hacer bypass a las políticas (inserción y createUser)
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
     // 1. Insertar email en la tabla super_admins primero.
-    // Con esto evitamos que el Trigger handle_new_user de Supabase le asigne un "Perfil de Tienda"
     const { error: insertError } = await supabaseAdmin
       .from('super_admins')
       .insert([{ email: email.toLowerCase() }])
 
-    if (insertError) {
-      // Ignoramos el unique violation si por error ya estaba anotado,
-      // pero esto también evita la creación sin querer de un perfil duplicado si se reintenta
-      if (insertError.code !== '23505') { 
-        console.error('Error insertando super_admin:', insertError)
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error interno guardando administrador: ' + insertError.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
-      }
+    if (insertError && insertError.code !== '23505') {
+      console.error('Error insertando super_admin:', insertError)
+      return new Response(
+        JSON.stringify({ success: false, error: 'Error interno guardando administrador: ' + insertError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
     }
 
     // 2. Crear usuario real en Auth
     const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: email.toLowerCase(),
       password: password,
-      email_confirm: true // Saltarse el email de confirmación
+      email_confirm: true
     })
 
     if (createError) {
       console.error('Error creando usuario de auth:', createError)
+      
+      // Rollback: delete from super_admins if auth creation failed
+      await supabaseAdmin.from('super_admins').delete().eq('email', email.toLowerCase())
+
       return new Response(
-        JSON.stringify({ success: false, error: createError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ success: false, error: 'Error Auth de Supabase: ' + createError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     // 3. Responder con éxito
     return new Response(
       JSON.stringify({ success: true, message: 'Administrador creado con éxito' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
   } catch (error) {
     console.error('Edge function error:', error)
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Error interno del servidor' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   }
 })

@@ -3,6 +3,7 @@ const sequelize = require('../db/conexion');
 
 // Define el modelo Sale para la tabla 'Sale'
 const Sale = sequelize.define('Sale', {
+    folio: { type: DataTypes.INTEGER, unique: true },        // Consecutivo sin saltos
     total: { type: DataTypes.FLOAT, allowNull: false },      // Monto total de la venta
     items: { type: DataTypes.TEXT, allowNull: false },       // Detalle de productos vendidos (JSON string)
     payment_method: { type: DataTypes.STRING, defaultValue: 'efectivo' },
