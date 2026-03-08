@@ -47,11 +47,14 @@ jobs:
         run: node scripts/prepare-backend.js
 
       - name: Build and Package Electron App
+        shell: pwsh
         run: |
-          if ($env:GITHUB_REF -like "refs/tags/v*") {
+          if ("${{ github.ref }}" -like "refs/tags/v*" -or "${{ github.event_name }}" -eq "workflow_dispatch") {
+            write-host "Publishing to GitHub Releases..."
             npx electron-builder --win --x64 --publish always
           } else {
-            npx electron-builder --win --x64
+            write-host "Building without publishing..."
+            npx electron-builder --win --x64 --publish never
           }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

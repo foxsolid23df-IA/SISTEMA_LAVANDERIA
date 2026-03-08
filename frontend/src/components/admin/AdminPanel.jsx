@@ -10,7 +10,7 @@ import { exportToExcel } from "../../utils/exportToExcel";
 import Swal from "sweetalert2";
 import "./AdminPanel.css";
 
-const APP_VERSION = "1.4.18";
+const APP_VERSION = "1.4.27";
 
 export const AdminPanel = () => {
   const { isAdmin } = useAuth();

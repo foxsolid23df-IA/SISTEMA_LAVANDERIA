@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.27] - 2026-03-08
+
+### Added
+
+- **Automatización de Releases:** Configuración completa de GitHub Actions para generar el instalador `.exe` de forma automática al detectar una etiqueta de versión (v\*) o manualmente.
+- **Preparación para Auto-Update:** Sincronización de versiones en `package.json` para asegurar que las actualizaciones automáticas funcionen correctamente.
+
 ## [1.4.20] - 2026-02-28
 
 ### Added
