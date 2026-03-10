@@ -155,6 +155,7 @@ export const SupplyInventory = () => {
     const formData = new FormData(e.target);
     const reconciliations = supplies.map((s) => ({
       supply_id: s.id,
+      previous_stock: s.current_stock,
       physical_stock: formData.get(`physical_${s.id}`) || s.current_stock,
     }));
 
@@ -169,7 +170,7 @@ export const SupplyInventory = () => {
       });
       Swal.fire({
         title: "Corte Completado",
-        html: `Se ha ajustado el inventario.<br/><b>Resumen de diferencias:</b><br/> ${result.summary.map((r) => `${r.name}: ${r.diff.toFixed(2)}`).join("<br/>")}`,
+        html: `Se ha ajustado el inventario.<br/><b>Resumen de lo gastado (diferencia):</b><br/> ${result.summary.map((r) => `${r.name}: ${r.diff.toFixed(2)}`).join("<br/>")}`,
         icon: "success",
       });
       loadSupplies();

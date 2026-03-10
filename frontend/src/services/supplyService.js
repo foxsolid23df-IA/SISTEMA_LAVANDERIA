@@ -148,7 +148,8 @@ export const supplyService = {
                 .single();
 
             if (!error) {
-                results.push({ name: data.name, diff: parseFloat(item.physical_stock) });
+                const diff = parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0);
+                results.push({ name: data.name, diff: diff });
             }
         }
 
