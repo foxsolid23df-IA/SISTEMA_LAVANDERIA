@@ -97,6 +97,69 @@ export const SupplyInventory = () => {
     }
   };
 
+  const handleExportHistoryExcel = () => {
+    try {
+      if (history.length === 0) {
+        Swal.fire("Aviso", "No hay datos para exportar", "info");
+        return;
+      }
+
+      // Filtrar los datos que se están visualizando actualmente (según búsqueda y fecha)
+      const filteredData = history.filter((h) => {
+        const matchSearch =
+          (h.supply?.name || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (h.responsible || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
+        const matchDate = filterDate
+          ? (h.reconciliation_date || h.createdAt).split("T")[0] === filterDate
+          : true;
+        return matchSearch && matchDate;
+      });
+
+      if (filteredData.length === 0) {
+        Swal.fire("Aviso", "No hay datos filtrados para exportar", "info");
+        return;
+      }
+
+      // Preparar los datos para el Excel
+      const excelData = filteredData.map((h) => ({
+        Fecha: new Date(h.reconciliation_date || h.createdAt).toLocaleDateString(),
+        Responsable: h.responsible,
+        Insumo: h.supply?.name || "Insumo Eliminado",
+        "Stock Teórico": parseFloat(h.theoretical_stock).toFixed(2),
+        "Stock Físico": parseFloat(h.physical_stock).toFixed(2),
+        Diferencia: h.difference,
+      }));
+
+      // Crear el libro y la hoja
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Historial_Cortes");
+
+      // Ajustar anchos de columna automáticamente
+      const wscols = [
+        { wch: 15 }, // Fecha
+        { wch: 25 }, // Responsable
+        { wch: 25 }, // Insumo
+        { wch: 15 }, // Stock Teórico
+        { wch: 15 }, // Stock Físico
+        { wch: 15 }, // Diferencia
+      ];
+      worksheet["!cols"] = wscols;
+
+      // Generar y descargar el archivo
+      const fileName = `Historial_Cortes_Insumos_${new Date().toISOString().split("T")[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+    } catch (error) {
+      console.error("Error al exportar Excel:", error);
+      Swal.fire("Error", "No se pudo generar el archivo Excel", "error");
+    }
+  };
+
   const handleCreateSupply = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -848,6 +911,16 @@ export const SupplyInventory = () => {
                     title="Actualizar historial"
                   >
                     <span className="material-icons-outlined">refresh</span>
+                  </button>
+                  <button
+                    onClick={handleExportHistoryExcel}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20"
+                    title="Exportar a Excel"
+                  >
+                    <span className="material-icons-outlined text-[18px]">
+                      file_download
+                    </span>
+                    EXCEL
                   </button>
                 </div>
               </div>
