@@ -150,15 +150,41 @@ export const supplyService = {
             if (!error) {
                 const diff = parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0);
                 results.push({ name: data.name, diff: diff });
+
+                // Insert into reconciliation history
+                await supabase
+                    .from('supply_reconciliations')
+                    .insert([{
+                        user_id: user.id,
+                        supply_id: item.supply_id,
+                        responsible: reconData.responsible,
+                        reconciliation_date: reconData.reconciliation_date,
+                        theoretical_stock: parseFloat(item.previous_stock || 0),
+                        physical_stock: parseFloat(item.physical_stock || 0),
+                        difference: diff
+                    }]);
             }
         }
 
         return { success: true, summary: results };
     },
 
-    // Historial (Simulado por ahora o consultando tabla de logs si existiera)
+    // Historial
     getReconciliationHistory: async () => {
-        // En una fase 2 agregaremos una tabla 'supply_logs' para este historial real
-        return [];
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('supply_reconciliations')
+            .select(`
+                *,
+                supply:supplies(name, unit_measure)
+            `)
+            .eq('user_id', user.id)
+            .order('reconciliation_date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
     },
 };
