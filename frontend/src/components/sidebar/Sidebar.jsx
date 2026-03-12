@@ -17,6 +17,7 @@ export const Sidebar = () => {
     isAdmin,
     canAccessReports,
     canManageInventory,
+    canViewSupplies,
     activeStaff,
     lockScreen,
     storeName,
@@ -326,6 +327,27 @@ export const Sidebar = () => {
                 <span className="text-sm font-bold">Insumos (Interno)</span>
               </NavLink>
             </>
+          )}
+
+          {/* Insumos Solo Lectura: solo si tiene can_view_supplies pero NO can_manage_inventory */}
+          {!canManageInventory && canViewSupplies && (
+            <NavLink
+              to="/insumos"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                inventory_2
+              </span>
+              <span className="text-sm font-bold">Insumos (Interno)</span>
+            </NavLink>
           )}
 
           <NavLink

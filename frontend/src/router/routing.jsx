@@ -174,8 +174,8 @@ const AdminRoute = ({ children }) => {
 };
 
 const InventoryRoute = ({ children }) => {
-  const { canManageInventory } = useAuth();
-  return canManageInventory ? children : <Navigate to="/" />;
+  const { canManageInventory, canViewSupplies } = useAuth();
+  return (canManageInventory || canViewSupplies) ? children : <Navigate to="/" />;
 };
 
 export const Routing = () => {

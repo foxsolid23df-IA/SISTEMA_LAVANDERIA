@@ -1,10 +1,19 @@
 # Changelog
+ 
+## [1.4.31] - 2026-03-12
+ 
+### Added
+ 
+- **Permiso de Solo Lectura para Insumos (`can_view_supplies`):** Implementación de un nuevo permiso granular que permite a los usuarios visualizar el stock y usar la libreta digital sin permisos de edición o eliminación.
+- **Filtrado Dinámico de Interfaz:** El módulo de insumos ahora oculta automáticamente las pestañas administrativas (Entradas, Catálogo, Corte Semanal, Movimientos) para usuarios con acceso de solo lectura.
+- **Seguridad Granular:** Mejoras en el guard de rutas y componentes para asegurar que el principio de menor privilegio se aplique al control de inventario interno.
 
-## [1.4.27] - 2026-03-08
+## [1.4.30] - 2026-03-12
 
 ### Added
 
-- **Automatización de Releases:** Configuración completa de GitHub Actions para generar el instalador `.exe` de forma automática al detectar una etiqueta de versión (v\*) o manualmente.
+- **Indicador de Unidad en Libreta:** Visualización dinámica de la unidad de medida (kg, L, piezas, etc.) junto al campo de cantidad gastada en la Libreta Digital para evitar errores de captura.
+
 - **Preparación para Auto-Update:** Sincronización de versiones en `package.json` para asegurar que las actualizaciones automáticas funcionen correctamente.
 
 ## [1.4.20] - 2026-02-28

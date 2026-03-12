@@ -8,15 +8,20 @@ export const SupplyInventory = () => {
   const [supplies, setSupplies] = useState([]);
   const [history, setHistory] = useState([]);
   const [movements, setMovements] = useState([]);
+  const [latestRecons, setLatestRecons] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history, movements
 
-  const { isAdmin, activeRole, canManageInventory } = useAuth();
+  const { isAdmin, activeRole, canManageInventory, canViewSupplies } = useAuth();
   const canEditOrDelete = canManageInventory;
 
   // Estados para filtros de historial
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [selectedUsageSupplyId, setSelectedUsageSupplyId] = useState("");
+
+  // Insumo seleccionado en Libreta Digital para mostrar su unidad
+  const selectedUsageSupply = supplies.find((s) => s.id === selectedUsageSupplyId);
 
   useEffect(() => {
     loadSupplies();
@@ -28,6 +33,9 @@ export const SupplyInventory = () => {
     }
     if (activeTab === "movements") {
       loadMovements();
+    }
+    if (activeTab === "reconciliation") {
+      loadLatestRecons();
     }
   }, [activeTab]);
 
@@ -58,6 +66,15 @@ export const SupplyInventory = () => {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const loadLatestRecons = async () => {
+    try {
+      const data = await supplyService.getLatestReconciliations();
+      const map = {};
+      data.forEach(r => { map[r.supply_id] = r.physical_stock });
+      setLatestRecons(map);
+    } catch (e) { console.error(e); }
   };
 
   const handleRecordUsage = async (e) => {
@@ -231,11 +248,20 @@ export const SupplyInventory = () => {
   const handleReconciliation = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const reconciliations = supplies.map((s) => ({
-      supply_id: s.id,
-      previous_stock: s.current_stock,
-      physical_stock: formData.get(`physical_${s.id}`) || s.current_stock,
-    }));
+    const reconciliations = supplies.map((s) => {
+      const inputElement = document.getElementsByName(`physical_${s.id}`)[0];
+      const val = inputElement ? inputElement.value : formData.get(`physical_${s.id}`);
+      const physical = (val !== "" && val !== null && val !== undefined) ? parseFloat(val) : s.current_stock;
+
+      const last_count = latestRecons[s.id] !== undefined ? latestRecons[s.id] : null;
+
+      return {
+        supply_id: s.id,
+        previous_stock: s.current_stock,
+        physical_stock: physical,
+        last_count: last_count
+      };
+    });
 
     const responsible = formData.get("responsible");
     const reconciliation_date = formData.get("reconciliation_date");
@@ -248,10 +274,78 @@ export const SupplyInventory = () => {
       });
       Swal.fire({
         title: "Corte Completado",
-        html: `Se ha ajustado el inventario.<br/><b>Resumen de lo gastado (diferencia):</b><br/> ${result.summary.map((r) => `${r.name}: ${r.diff.toFixed(2)}`).join("<br/>")}`,
+        html: `Se ha ajustado el inventario.<br/><br/><b>Resumen del Periodo:</b><br/> 
+        <div class="max-h-60 overflow-y-auto">
+          ${result.summary.map((r) => 
+            `<div class="text-left mt-2 pb-2 border-b border-gray-100 dark:border-slate-800">
+               <b class="text-indigo-600 dark:text-indigo-400">${r.name}</b><br/>
+               <span class="text-xs text-slate-500">Último corte: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</span><br/>
+               <span class="text-sm font-bold ${r.gasto > 0 ? 'text-rose-500' : 'text-slate-500'}">Gasto del Periodo: ${r.gasto !== 0 ? r.gasto.toFixed(2) : '0.00'}</span><br/>
+               <span class="text-xs ${r.diff !== 0 ? 'text-amber-500' : 'text-emerald-500'}">Dif Sist: ${r.diff.toFixed(2)}</span>
+             </div>`
+          ).join("")}
+        </div>`,
         icon: "success",
+        showCancelButton: true,
+        confirmButtonText: "OK",
+        cancelButtonText: "🖨️ Imprimir Ticket",
+        cancelButtonColor: "#4f46e5",
+      }).then((swalResult) => {
+        if (swalResult.dismiss === Swal.DismissReason.cancel) {
+          // Imprimir Ticket
+          const printWindow = window.open('', '_blank');
+          const printHtml = `
+            <html>
+            <head>
+              <title>Ticket de Corte Semanal</title>
+              <style>
+                body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 400px; margin: 0 auto; }
+                h2 { text-align: center; font-size: 18px; margin-bottom: 5px; }
+                p { text-align: center; margin: 5px 0; }
+                .divider { border-bottom: 1px dashed #000; margin: 15px 0; }
+                .item { margin-bottom: 10px; }
+                .title { font-weight: bold; }
+                .row { display: flex; justify-content: space-between; }
+                .small { font-size: 12px; }
+              </style>
+            </head>
+            <body>
+              <h2>CORTE DE INSUMOS</h2>
+              <p>Fecha: ${reconciliation_date}</p>
+              <p>Responsable: ${responsible}</p>
+              <div class="divider"></div>
+              ${result.summary.map(r => `
+                <div class="item">
+                  <div class="title">${r.name}</div>
+                  <div class="small">Último: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</div>
+                  <div class="row">
+                    <span>Gasto:</span>
+                    <span>${r.gasto !== 0 ? r.gasto.toFixed(2) : '0.00'}</span>
+                  </div>
+                  <div class="row small">
+                    <span>Dif. Sist:</span>
+                    <span>${r.diff.toFixed(2)}</span>
+                  </div>
+                </div>
+              `).join("")}
+              <div class="divider"></div>
+              <p>FIN DEL REPORTE</p>
+              <script>
+                window.onload = function() { 
+                  setTimeout(() => { window.print(); }, 500); 
+                }
+                window.onafterprint = function() { window.close(); }
+              </script>
+            </body>
+            </html>
+          `;
+          printWindow.document.write(printHtml);
+          printWindow.document.close();
+        }
       });
       loadSupplies();
+      loadLatestRecons();
+      setActiveTab("inventory");
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -381,7 +475,15 @@ export const SupplyInventory = () => {
           },
           { id: "movements", label: "Movimientos", icon: "swap_vert" },
           { id: "history", label: "Historial Cortes", icon: "history" },
-        ].map((tab) => (
+        ]
+          .filter((tab) => {
+            // Si tiene permiso completo, ve todas las tabs
+            if (canManageInventory) return true;
+            // Si solo tiene can_view_supplies, solo ve Libreta Digital y Existencias
+            if (canViewSupplies) return ["usage", "inventory"].includes(tab.id);
+            return true;
+          })
+          .map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -420,6 +522,8 @@ export const SupplyInventory = () => {
                 <select
                   name="supply_id"
                   required
+                  value={selectedUsageSupplyId}
+                  onChange={(e) => setSelectedUsageSupplyId(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Seleccionar...</option>
@@ -434,14 +538,21 @@ export const SupplyInventory = () => {
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Cantidad Gastada
                 </label>
-                <input
-                  name="quantity"
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="0.00"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                />
+                <div className="relative">
+                  <input
+                    name="quantity"
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 pr-16 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                  />
+                  {selectedUsageSupply && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg uppercase pointer-events-none">
+                      {selectedUsageSupply.unit_measure}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -839,9 +950,10 @@ export const SupplyInventory = () => {
                   <thead>
                     <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">
                       <th className="px-6 py-4">Insumo</th>
+                      <th className="px-6 py-4">Último Conteo</th>
                       <th className="px-6 py-4">Stock Sistema</th>
                       <th className="px-6 py-4">Conteo Físico Real</th>
-                      <th className="px-6 py-4">Diferencia</th>
+                      <th className="px-6 py-4 text-center">Gasto Periodo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -861,6 +973,9 @@ export const SupplyInventory = () => {
                               {s.unit_measure}
                             </span>
                           </td>
+                          <td className="px-6 py-4 text-sm font-bold text-slate-400">
+                            {latestRecons[s.id] !== undefined ? latestRecons[s.id].toFixed(2) : '-'}
+                          </td>
                           <td className="px-6 py-4 text-sm font-bold text-slate-500">
                             {s.current_stock.toFixed(2)}
                           </td>
@@ -872,28 +987,29 @@ export const SupplyInventory = () => {
                               defaultValue={s.current_stock.toFixed(2)}
                               className="w-32 bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 font-black text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                               onChange={(e) => {
-                                // Cálculo visual rápido de diferencia (DOM manipulation simple para no re-renderizar todo)
                                 const val = parseFloat(e.target.value) || 0;
-                                const diff = val - s.current_stock;
-                                const span = document.getElementById(
-                                  `diff_${s.id}`,
-                                );
-                                if (span) {
-                                  span.innerText =
-                                    diff > 0
-                                      ? `+${diff.toFixed(2)}`
-                                      : diff.toFixed(2);
-                                  span.className = `font-black ${diff < 0 ? "text-rose-500" : diff > 0 ? "text-emerald-500" : "text-slate-300"}`;
+                                
+                                // Gasto (Último Conteo - Conteo Físico)
+                                const last = latestRecons[s.id] !== undefined ? latestRecons[s.id] : s.current_stock;
+                                const gasto = last - val;
+                                
+                                const spanGasto = document.getElementById(`gasto_${s.id}`);
+                                if (spanGasto) {
+                                  spanGasto.innerText = gasto.toFixed(2);
+                                  spanGasto.className = `font-black ${gasto > 0 ? "text-rose-500" : gasto < 0 ? "text-emerald-500" : "text-slate-300"}`;
                                 }
                               }}
                             />
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 text-center">
                             <div
-                              id={`diff_${s.id}`}
+                              id={`gasto_${s.id}`}
                               className="font-black text-slate-300"
                             >
-                              0.00
+                              { (() => {
+                                const last = latestRecons[s.id] !== undefined ? latestRecons[s.id] : s.current_stock;
+                                return (last - s.current_stock).toFixed(2);
+                              })() }
                             </div>
                           </td>
                         </tr>

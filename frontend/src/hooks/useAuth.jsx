@@ -313,6 +313,9 @@ export const AuthProvider = ({ children }) => {
     activeStaff?.permissions?.can_manage_inventory ??
     (canAccessAdmin || activeRole === "gerente");
 
+  const canViewSupplies =
+    activeStaff?.permissions?.can_view_supplies ?? false;
+
   const canManageStaff =
     activeStaff?.permissions?.can_manage_staff ?? canAccessAdmin;
 
@@ -356,6 +359,7 @@ export const AuthProvider = ({ children }) => {
       isAdmin: canManageStaff || canAccessAdmin, // Permitimos que isAdmin se base en canManageStaff temporalmente para retrocompatibilidad
       canAccessReports,
       canManageInventory,
+      canViewSupplies,
       canManageStaff,
       canDeleteOrders,
       canProcessOrders,
@@ -404,6 +408,7 @@ export const AuthProvider = ({ children }) => {
       canAccessAdmin,
       canAccessReports,
       canManageInventory,
+      canViewSupplies,
       canManageStaff,
       canDeleteOrders,
       canProcessOrders,

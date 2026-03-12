@@ -189,7 +189,14 @@ export const supplyService = {
 
             if (!error) {
                 const diff = parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0);
-                results.push({ name: data.name, diff: diff });
+                
+                // Si viene el último conteo en los datos, calcular el gasto real
+                const lastCount = item.last_count !== undefined && item.last_count !== null 
+                    ? parseFloat(item.last_count) 
+                    : parseFloat(item.previous_stock || 0);
+                const gasto = lastCount - parseFloat(item.physical_stock || 0);
+
+                results.push({ name: data.name, diff: diff, gasto: gasto, last_count: lastCount, physical_stock: parseFloat(item.physical_stock || 0) });
 
                 // Insert into reconciliation history
                 await supabase
@@ -207,6 +214,31 @@ export const supplyService = {
         }
 
         return { success: true, summary: results };
+    },
+
+    // Obtener los últimos conteos físicos por insumo
+    getLatestReconciliations: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('supply_reconciliations')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('reconciliation_date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        // Agrupar para obtener solo el más reciente por insumo
+        const latest = {};
+        (data || []).forEach(record => {
+            if (!latest[record.supply_id]) {
+                latest[record.supply_id] = record;
+            }
+        });
+        
+        return Object.values(latest);
     },
 
     // Historial
