@@ -27,6 +27,8 @@ export const supplyService = {
             .insert([{
                 name: supplyData.name,
                 unit_measure: supplyData.unit_measure,
+                presentation: supplyData.presentation || 'Galón',
+                content_per_presentation: parseFloat(supplyData.content_per_presentation || 1),
                 min_stock: parseFloat(supplyData.min_stock || 0),
                 current_stock: 0,
                 user_id: user.id
@@ -48,6 +50,8 @@ export const supplyService = {
             .update({
                 name: supplyData.name,
                 unit_measure: supplyData.unit_measure,
+                presentation: supplyData.presentation || 'Galón',
+                content_per_presentation: parseFloat(supplyData.content_per_presentation || 1),
                 min_stock: parseFloat(supplyData.min_stock || 0),
                 current_stock: parseFloat(supplyData.current_stock || 0)
             })
@@ -81,17 +85,23 @@ export const supplyService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No hay una sesión activa.");
 
-        // 1. Obtener stock actual
+        // 1. Obtener stock actual Y factor de conversión
         const { data: supply, error: getError } = await supabase
             .from('supplies')
-            .select('current_stock')
+            .select('current_stock, content_per_presentation')
             .eq('id', entryData.supply_id)
             .single();
 
         if (getError) throw getError;
 
-        // 2. Actualizar stock
-        const newStock = parseFloat(supply.current_stock || 0) + parseFloat(entryData.quantity);
+        // 2. Calcular cantidad real en unidad base
+        // Ej: El usuario pone "2 Galones" * 3.7 L/Galón = 7.4 L
+        const factor = parseFloat(supply.content_per_presentation || 1);
+        const qtyPresentations = parseFloat(entryData.quantity);
+        const realQuantity = qtyPresentations * factor;
+
+        // 3. Actualizar stock (sumando en unidad base)
+        const newStock = parseFloat(supply.current_stock || 0) + realQuantity;
         const { data, error } = await supabase
             .from('supplies')
             .update({ current_stock: newStock })
@@ -100,6 +110,22 @@ export const supplyService = {
             .single();
 
         if (error) throw error;
+
+        // 4. REGISTRAR MOVIMIENTO con ambos datos
+        await supabase
+            .from('supply_movements')
+            .insert([{
+                user_id: user.id,
+                supply_id: entryData.supply_id,
+                type: 'ENTRY_WEEKLY',
+                quantity: realQuantity,
+                notes: entryData.notes
+                    ? `${qtyPresentations} presentación(es) × ${factor} = ${realQuantity.toFixed(2)} | ${entryData.notes}`
+                    : `${qtyPresentations} presentación(es) × ${factor} = ${realQuantity.toFixed(2)}`,
+                staff_name: 'Administrador',
+                usage_date: new Date().toISOString().split('T')[0]
+            }]);
+
         return data;
     },
 
@@ -129,6 +155,20 @@ export const supplyService = {
             .single();
 
         if (error) throw error;
+
+        // 4. REGISTRAR MOVIMIENTO en supply_movements (FIX: antes se omitía)
+        await supabase
+            .from('supply_movements')
+            .insert([{
+                user_id: user.id,
+                supply_id: usageData.supply_id,
+                type: usageData.type,  // USAGE_MORNING o USAGE_AFTERNOON
+                quantity: parseFloat(usageData.quantity),
+                notes: usageData.notes || null,
+                staff_name: usageData.user_name || 'Desconocido',
+                usage_date: usageData.usage_date || new Date().toISOString().split('T')[0]
+            }]);
+
         return data;
     },
 
@@ -183,6 +223,26 @@ export const supplyService = {
             .eq('user_id', user.id)
             .order('reconciliation_date', { ascending: false })
             .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    // Historial de movimientos diarios (Entradas + Consumos)
+    getMovementHistory: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('supply_movements')
+            .select(`
+                *,
+                supply:supplies(name, unit_measure)
+            `)
+            .eq('user_id', user.id)
+            .order('usage_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(200);
 
         if (error) throw error;
         return data || [];

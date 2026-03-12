@@ -7,8 +7,9 @@ import * as XLSX from "xlsx";
 export const SupplyInventory = () => {
   const [supplies, setSupplies] = useState([]);
   const [history, setHistory] = useState([]);
+  const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history
+  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history, movements
 
   const { isAdmin, activeRole, canManageInventory } = useAuth();
   const canEditOrDelete = canManageInventory;
@@ -24,6 +25,9 @@ export const SupplyInventory = () => {
   useEffect(() => {
     if (activeTab === "history") {
       loadHistory();
+    }
+    if (activeTab === "movements") {
+      loadMovements();
     }
   }, [activeTab]);
 
@@ -42,6 +46,15 @@ export const SupplyInventory = () => {
     try {
       const data = await supplyService.getReconciliationHistory();
       setHistory(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const loadMovements = async () => {
+    try {
+      const data = await supplyService.getMovementHistory();
+      setMovements(data);
     } catch (error) {
       console.error(error);
     }
@@ -166,6 +179,8 @@ export const SupplyInventory = () => {
     const data = {
       name: formData.get("name"),
       unit_measure: formData.get("unit_measure"),
+      presentation: formData.get("presentation"),
+      content_per_presentation: formData.get("content_per_presentation"),
       min_stock: formData.get("min_stock"),
     };
 
@@ -248,7 +263,11 @@ export const SupplyInventory = () => {
       html: `<div class="text-left">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre del Insumo</label>
           <input id="swal-edit-name" class="swal2-input w-full mx-0 mb-4" value="${supply.name}">
-          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Unidad de Medida</label>
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Presentación (Galón, Bote, etc)</label>
+          <input id="swal-edit-presentation" class="swal2-input w-full mx-0 mb-4" value="${supply.presentation || 'Galón'}">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Contenido por Presentación</label>
+          <input id="swal-edit-content" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${supply.content_per_presentation || 1}">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Unidad Base (L, Kg, mL, Pza)</label>
           <input id="swal-edit-unit" class="swal2-input w-full mx-0 mb-4" value="${supply.unit_measure}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Stock Mínimo</label>
           <input id="swal-edit-min" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${supply.min_stock}">
@@ -262,6 +281,8 @@ export const SupplyInventory = () => {
       preConfirm: () => {
         return {
           name: document.getElementById("swal-edit-name").value,
+          presentation: document.getElementById("swal-edit-presentation").value,
+          content_per_presentation: document.getElementById("swal-edit-content").value,
           unit_measure: document.getElementById("swal-edit-unit").value,
           min_stock: document.getElementById("swal-edit-min").value,
           current_stock: document.getElementById("swal-edit-current").value,
@@ -358,7 +379,8 @@ export const SupplyInventory = () => {
             label: "Corte Semanal",
             icon: "assignment_turned_in",
           },
-          { id: "history", label: "Historial", icon: "history" },
+          { id: "movements", label: "Movimientos", icon: "swap_vert" },
+          { id: "history", label: "Historial Cortes", icon: "history" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -487,7 +509,8 @@ export const SupplyInventory = () => {
                   <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <th className="px-6 py-4">Insumo</th>
                     <th className="px-6 py-4">Stock Actual</th>
-                    <th className="px-6 py-4">Unidad</th>
+                    <th className="px-6 py-4">Presentación</th>
+                    <th className="px-6 py-4">Unidad Base</th>
                     <th className="px-6 py-4">Estado</th>
                     {canEditOrDelete && (
                       <th className="px-6 py-4 text-right">Acciones</th>
@@ -509,6 +532,9 @@ export const SupplyInventory = () => {
                         >
                           {s.current_stock.toFixed(2)}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-slate-400">
+                        {s.presentation || '—'} ({s.content_per_presentation || 1} {s.unit_measure})
                       </td>
                       <td className="px-6 py-4 text-xs font-bold text-slate-400">
                         {s.unit_measure}
@@ -553,7 +579,7 @@ export const SupplyInventory = () => {
                   {supplies.length === 0 && (
                     <tr>
                       <td
-                        colSpan={canEditOrDelete ? "5" : "4"}
+                        colSpan={canEditOrDelete ? "7" : "6"}
                         className="px-6 py-12 text-center text-slate-400"
                       >
                         No hay insumos registrados.
@@ -589,14 +615,14 @@ export const SupplyInventory = () => {
                   <option value="">Seleccionar...</option>
                   {supplies.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name}
+                      {s.name} — {s.presentation || 'Galón'} ({s.content_per_presentation || 1} {s.unit_measure})
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Cantidad que Entra
+                  Cantidad (en Presentaciones)
                 </label>
                 <input
                   name="quantity"
@@ -628,9 +654,9 @@ export const SupplyInventory = () => {
             </h2>
             <form
               onSubmit={handleCreateSupply}
-              className="grid grid-cols-1 md:grid-cols-4 gap-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
-              <div className="space-y-2 lg:col-span-2">
+              <div className="space-y-2 lg:col-span-3">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Nombre del Insumo
                 </label>
@@ -642,18 +668,66 @@ export const SupplyInventory = () => {
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 />
               </div>
+
+              {/* PRESENTACIÓN */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Unidad (Galón, Bote, etc)
+                  Presentación
+                </label>
+                <select
+                  name="presentation"
+                  required
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="Galón">Galón</option>
+                  <option value="Bote">Bote</option>
+                  <option value="Garrafa">Garrafa</option>
+                  <option value="Costal">Costal</option>
+                  <option value="Caja">Caja</option>
+                  <option value="Bolsa">Bolsa</option>
+                  <option value="Frasco">Frasco</option>
+                  <option value="Pieza">Pieza</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+
+              {/* CONTENIDO POR PRESENTACIÓN */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Contenido por Presentación
                 </label>
                 <input
-                  name="unit_measure"
-                  type="text"
+                  name="content_per_presentation"
+                  type="number"
+                  step="0.01"
                   required
-                  placeholder="GALON"
+                  placeholder="Ej. 3.7"
+                  defaultValue="1"
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 />
               </div>
+
+              {/* UNIDAD DE MEDIDA BASE */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Unidad de Medida
+                </label>
+                <select
+                  name="unit_measure"
+                  required
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="L">Litros (L)</option>
+                  <option value="mL">Mililitros (mL)</option>
+                  <option value="Kg">Kilogramos (Kg)</option>
+                  <option value="g">Gramos (g)</option>
+                  <option value="Pza">Piezas (Pza)</option>
+                  <option value="Rollo">Rollos</option>
+                  <option value="Galón">Galón</option>
+                </select>
+              </div>
+
+              {/* STOCK MÍNIMO */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Stock Mínimo (Alerta)
@@ -667,7 +741,8 @@ export const SupplyInventory = () => {
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 />
               </div>
-              <div className="md:col-span-4 flex justify-end">
+
+              <div className="lg:col-span-3 flex justify-end">
                 <button
                   type="submit"
                   className="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary/20"
@@ -844,6 +919,87 @@ export const SupplyInventory = () => {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+        {/* Tab: Movimientos Diarios */}
+        {activeTab === "movements" && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="material-icons-outlined text-primary">swap_vert</span>
+                Movimientos Diarios (Entradas y Consumos)
+              </h2>
+              <button
+                onClick={loadMovements}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg text-slate-500 transition-all"
+                title="Actualizar"
+              >
+                <span className="material-icons-outlined">refresh</span>
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <th className="px-6 py-4">Fecha</th>
+                    <th className="px-6 py-4">Insumo</th>
+                    <th className="px-6 py-4">Tipo</th>
+                    <th className="px-6 py-4 text-center">Cantidad</th>
+                    <th className="px-6 py-4">Responsable</th>
+                    <th className="px-6 py-4">Notas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {movements.map((m, index) => {
+                    const isEntry = m.type === 'ENTRY_WEEKLY';
+                    const typeLabel = {
+                      'ENTRY_WEEKLY': 'Entrada Semanal',
+                      'USAGE_MORNING': 'Consumo Mañana',
+                      'USAGE_AFTERNOON': 'Consumo Tarde',
+                      'ADJUSTMENT': 'Ajuste'
+                    }[m.type] || m.type;
+                    return (
+                      <tr key={m.id || index} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">
+                          {m.usage_date ? new Date(m.usage_date + 'T12:00:00').toLocaleDateString() : new Date(m.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                          {m.supply?.name || 'Insumo Eliminado'}
+                          <span className="block text-[10px] text-slate-400 font-normal">{m.supply?.unit_measure}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${
+                            isEntry
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          }`}>
+                            {typeLabel}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`font-mono font-black text-lg ${isEntry ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {isEntry ? '+' : '-'}{parseFloat(m.quantity).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-slate-500">
+                          {m.staff_name || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-400 max-w-[200px] truncate">
+                          {m.notes || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {movements.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-medium">
+                        No hay movimientos registrados aún. Registra un consumo o entrada para empezar a ver el historial.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
         {/* Tab: Reconciliation History */}
