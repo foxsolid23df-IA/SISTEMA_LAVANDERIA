@@ -1,6 +1,11 @@
 # Changelog
- 
-## [1.4.31] - 2026-03-12
+
+## [1.4.32] - 2026-03-12
+
+### Fixed
+
+- **Inventario Interno:** Se simplificó la confirmación al borrar un insumo. Ahora solo requiere hacer clic en el botón de confirmación en lugar de escribir el nombre exacto del producto, mejorando la experiencia de uso.
+
  
 ### Added
  

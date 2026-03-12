@@ -405,30 +405,23 @@ export const SupplyInventory = () => {
   };
 
   const handleDeleteSupply = async (supply) => {
-    // Doble validación requerida por el usuario
-    const { value: confirmName } = await Swal.fire({
+    const { isConfirmed } = await Swal.fire({
       title: "¿Borrar Insumo?",
-      html: `<p class="mb-4">Para confirmar, escribe el nombre del insumo exacto: <b>${supply.name}</b></p>`,
-      input: "text",
+      html: `<p class="mb-4">¿Estás seguro de que deseas borrar el insumo <b>${supply.name}</b>?</p>`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
       confirmButtonText: "Sí, borrar",
       cancelButtonText: "Cancelar",
-      inputValidator: (value) => {
-        if (value !== supply.name) {
-          return "El nombre no coincide.";
-        }
-      },
     });
 
-    if (confirmName === supply.name) {
+    if (isConfirmed) {
       try {
         await supplyService.delete(supply.id);
         Swal.fire(
           "¡Borrado!",
-          "El insumo ha sido ocultado (borrado suave).",
+          "El insumo ha sido eliminado.",
           "success",
         );
         loadSupplies();
