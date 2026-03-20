@@ -157,14 +157,19 @@ export const supplyService = {
         if (error) throw error;
 
         // 4. REGISTRAR MOVIMIENTO en supply_movements (FIX: antes se omitía)
+        const qty = parseFloat(usageData.quantity);
+        const cleanUnit = supply.unit_measure ? supply.unit_measure.replace(/^\d+\s*/, '') : '';
+        const baseNote = `${qty} ${cleanUnit}`;
+        const finalNote = usageData.notes ? `${baseNote} | ${usageData.notes}` : baseNote;
+
         await supabase
             .from('supply_movements')
             .insert([{
                 user_id: user.id,
                 supply_id: usageData.supply_id,
                 type: usageData.type,  // USAGE_MORNING o USAGE_AFTERNOON
-                quantity: parseFloat(usageData.quantity),
-                notes: usageData.notes ? `${parseFloat(usageData.quantity)} ${supply.unit_measure} | ${usageData.notes}` : `${parseFloat(usageData.quantity)} ${supply.unit_measure}`,
+                quantity: qty,
+                notes: finalNote,
                 staff_name: usageData.user_name || 'Desconocido',
                 usage_date: usageData.usage_date || new Date().toISOString().split('T')[0]
             }]);
