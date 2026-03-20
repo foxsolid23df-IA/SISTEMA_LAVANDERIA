@@ -280,8 +280,7 @@ export const SupplyInventory = () => {
             `<div class="text-left mt-2 pb-2 border-b border-gray-100 dark:border-slate-800">
                <b class="text-indigo-600 dark:text-indigo-400">${r.name}</b><br/>
                <span class="text-xs text-slate-500">Último corte: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</span><br/>
-               <span class="text-sm font-bold ${r.gasto > 0 ? 'text-rose-500' : 'text-slate-500'}">Gasto del Periodo: ${r.gasto !== 0 ? r.gasto.toFixed(2) : '0.00'}</span><br/>
-               <span class="text-xs ${r.diff !== 0 ? 'text-amber-500' : 'text-emerald-500'}">Dif Sist: ${r.diff.toFixed(2)}</span>
+               <span className="text-sm font-bold ${r.diff > 0 ? 'text-rose-500' : 'text-emerald-500'}">Ajuste Aplicado: ${r.diff !== 0 ? r.diff.toFixed(2) : '0.00'}</span><br/>
              </div>`
           ).join("")}
         </div>`,
@@ -319,12 +318,8 @@ export const SupplyInventory = () => {
                   <div class="title">${r.name}</div>
                   <div class="small">Último: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</div>
                   <div class="row">
-                    <span>Gasto:</span>
-                    <span>${r.gasto !== 0 ? r.gasto.toFixed(2) : '0.00'}</span>
-                  </div>
-                  <div class="row small">
-                    <span>Dif. Sist:</span>
-                    <span>${r.diff.toFixed(2)}</span>
+                    <span>Ajuste/Merma:</span>
+                    <span>${r.diff !== 0 ? r.diff.toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
               `).join("")}
@@ -951,7 +946,7 @@ export const SupplyInventory = () => {
                       <th className="px-6 py-4">Último Conteo</th>
                       <th className="px-6 py-4">Stock Sistema</th>
                       <th className="px-6 py-4">Conteo Físico Real</th>
-                      <th className="px-6 py-4 text-center">Gasto Periodo</th>
+                      <th className="px-6 py-4 text-center">Merma / Gasto</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -987,9 +982,8 @@ export const SupplyInventory = () => {
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
                                 
-                                // Gasto (Último Conteo - Conteo Físico)
-                                const last = latestRecons[s.id] !== undefined ? latestRecons[s.id] : s.current_stock;
-                                const gasto = last - val;
+                                // Gasto (Stock Sistema - Conteo Físico) -> esto refleja exactamente el ajuste que se aplicará
+                                const gasto = s.current_stock - val;
                                 
                                 const spanGasto = document.getElementById(`gasto_${s.id}`);
                                 if (spanGasto) {
@@ -1005,8 +999,8 @@ export const SupplyInventory = () => {
                               className="font-black text-slate-300"
                             >
                               { (() => {
-                                const last = latestRecons[s.id] !== undefined ? latestRecons[s.id] : s.current_stock;
-                                return (last - s.current_stock).toFixed(2);
+                                // Valor inicial de visualización
+                                return (s.current_stock - s.current_stock).toFixed(2); // Inicia en 0.00
                               })() }
                             </div>
                           </td>

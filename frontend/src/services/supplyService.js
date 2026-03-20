@@ -215,6 +215,21 @@ export const supplyService = {
                         physical_stock: parseFloat(item.physical_stock || 0),
                         difference: diff
                     }]);
+
+                // Registrar la diferencia como comprobante formal de ajuste/consumo en los movimientos diarios
+                if (diff !== 0) {
+                    await supabase
+                        .from('supply_movements')
+                        .insert([{
+                            user_id: user.id,
+                            supply_id: item.supply_id,
+                            type: 'ADJUSTMENT',
+                            quantity: -diff, // Si el teórico era 10 y el físico 8, la diferencia (merma) es 2. El movimiento debe ser -2.
+                            notes: `Descuento por Corte Semanal. (Sist: ${parseFloat(item.previous_stock || 0)} → Físico: ${parseFloat(item.physical_stock || 0)})`,
+                            staff_name: reconData.responsible || 'Sistema',
+                            usage_date: reconData.reconciliation_date || new Date().toISOString().split('T')[0]
+                        }]);
+                }
             }
         }
 
