@@ -134,10 +134,10 @@ export const supplyService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No hay una sesión activa.");
 
-        // 1. Obtener stock actual
+        // 1. Obtener stock actual y unidad de medida
         const { data: supply, error: getError } = await supabase
             .from('supplies')
-            .select('current_stock')
+            .select('current_stock, unit_measure')
             .eq('id', usageData.supply_id)
             .single();
 
@@ -164,7 +164,7 @@ export const supplyService = {
                 supply_id: usageData.supply_id,
                 type: usageData.type,  // USAGE_MORNING o USAGE_AFTERNOON
                 quantity: parseFloat(usageData.quantity),
-                notes: usageData.notes || null,
+                notes: usageData.notes ? `${parseFloat(usageData.quantity)} ${supply.unit_measure} | ${usageData.notes}` : `${parseFloat(usageData.quantity)} ${supply.unit_measure}`,
                 staff_name: usageData.user_name || 'Desconocido',
                 usage_date: usageData.usage_date || new Date().toISOString().split('T')[0]
             }]);

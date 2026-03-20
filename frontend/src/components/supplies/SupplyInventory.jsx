@@ -529,7 +529,7 @@ export const SupplyInventory = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Cantidad Gastada
+                  Cantidad Gastada {selectedUsageSupply ? `(${selectedUsageSupply.unit_measure})` : ""}
                 </label>
                 <div className="relative">
                   <input
@@ -546,6 +546,11 @@ export const SupplyInventory = () => {
                     </span>
                   )}
                 </div>
+                {selectedUsageSupply && (
+                  <p className="text-[10px] text-amber-500 font-bold mt-1">
+                    * Ingrese el gasto exacto en {selectedUsageSupply.unit_measure}, NO en presentaciones.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
