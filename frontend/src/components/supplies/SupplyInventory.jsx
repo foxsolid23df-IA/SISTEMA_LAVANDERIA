@@ -3,6 +3,7 @@ import { supplyService } from "../../services/supplyService";
 import { useAuth } from "../../hooks/useAuth";
 import Swal from "sweetalert2";
 import * as XLSX from "xlsx";
+import ReconciliationTab from "./ReconciliationTab";
 
 export const SupplyInventory = () => {
   const [supplies, setSupplies] = useState([]);
@@ -10,7 +11,9 @@ export const SupplyInventory = () => {
   const [movements, setMovements] = useState([]);
   const [latestRecons, setLatestRecons] = useState({});
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history, movements
+  const [activeTab, setActiveTab] = useState("usage"); // usage, entry, reconciliation, inventory, history, movements, weekly_table
+  const [adjustedStocks, setAdjustedStocks] = useState({}); // Estado para el cálculo reactivo de la tabla de auditoría
+  const [weeklyData, setWeeklyData] = useState([]);
 
   const { isAdmin, activeRole, canManageInventory, canViewSupplies } = useAuth();
   const canEditOrDelete = canManageInventory;
@@ -36,6 +39,7 @@ export const SupplyInventory = () => {
     }
     if (activeTab === "reconciliation") {
       loadLatestRecons();
+      loadWeeklyData();
     }
   }, [activeTab]);
 
@@ -75,6 +79,18 @@ export const SupplyInventory = () => {
       data.forEach(r => { map[r.supply_id] = r.physical_stock });
       setLatestRecons(map);
     } catch (e) { console.error(e); }
+  };
+
+  const loadWeeklyData = async () => {
+    try {
+      setLoading(true);
+      const data = await supplyService.getWeeklyTable();
+      setWeeklyData(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRecordUsage = async (e) => {
@@ -272,17 +288,66 @@ export const SupplyInventory = () => {
         responsible,
         reconciliation_date,
       });
+
       Swal.fire({
         title: "Corte Completado",
-        html: `Se ha ajustado el inventario.<br/><br/><b>Resumen del Periodo:</b><br/> 
-        <div class="max-h-60 overflow-y-auto">
-          ${result.summary.map((r) => 
-            `<div class="text-left mt-2 pb-2 border-b border-gray-100 dark:border-slate-800">
-               <b class="text-indigo-600 dark:text-indigo-400">${r.name}</b><br/>
-               <span class="text-xs text-slate-500">Último corte: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</span><br/>
-               <span className="text-sm font-bold ${r.diff > 0 ? 'text-rose-500' : 'text-emerald-500'}">Ajuste Aplicado: ${r.diff !== 0 ? r.diff.toFixed(2) : '0.00'}</span><br/>
-             </div>`
-          ).join("")}
+        html: `Se ha ajustado el inventario.<br/><br/><b>Ticket a imprimir:</b><br/> 
+        <div class="max-h-80 overflow-y-auto text-left text-sm mt-4">
+          ${result.summary.map((r) => {
+             const supplyData = supplies.find(s => s.name === r.name) || {};
+             const weekData = weeklyData.find(w => w.id === supplyData.id) || {};
+             
+             const ultimoCorteObj = weekData["Ultimo Corte"] || 0;
+             const ultimaCompraObj = weekData["Ultima Compra"] || 0;
+             const gastoPeriodo = (ultimoCorteObj + ultimaCompraObj) - r.physical_stock;
+             
+             const stockMinimo = parseFloat(supplyData.min_stock || 0);
+             const compraSugerida = Math.max(0, stockMinimo - r.physical_stock);
+             
+             // Evitar errores de zona horaria usando split/substring si es formato ISO, o pasarlo seguro a string local.
+             const formatearFecha = (fechaStr) => {
+               if(!fechaStr) return 'N/A';
+               try { return new Date(fechaStr + "T00:00:00").toLocaleDateString(); }
+               catch { return new Date(fechaStr).toLocaleDateString(); }
+             };
+
+             const fechaUltimoCorte = weekData.fecha_ultimo_corte ? formatearFecha(weekData.fecha_ultimo_corte.split("T")[0]) : 'N/A';
+             const fechaActual = formatearFecha((reconciliation_date || new Date().toISOString().split("T")[0]).split("T")[0]);
+             const periodoCorte = `${fechaUltimoCorte} - ${fechaActual}`;
+             
+             return `
+             <div class="mb-6 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+               <table class="w-full text-left border-collapse">
+                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                   <tr>
+                     <td class="px-4 py-2 font-bold bg-slate-50 dark:bg-slate-800 w-[45%]">Producto</td>
+                     <td class="px-4 py-2 font-bold text-indigo-600 dark:text-indigo-400">${r.name}</td>
+                   </tr>
+                   <tr>
+                     <td class="px-4 py-2 bg-slate-50 dark:bg-slate-800">Periodo del Corte</td>
+                     <td class="px-4 py-2 text-slate-600 dark:text-slate-300">${periodoCorte}</td>
+                   </tr>
+                   <tr>
+                     <td class="px-4 py-2 bg-slate-50 dark:bg-slate-800">Gasto del Periodo</td>
+                     <td class="px-4 py-2 text-slate-600 dark:text-slate-300">${gastoPeriodo.toFixed(2)}</td>
+                   </tr>
+                   <tr>
+                     <td class="px-4 py-2 bg-slate-50 dark:bg-slate-800">Stock Actual</td>
+                     <td class="px-4 py-2 font-bold text-slate-700 dark:text-slate-200">${r.physical_stock.toFixed(2)}</td>
+                   </tr>
+                   <tr>
+                     <td class="px-4 py-2 bg-slate-50 dark:bg-slate-800">Stock Minimo</td>
+                     <td class="px-4 py-2 text-slate-600 dark:text-slate-300">${stockMinimo.toFixed(2)}</td>
+                   </tr>
+                   <tr>
+                     <td class="px-4 py-2 bg-slate-50 dark:bg-slate-800 font-bold">Compra Sugerida</td>
+                     <td class="px-4 py-2 font-black ${compraSugerida > 0 ? 'text-rose-500' : 'text-emerald-500'}">${compraSugerida.toFixed(2)}</td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
+             `;
+          }).join("")}
         </div>`,
         icon: "success",
         showCancelButton: true,
@@ -298,33 +363,59 @@ export const SupplyInventory = () => {
             <head>
               <title>Ticket de Corte Semanal</title>
               <style>
-                body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 400px; margin: 0 auto; }
-                h2 { text-align: center; font-size: 18px; margin-bottom: 5px; }
-                p { text-align: center; margin: 5px 0; }
-                .divider { border-bottom: 1px dashed #000; margin: 15px 0; }
-                .item { margin-bottom: 10px; }
-                .title { font-weight: bold; }
-                .row { display: flex; justify-content: space-between; }
-                .small { font-size: 12px; }
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; padding: 20px; max-width: 600px; margin: 0 auto; color: #333; }
+                h2 { text-align: center; font-size: 20px; margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 10px; }
+                .info-head { text-align: center; margin-bottom: 20px; font-size: 14px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #000; }
+                th, td { border: 1px solid #000; padding: 10px; text-align: left; }
+                th { width: 45%; background-color: #f0f0f0; }
+                .compra-sugerida { font-weight: bold; font-size: 15px; }
+                @media print {
+                  body { padding: 0; }
+                  @page { margin: 1cm; }
+                }
               </style>
             </head>
             <body>
-              <h2>CORTE DE INSUMOS</h2>
-              <p>Fecha: ${reconciliation_date}</p>
-              <p>Responsable: ${responsible}</p>
-              <div class="divider"></div>
-              ${result.summary.map(r => `
-                <div class="item">
-                  <div class="title">${r.name}</div>
-                  <div class="small">Último: ${r.last_count !== null ? r.last_count.toFixed(2) : '-'} | Actual: ${r.physical_stock.toFixed(2)}</div>
-                  <div class="row">
-                    <span>Ajuste/Merma:</span>
-                    <span>${r.diff !== 0 ? r.diff.toFixed(2) : '0.00'}</span>
-                  </div>
-                </div>
-              `).join("")}
-              <div class="divider"></div>
-              <p>FIN DEL REPORTE</p>
+              <h2>Ticket de Corte de Insumos</h2>
+              <div class="info-head">
+                <p><strong>Fecha de Corte:</strong> ${reconciliation_date || new Date().toLocaleDateString()}</p>
+                <p><strong>Responsable:</strong> ${responsible}</p>
+              </div>
+              ${result.summary.map(r => {
+                 const supplyData = supplies.find(s => s.name === r.name) || {};
+                 const weekData = weeklyData.find(w => w.id === supplyData.id) || {};
+                 
+                 const ultimoCorteObj = weekData["Ultimo Corte"] || 0;
+                 const ultimaCompraObj = weekData["Ultima Compra"] || 0;
+                 const gastoPeriodo = (ultimoCorteObj + ultimaCompraObj) - r.physical_stock;
+                 
+                 const stockMinimo = parseFloat(supplyData.min_stock || 0);
+                 const compraSugerida = Math.max(0, stockMinimo - r.physical_stock);
+                 
+                 const formatearFecha = (fechaStr) => {
+                   if(!fechaStr) return 'N/A';
+                   try { return new Date(fechaStr + "T00:00:00").toLocaleDateString(); }
+                   catch { return new Date(fechaStr).toLocaleDateString(); }
+                 };
+
+                 const fechaUltimoCorte = weekData.fecha_ultimo_corte ? formatearFecha(weekData.fecha_ultimo_corte.split("T")[0]) : 'N/A';
+                 const fechaActual = formatearFecha((reconciliation_date || new Date().toISOString().split("T")[0]).split("T")[0]);
+                 const periodoCorte = `${fechaUltimoCorte} - ${fechaActual}`;
+                 
+                 return `
+                 <table>
+                   <tr><th>Ticket a imprimir</th><td style="background-color: #f8f8f8;"></td></tr>
+                   <tr><th>Producto</th><td><strong>${r.name}</strong></td></tr>
+                   <tr><th>Periodo del Corte</th><td>${periodoCorte}</td></tr>
+                   <tr><th>Gasto del Periodo</th><td>${gastoPeriodo.toFixed(2)}</td></tr>
+                   <tr><th>Stock Actual</th><td>${r.physical_stock.toFixed(2)}</td></tr>
+                   <tr><th>Stock Minimo</th><td>${stockMinimo.toFixed(2)}</td></tr>
+                   <tr><th>Compra Sugerida</th><td class="compra-sugerida">${compraSugerida.toFixed(2)}</td></tr>
+                 </table>
+                 `;
+              }).join("")}
+              <div style="text-align: center; margin-top: 20px; font-weight: bold;">FIN DEL REPORTE</div>
               <script>
                 window.onload = function() { 
                   setTimeout(() => { window.print(); }, 500); 
@@ -457,8 +548,13 @@ export const SupplyInventory = () => {
           { id: "entry", label: "Entradas", icon: "add_circle" },
           { id: "catalog", label: "Catálogo", icon: "settings_suggest" },
           {
+            id: "shopping_list",
+            label: "Lista de Compras",
+            icon: "shopping_cart",
+          },
+          {
             id: "reconciliation",
-            label: "Corte Semanal",
+            label: "Ajuste Auditoría",
             icon: "assignment_turned_in",
           },
           { id: "movements", label: "Movimientos", icon: "swap_vert" },
@@ -860,149 +956,135 @@ export const SupplyInventory = () => {
 
         {/* Tab: Weekly Reconciliation (Corte) */}
         {activeTab === "reconciliation" && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <ReconciliationTab
+            supplies={supplies}
+            onCancel={() => setActiveTab("inventory")}
+            onSuccess={() => {
+              setActiveTab("inventory");
+              loadSupplies();
+              loadHistory();
+            }}
+          />
+        )}
+        
+        {/* Tab: Lista de Compras Automática */}
+        {activeTab === "shopping_list" && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
-                  <span className="material-icons-outlined">
-                    assignment_turned_in
-                  </span>
-                  Corte Semanal de Insumos
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="material-icons-outlined text-primary">shopping_cart</span>
+                  Lista de Compras Automática
                 </h2>
-                <p className="text-xs text-slate-500 mt-1 uppercase font-bold tracking-wider">
-                  Contabiliza lo que hay físicamente en la estantería
+                <p className="text-sm text-slate-500 mt-1">
+                  Insumos que han alcanzado su nivel crítico de Stock Mínimo.
                 </p>
               </div>
-              <div className="bg-indigo-50 dark:bg-indigo-500/10 p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20">
-                <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase">
-                  Instrucciones
-                </p>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Ingresa la cantidad real que tienes hoy. El sistema ajustará
-                  el stock automáticamente.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  const criticalSupplies = supplies.filter(s => s.current_stock <= s.min_stock);
+                  const dateStr = new Date().toLocaleDateString();
+                  
+                  const printHtml = `
+                    <html>
+                    <head>
+                      <title>Lista de Compras</title>
+                      <style>
+                        body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 400px; margin: 0 auto; text-transform: uppercase; }
+                        h2 { text-align: center; font-size: 18px; margin-bottom: 5px; }
+                        p { text-align: center; margin: 5px 0; }
+                        .divider { border-bottom: 1px dashed #000; margin: 15px 0; }
+                        .item { margin-bottom: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+                        .title { font-weight: bold; width: 60%; }
+                        .qty { width: 40%; text-align: right; }
+                        .small { font-size: 12px; color: #555; display: block; }
+                      </style>
+                    </head>
+                    <body>
+                      <h2>LISTA DE COMPRAS</h2>
+                      <p>Fecha: ${dateStr}</p>
+                      <div class="divider"></div>
+                      ${criticalSupplies.length === 0 ? '<p>TODO EL STOCK ESTÁ BIEN</p>' : ''}
+                      ${criticalSupplies.map(s => {
+                        const falta = s.min_stock - s.current_stock;
+                        const sugerido = falta > 0 ? (s.min_stock * 2) - s.current_stock : Math.max(s.min_stock, 1);
+                        return `
+                        <div class="item">
+                          <div class="title">${s.name} <span class="small">Min: ${s.min_stock} | Act: ${s.current_stock.toFixed(2)}</span></div>
+                          <div class="qty"><span style="font-size: 10px; color:#666;">Sug:</span> <b>${parseFloat(sugerido).toFixed(2)}</b> ${s.unit_measure}</div>
+                        </div>
+                        `;
+                      }).join("")}
+                      <div class="divider"></div>
+                      <p>FIN DE LA LISTA</p>
+                      <script>
+                        window.onload = function() { 
+                          setTimeout(() => { window.print(); }, 500); 
+                        }
+                        window.onafterprint = function() { window.close(); }
+                      </script>
+                    </body>
+                    </html>
+                  `;
+                  printWindow.document.write(printHtml);
+                  printWindow.document.close();
+                }}
+                className="h-[48px] px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all"
+              >
+                <span className="material-icons-outlined">print</span>
+                Imprimir Ticket de Compra
+              </button>
             </div>
-
-            <form onSubmit={handleReconciliation}>
-              {/* Info del Responsable */}
-              {/* Info del Responsable y Fecha */}
-              <div className="mb-6 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800 flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300 mb-2">
-                    Responsable del Corte (Obligatorio)
-                  </label>
-                  <input
-                    name="responsible"
-                    type="text"
-                    required
-                    placeholder="Escribe tu nombre..."
-                    className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="w-full md:w-1/3 relative">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300 mb-2">
-                    Fecha del Corte
-                  </label>
-                  <input
-                    name="reconciliation_date"
-                    type="date"
-                    required
-                    defaultValue={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-white dark:bg-slate-800 border-none rounded-lg p-3 pl-10 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 cursor-pointer text-center"
-                  />
-                  <div className="absolute left-3 top-[38px] text-black dark:text-white z-10 pointer-events-none">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      className="opacity-100"
-                    >
-                      <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleExportExcel}
-                    className="h-[48px] px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-lg flex items-center gap-2 transition-all"
-                  >
-                    <span className="material-icons-outlined">
-                      file_download
-                    </span>
-                    Excel
-                  </button>
-                </div>
+            
+            {supplies.filter(s => s.current_stock <= s.min_stock).length === 0 ? (
+              <div className="p-12 text-center flex flex-col items-center justify-center">
+                <span className="material-icons-outlined text-emerald-500 text-6xl mb-4">check_circle</span>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">¡Todo en orden!</h3>
+                <p className="text-slate-500">No hay ningún insumo por debajo de su stock mínimo.</p>
               </div>
-
-              <div className="overflow-x-auto mb-6">
+            ) : (
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                      <th className="px-6 py-4">Insumo</th>
-                      <th className="px-6 py-4">Último Conteo</th>
-                      <th className="px-6 py-4">Stock Sistema</th>
-                      <th className="px-6 py-4">Conteo Físico Real</th>
-                      <th className="px-6 py-4 text-center">Merma / Gasto</th>
+                    <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <th className="px-6 py-4 animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "0ms"}}>Insumo</th>
+                      <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "50ms"}}>Stock Actual</th>
+                      <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "100ms"}}>Stock Mínimo</th>
+                      <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "150ms"}}>Estado</th>
+                      <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "200ms"}}>Sugerido a Comprar</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {supplies.map((s) => {
-                      // Lógica simple para calcular diferencia en tiempo real si implementáramos estado,
-                      // por ahora usaremos inputs no controlados con visualización básica post-submit,
-                      // o mejoramos a componentes controlados en el futuro.
-                      // Para esta iteración, mantenemos input simple pero añadimos visualización clara.
+                    {supplies.map((s, index) => {
+                      const isCritical = s.current_stock <= s.min_stock;
+                      if (!isCritical) return null;
+                      
+                      const falta = s.min_stock - s.current_stock;
+                      const sugerido = falta > 0 ? (s.min_stock * 2) - s.current_stock : Math.max(s.min_stock, 1);
+                      
                       return (
-                        <tr
-                          key={s.id}
-                          className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">
+                        <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: `${250 + (index * 50)}ms`}}>
+                          <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                             {s.name}
-                            <span className="block text-[10px] text-slate-400 font-normal">
-                              {s.unit_measure}
-                            </span>
+                            <span className="block text-[10px] text-slate-400 font-normal">{s.unit_measure}</span>
                           </td>
-                          <td className="px-6 py-4 text-sm font-bold text-slate-400">
-                            {latestRecons[s.id] !== undefined ? latestRecons[s.id].toFixed(2) : '-'}
+                          <td className="px-6 py-4 text-center font-mono font-medium text-slate-600 dark:text-slate-300">
+                             {s.current_stock.toFixed(2)}
                           </td>
-                          <td className="px-6 py-4 text-sm font-bold text-slate-500">
-                            {s.current_stock.toFixed(2)}
-                          </td>
-                          <td className="px-6 py-4">
-                            <input
-                              name={`physical_${s.id}`}
-                              type="number"
-                              step="0.01"
-                              defaultValue={s.current_stock.toFixed(2)}
-                              className="w-32 bg-slate-50 dark:bg-slate-800 border-none rounded-lg p-2 font-black text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                
-                                // Gasto (Stock Sistema - Conteo Físico) -> esto refleja exactamente el ajuste que se aplicará
-                                const gasto = s.current_stock - val;
-                                
-                                const spanGasto = document.getElementById(`gasto_${s.id}`);
-                                if (spanGasto) {
-                                  spanGasto.innerText = gasto.toFixed(2);
-                                  spanGasto.className = `font-black ${gasto > 0 ? "text-rose-500" : gasto < 0 ? "text-emerald-500" : "text-slate-300"}`;
-                                }
-                              }}
-                            />
+                          <td className="px-6 py-4 text-center font-mono font-medium text-slate-400">
+                             {s.min_stock.toFixed(2)}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div
-                              id={`gasto_${s.id}`}
-                              className="font-black text-slate-300"
-                            >
-                              { (() => {
-                                // Valor inicial de visualización
-                                return (s.current_stock - s.current_stock).toFixed(2); // Inicia en 0.00
-                              })() }
-                            </div>
+                            <span className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black px-3 py-1.5 rounded-md uppercase">
+                              Crítico
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                             <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-mono font-black rounded-lg py-2 inline-block px-4 shadow-sm border border-indigo-100 dark:border-indigo-800/30">
+                               + {sugerido.toFixed(2)}
+                             </div>
                           </td>
                         </tr>
                       );
@@ -1010,25 +1092,10 @@ export const SupplyInventory = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("inventory")}
-                  className="px-6 py-3 text-slate-500 font-bold hover:text-slate-700 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-3 rounded-xl shadow-lg shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center gap-2"
-                >
-                  <span className="material-icons-outlined">fact_check</span>
-                  FINALIZAR CORTE Y AJUSTAR STOCK
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         )}
+
         {/* Tab: Movimientos Diarios */}
         {activeTab === "movements" && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
@@ -1110,6 +1177,8 @@ export const SupplyInventory = () => {
             </div>
           </div>
         )}
+
+
         {/* Tab: Reconciliation History */}
         {activeTab === "history" && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">

@@ -5,6 +5,7 @@ import { useConnectivity } from "../../hooks/useConnectivity";
 import { terminalService } from "../../services/terminalService";
 import { productService } from "../../services/productService";
 import { salesService } from "../../services/salesService";
+import { supplyService } from "../../services/supplyService";
 import { CashCut } from "../cashcut/CashCut";
 import Swal from "sweetalert2";
 import { config } from "../../config";
@@ -28,6 +29,7 @@ export const Sidebar = () => {
 
   const [showCashCut, setShowCashCut] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [lowStockCount, setLowStockCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [updaterMessage, setUpdaterMessage] = useState("");
@@ -44,6 +46,25 @@ export const Sidebar = () => {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const isManagerOrAdmin = isAdmin || activeRole === "GERENTE";
+    if (!isManagerOrAdmin || !canViewSupplies) return;
+
+    const checkLowStock = async () => {
+      try {
+        const supplies = await supplyService.getAll();
+        const count = supplies.filter(s => parseFloat(s.current_stock || 0) <= parseFloat(s.min_stock || 0)).length;
+        setLowStockCount(count);
+      } catch (err) {
+        console.error("[Sidebar] Error checkLowStock", err);
+      }
+    };
+
+    checkLowStock();
+    const interval = setInterval(checkLowStock, 120000); // Check every 2 minutes
+    return () => clearInterval(interval);
+  }, [isAdmin, activeRole, canViewSupplies]);
 
   const handleCheckUpdates = async () => {
     if (!window.electron?.checkForUpdates) return;
@@ -324,7 +345,12 @@ export const Sidebar = () => {
                 <span className="material-icons-outlined text-[20px]">
                   inventory_2
                 </span>
-                <span className="text-sm font-bold">Insumos (Interno)</span>
+                <span className="text-sm font-bold flex-1">Insumos (Interno)</span>
+                {(isAdmin || activeRole === "GERENTE") && lowStockCount > 0 && (
+                  <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-rose-500/30">
+                    {lowStockCount}
+                  </span>
+                )}
               </NavLink>
             </>
           )}
@@ -346,7 +372,12 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 inventory_2
               </span>
-              <span className="text-sm font-bold">Insumos (Interno)</span>
+              <span className="text-sm font-bold flex-1">Insumos (Interno)</span>
+              {(isAdmin || activeRole === "GERENTE") && lowStockCount > 0 && (
+                <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-rose-500/30">
+                  {lowStockCount}
+                </span>
+              )}
             </NavLink>
           )}
 
@@ -461,6 +492,24 @@ export const Sidebar = () => {
               <span className="text-sm font-bold">Admin Panel</span>
             </NavLink>
           )}
+
+          <NavLink
+            to="/configuracion-impuestos"
+            className={({ isActive }) => `
+                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                            ${
+                              isActive
+                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                            }
+                        `}
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="material-icons-outlined text-[20px]">
+              request_quote
+            </span>
+            <span className="text-sm font-bold">Impuestos</span>
+          </NavLink>
 
           <NavLink
             to="/configuracion-dolares"

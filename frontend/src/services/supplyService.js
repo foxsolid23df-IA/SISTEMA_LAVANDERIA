@@ -299,4 +299,90 @@ export const supplyService = {
         if (error) throw error;
         return data || [];
     },
+
+    // Generar tabla de Análisis Semanal
+    getWeeklyTable: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data: supplies, error: supError } = await supabase
+            .from('supplies')
+            .select('*')
+            .eq('user_id', user.id)
+            .not('is_active', 'eq', false);
+
+        if (supError) throw supError;
+
+        const { data: recons, error: recError } = await supabase
+            .from('supply_reconciliations')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('reconciliation_date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (recError) throw recError;
+
+        const latestRecons = {};
+        (recons || []).forEach(record => {
+            if (!latestRecons[record.supply_id]) {
+                latestRecons[record.supply_id] = record;
+            }
+        });
+
+        const { data: movements, error: movError } = await supabase
+            .from('supply_movements')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('type', 'ENTRY_WEEKLY')
+            .order('usage_date', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (movError) throw movError;
+
+        const latestEntries = {};
+        (movements || []).forEach(record => {
+            if (!latestEntries[record.supply_id]) {
+                latestEntries[record.supply_id] = record;
+            }
+        });
+
+        const table = supplies.map(supply => {
+            const lastCostRecon = latestRecons[supply.id];
+            const lastEntry = latestEntries[supply.id];
+
+            const ultimoCorte = lastCostRecon ? parseFloat(lastCostRecon.physical_stock || 0) : 0;
+            const ultimaCompra = lastEntry ? parseFloat(lastEntry.quantity || 0) : 0;
+            const stockSistema = parseFloat(supply.current_stock || 0);
+
+            const totalGastado = (ultimoCorte + ultimaCompra) - stockSistema;
+
+            return {
+                id: supply.id,
+                Insumo: supply.name,
+                "Ultimo Corte": ultimoCorte,
+                "Ultima Compra": ultimaCompra,
+                "Stock Sistema": stockSistema,
+                "Total Gastado": `(${ultimoCorte.toFixed(2)} + ${ultimaCompra.toFixed(2)}) - ${stockSistema.toFixed(2)}`,
+                "Total de la Semana": totalGastado
+            };
+        });
+
+        return table;
+    },
+
+    // Obtener datos del periodo para el Nuevo Corte de Insumos
+    getReconciliationPeriodData: async (startDate, endDate) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        // Llama a la funcion RPC 
+        const { data, error } = await supabase.rpc('get_supplies_period_data', {
+            p_user_id: user.id,
+            p_start_date: startDate,
+            p_end_date: endDate
+        });
+
+        if (error) throw error;
+        return data || [];
+    }
 };

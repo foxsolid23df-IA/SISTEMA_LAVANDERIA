@@ -35,48 +35,32 @@ export const ClientRegistrationModal = ({ isOpen, onClose, onClientRegistered })
 
         setLoading(true);
         try {
-            // Verificar duplicados
-            const duplicates = await customerService.checkDuplicate(formData.name.trim(), formData.phone.trim());
-            
-            if (duplicates && duplicates.length > 0) {
-                // Filtrar duplicado exacto para mostrar mensaje específico
-                const nameMatch = duplicates.find(d => d.name.toLowerCase() === formData.name.trim().toLowerCase());
-                const phoneMatch = formData.phone.trim() ? duplicates.find(d => d.phone === formData.phone.trim()) : null;
+            // Verificar duplicados por Nombre o Teléfono
+            const duplicateByName = await customerService.checkDuplicate('name', formData.name.trim());
+            const duplicateByPhone = formData.phone.trim() ? await customerService.checkDuplicate('phone', formData.phone.trim()) : null;
 
+            if (duplicateByName || duplicateByPhone) {
                 let errorMsg = 'Ya existe un cliente con estos datos.';
-                if (nameMatch && phoneMatch) errorMsg = 'Ya existe un cliente con ese nombre y teléfono.';
-                else if (nameMatch) errorMsg = `Ya existe un cliente con el nombre "${nameMatch.name}".`;
-                else if (phoneMatch) errorMsg = `Ya existe un cliente con el teléfono "${phoneMatch.phone}".`;
+                if (duplicateByName && duplicateByPhone) errorMsg = 'Ya existe un cliente con ese nombre y teléfono.';
+                else if (duplicateByName) errorMsg = `Ya existe un cliente con el nombre "${duplicateByName.name}".`;
+                else if (duplicateByPhone) errorMsg = `Ya existe un cliente con el teléfono "${duplicateByPhone.phone}".`;
 
-                await Swal.fire({
+                const result = await Swal.fire({
                     icon: 'warning',
                     title: 'Cliente Duplicado',
                     text: errorMsg,
                     showCancelButton: true,
                     confirmButtonText: 'Registrar de todos modos',
                     cancelButtonText: 'Cancelar'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                       await proceedRegistration();
-                    }
                 });
-                
-                // Si el usuario cancela o cierra el modal, aseguramos que loading sea false.
-                // Si confirmó, proceedRegistration ya se encargó de la lógica (éxito cierra modal, error lanza excepción caught below)
-                // Pero como proceedRegistration no lanza error si tiene éxito (solo cierra), necesitamos controlar el estado.
-                // En realidad, si proceedRegistration es llamado, él maneja el flujo.
-                // Solo si NO se llama (cancelar), debemos poner false.
-                
-                // NOTA: Si el usuario confirma, `proceedRegistration` se ejecuta y puede cerrar el modal.
-                // Si el usuario Cancela, el código sigue aquí.
-                
-                // Corrección: Como el `then` anterior espera a proceedRegistration, si llegamos aquí es que terminó.
-                // Si proceedRegistration tuvo éxito, el componente probablemente se desmontó (onClose).
-                // Pero es seguro poner false aquí.
-                setLoading(false);
+
+                if (result.isConfirmed) {
+                    await proceedRegistration();
+                } else {
+                    setLoading(false);
+                }
                 return;
             }
-
 
             await proceedRegistration();
         } catch (error) {

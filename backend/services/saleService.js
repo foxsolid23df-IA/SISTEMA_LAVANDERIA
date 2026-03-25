@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 
 // 1. CREAR UNA NUEVA VENTA
 async function crearVenta(datosVenta) {
-    const { items, total } = datosVenta;
+    const { items, total, has_tax, tax_amount, invoice_requested } = datosVenta;
     if (!items.length) throw new Error('No hay productos en la venta');
 
     let errorStock = null;
@@ -54,6 +54,9 @@ async function crearVenta(datosVenta) {
         folio: nextFolio,
         total,
         items: JSON.stringify(items),
+        has_tax: has_tax || false,
+        tax_amount: tax_amount || 0,
+        invoice_requested: invoice_requested || false,
         createdAt: now
     });
 

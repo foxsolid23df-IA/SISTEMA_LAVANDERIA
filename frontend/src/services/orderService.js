@@ -20,7 +20,10 @@ export const orderService = {
         payment_method: orderData.payment_method || 'cash',
         notes: orderData.notes,
         promised_at: orderData.promised_at,
-        cash_session_id: orderData.cash_session_id
+        cash_session_id: orderData.cash_session_id,
+        has_tax: orderData.has_tax || false,
+        tax_amount: orderData.tax_amount || 0,
+        invoice_requested: orderData.invoice_requested || false
       }])
       .select()
       .single();

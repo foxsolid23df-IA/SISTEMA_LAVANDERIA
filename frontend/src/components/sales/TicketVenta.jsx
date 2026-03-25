@@ -7,6 +7,9 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
   if (!venta) return null;
 
   const saldoPendiente = venta.total - (venta.paid_amount || 0);
+  const hasTax = venta.has_tax || venta.invoice_requested;
+  const taxAmount = parseFloat(venta.tax_amount) || 0;
+  const subtotal = (parseFloat(venta.total) || 0) - taxAmount;
 
   return (
     <div
@@ -165,6 +168,32 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
       />
 
       <div className="ticket-summary">
+        {hasTax && (
+          <>
+            <div
+              className="ticket-summary-row"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.95em",
+              }}
+            >
+              <span>SUBTOTAL:</span>
+              <span>{formatearDinero(subtotal)}</span>
+            </div>
+            <div
+              className="ticket-summary-row"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.95em",
+              }}
+            >
+              <span>IVA ({settings?.tax_percentage || 16}%):</span>
+              <span>{formatearDinero(taxAmount)}</span>
+            </div>
+          </>
+        )}
         <div
           className="ticket-summary-row"
           style={{

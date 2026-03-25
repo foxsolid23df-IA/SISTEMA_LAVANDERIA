@@ -227,74 +227,86 @@ export const LockScreen = () => {
 
     return (
         <div 
-            className="lock-screen" 
+            className="lock-screen-split" 
             onKeyDown={handleKeyDown} 
             tabIndex={0}
             ref={containerRef}
             style={{ outline: 'none' }}
         >
-            <div className="lock-container">
-                <div className="lock-header">
-                    <button 
-                        className="absolute top-4 right-4 p-2 text-slate-400 hover:text-primary dark:hover:text-white transition-colors"
-                        onClick={() => {
-                            document.documentElement.classList.toggle('dark');
-                            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-                        }}
-                        title="Cambiar Tema"
-                    >
-                        <span className="material-icons-outlined">dark_mode</span>
-                    </button>
-                    <div className="store-name">{storeName || 'Mi Tienda'}</div>
-                    <div className="lock-icon">🔐</div>
-                    <h1>Pantalla Bloqueada</h1>
-                    <p>Ingresa tu PIN para comenzar</p>
-                </div>
 
-                <div className="pin-display">
-                    {[...Array(6)].map((_, i) => (
-                        <div
-                            key={i}
-                            className={`pin-dot ${i < pin.length ? 'filled' : ''}`}
-                        />
-                    ))}
-                </div>
+            {/* Seccion Izquierda: Imagen de fondo */}
+            <div className="lock-left-panel">
+                {/* Vacío ya que la imagen que cargará el usuario del chat ya lo incluye */}
+            </div>
 
-                <div className="pin-keypad">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
-                        <button
-                            key={digit}
-                            className="key-btn"
-                            onClick={() => handlePinInput(digit.toString())}
-                            disabled={isValidating}
-                        >
-                            {digit}
+            {/* Seccion Derecha: Tarjeta Neon como Stitch */}
+            <div className="lock-right-panel">
+                <div className="ambient-glow"></div>
+                
+                <div className="lock-neon-card">
+                    <div className="lock-neon-header">
+                        {/* Candado SVG con degrade cian */}
+                        <div className="lock-icon">
+                            <svg width="68" height="68" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17 11H7C5.89543 11 5 11.8954 5 13V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V13C19 11.8954 18.1046 11 17 11Z" fill="url(#lock-grad)" />
+                                <path d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11" stroke="url(#lock-grad)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                                <circle cx="12" cy="16" r="1.8" fill="#121A2D" />
+                                <defs>
+                                    <linearGradient id="lock-grad" x1="5" y1="2" x2="19" y2="21" gradientUnits="userSpaceOnUse">
+                                        <stop stopColor="#0CD9A6" />
+                                        <stop offset="1" stopColor="#01A382" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+
+                        <h1>Pantalla Bloqueada</h1>
+                        <p>Ingresa tu PIN para continuar</p>
+                    </div>
+
+                    <div className="pin-display">
+                        {[...Array(6)].map((_, i) => (
+                            <div
+                                key={i}
+                                className={`pin-dot ${i < pin.length ? 'filled' : ''}`}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="pin-keypad">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(digit => (
+                            <button
+                                key={digit}
+                                className="key-btn"
+                                onClick={() => handlePinInput(digit.toString())}
+                                disabled={isValidating}
+                            >
+                                {digit}
+                            </button>
+                        ))}
+                        <button className="key-btn clear-btn" onClick={handleClear} disabled={isValidating}>C</button>
+                        <button className="key-btn" onClick={() => handlePinInput('0')} disabled={isValidating}>0</button>
+                        <button className="key-btn backspace-btn" onClick={handleBackspace} disabled={isValidating}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                                <line x1="18" y1="9" x2="12" y2="15"></line>
+                                <line x1="12" y1="9" x2="18" y2="15"></line>
+                            </svg>
                         </button>
-                    ))}
-                    <button className="key-btn clear" onClick={handleClear} disabled={isValidating}>C</button>
-                    <button className="key-btn" onClick={() => handlePinInput('0')} disabled={isValidating}>0</button>
-                    <button className="key-btn backspace" onClick={handleBackspace} disabled={isValidating}>⌫</button>
-                </div>
+                    </div>
 
-                <button
-                    className="unlock-btn"
-                    onClick={handleSubmit}
-                    disabled={pin.length < 4 || isValidating}
-                >
-                    {isValidating ? 'Verificando...' : 'Desbloquear'}
-                </button>
-
-                <div className="lock-actions">
-                    <button className="owner-btn" onClick={handleOwnerAccess}>
-                        👑 Soy el Propietario
-                    </button>
-                    <button className="logout-btn" onClick={handleLogout}>
-                        🚪 Cerrar Sesión de la Tienda
+                    <button
+                        className="unlock-btn"
+                        onClick={handleSubmit}
+                        disabled={pin.length < 4 || isValidating}
+                    >
+                        {isValidating ? 'Desbloqueando...' : 'Desbloquear'}
                     </button>
                 </div>
 
-                <div className="lock-hint">
-                    <small>💡 Ingresa tu PIN de 4-6 dígitos y presiona "Desbloquear"</small>
+                <div className="lock-card-footer">
+                    <button className="footer-action-btn" onClick={handleOwnerAccess}>Soy Propietario</button>
+                    <button className="footer-action-btn" onClick={handleLogout}>Cerrar Sesión</button>
                 </div>
             </div>
         </div>

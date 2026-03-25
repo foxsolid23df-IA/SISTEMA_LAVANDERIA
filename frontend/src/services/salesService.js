@@ -36,7 +36,10 @@ export const salesService = {
                     exchange_rate: saleData.exchange_rate || null,
                     amount_usd: saleData.amount_usd || null,
                     payment_method: saleData.metodoPago || 'efectivo',
-                    terminal_id: terminalId
+                    terminal_id: terminalId,
+                    has_tax: saleData.has_tax || false,
+                    tax_amount: saleData.tax_amount || 0,
+                    invoice_requested: saleData.invoice_requested || false
                 }])
                 .select()
                 .single();
@@ -93,6 +96,9 @@ export const salesService = {
                     })),
                     payment_method: saleData.metodoPago || 'efectivo',
                     terminal_id: terminalId,
+                    has_tax: saleData.has_tax || false,
+                    tax_amount: saleData.tax_amount || 0,
+                    invoice_requested: saleData.invoice_requested || false,
                     status: 'pending' // Importante para la sincronización
                 })
             });
@@ -133,7 +139,10 @@ export const salesService = {
                         total: localSale.total,
                         payment_method: localSale.payment_method,
                         terminal_id: localSale.terminal_id,
-                        created_at: localSale.createdAt
+                        created_at: localSale.createdAt,
+                        has_tax: localSale.has_tax || false,
+                        tax_amount: localSale.tax_amount || 0,
+                        invoice_requested: localSale.invoice_requested || false
                     };
 
                     // Implementar lógica de subida similar a createSale pero forzando nube
@@ -207,6 +216,9 @@ export const salesService = {
                         price: pi.price,
                         total: (pi.price * pi.quantity)
                     })),
+                    has_tax: local.has_tax || false,
+                    tax_amount: local.tax_amount || 0,
+                    invoice_requested: local.invoice_requested || false,
                     is_local: true
                 };
             });

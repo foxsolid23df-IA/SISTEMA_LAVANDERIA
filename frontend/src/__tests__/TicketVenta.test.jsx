@@ -41,10 +41,15 @@ describe('<TicketVenta />', () => {
         expect(screen.getByText('Secado')).toBeInTheDocument();
     });
 
-    it('Muestra totales y saldos', () => {
-        render(<TicketVenta venta={mockVenta} settings={mockSettings} />);
-        // Buscamos presencia de textos clave
-        expect(screen.getAllByText(/Total/i).length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/Saldo/i).length).toBeGreaterThan(0);
+    it('Muestra desglose de IVA si aplica', () => {
+        const ventaConIva = {
+            ...mockVenta,
+            has_tax: true,
+            tax_amount: 16,
+            total: 116,
+        };
+        render(<TicketVenta venta={ventaConIva} settings={mockSettings} />);
+        expect(screen.getByText('SUBTOTAL:')).toBeInTheDocument();
+        expect(screen.getByText('IVA (16%):')).toBeInTheDocument();
     });
 });

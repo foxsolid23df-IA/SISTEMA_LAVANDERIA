@@ -73,6 +73,9 @@ export const Sales = () => {
   const [montoRecibidoUSD, setMontoRecibidoUSD] = useState("");
   const [usarUSD, setUsarUSD] = useState(false);
 
+  // Impuestos
+  const [wantsInvoice, setWantsInvoice] = useState(false);
+
   // IA States
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
@@ -137,6 +140,8 @@ export const Sales = () => {
     }
   }, [busquedaCliente]);
 
+
+
   const handleClientRegistered = (newClient) => {
     setClienteSeleccionado(newClient);
     setBusquedaCliente(newClient.name);
@@ -185,6 +190,18 @@ export const Sales = () => {
     });
   };
 
+  // Cálculo de totales con impuestos
+  const globalTaxRate = businessSettings?.tax_percentage ? parseFloat(businessSettings.tax_percentage) : 16;
+  const taxAmount = wantsInvoice ? (total * (globalTaxRate / 100)) : 0;
+  const finalTotal = total + taxAmount;
+
+  // Sincronizar anticipo con el total de la orden cuando el modal de pago está abierto
+  useEffect(() => {
+    if (isPaymentModalOpen) {
+      setAnticipo(finalTotal);
+    }
+  }, [finalTotal, isPaymentModalOpen]);
+
   // Procesar Orden
   const handleProcessOrder = async () => {
     if (!cashSession) {
@@ -217,6 +234,7 @@ export const Sales = () => {
     setMontoRecibido(""); // Reset change calculator
     setMontoRecibidoUSD("");
     setUsarUSD(false);
+    setWantsInvoice(false);
     setIsPaymentModalOpen(true);
   };
 
@@ -232,11 +250,14 @@ export const Sales = () => {
           price: item.price,
           pricing_type: item.pricing_type || "unit",
         })),
-        total: total,
+        total: finalTotal,
+        has_tax: wantsInvoice,
+        tax_amount: taxAmount,
+        invoice_requested: wantsInvoice,
         paid_amount: parseFloat(anticipo) || 0,
         payment_method: usarUSD ? "usd_cash" : metodoPago,
         payment_status:
-          (parseFloat(anticipo) || 0) >= total ? "paid" : "pending",
+          (parseFloat(anticipo) || 0) >= finalTotal ? "paid" : "pending",
         promised_at: (() => {
           const [year, month, day] = fechaEntrega.split("-");
           return new Date(year, month - 1, day, 12, 0, 0).toISOString();
@@ -940,34 +961,45 @@ export const Sales = () => {
                 <p className="text-black text-sm mb-1 uppercase tracking-tighter font-bold">
                   Monto Total
                 </p>
-                <h4 className="text-4xl font-black text-black dark:text-white">
-                  {formatearDinero(total)}
+                <h4 className="text-4xl font-black text-black dark:text-white mb-4">
+                  {formatearDinero(finalTotal)}
                 </h4>
+
+                {/* Switch de Facturación */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl mb-6">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">¿Desea Facturar?</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {wantsInvoice ? `Se agregará el ${globalTaxRate}% de impuestos.` : 'Sin impuestos adicionales.'}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={wantsInvoice}
+                      onChange={(e) => setWantsInvoice(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500"></div>
+                  </label>
+                </div>
+                
+                {/* Desglose de impuestos si facturan */}
+                {wantsInvoice && (
+                  <div className="flex flex-col gap-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-4 text-left">
+                    <div className="flex justify-between font-bold text-slate-600 dark:text-slate-400">
+                      <span>Subtotal:</span>
+                      <span>{formatearDinero(total)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-rose-500">
+                      <span>Impuestos ({globalTaxRate}%):</span>
+                      <span>+ {formatearDinero(taxAmount)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="relative">
-                <label className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-2 block">
-                  Paga con (Anticipo)
-                </label>
-                <div className="relative flex items-center">
-                  <span className="absolute left-4 font-bold text-emerald-600">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    className="w-full pl-8 pr-20 py-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-black dark:text-white font-black text-xl"
-                    value={anticipo}
-                    onChange={(e) => setAnticipo(e.target.value)}
-                    placeholder="0.00"
-                  />
-                  <button
-                    onClick={() => setAnticipo(total)}
-                    className="absolute right-3 bg-emerald-200 text-emerald-800 text-xs font-black px-3 py-1.5 rounded-lg hover:bg-emerald-300 transition-colors"
-                  >
-                    TOTAL
-                  </button>
-                </div>
-              </div>
+
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button
@@ -1033,45 +1065,17 @@ export const Sales = () => {
 
               {/* CALCULADORA DE CAMBIO (Solo Efectivo / USD) */}
               {metodoPago === "cash" && (
-                <div
-                  className={`p-4 rounded-xl border ${usarUSD ? "bg-blue-50 dark:bg-blue-500/10 border-blue-100 dark:border-blue-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20"}`}
-                >
-                  <label
-                    className={`text-xs font-bold uppercase tracking-wider mb-2 block ${usarUSD ? "text-blue-700 dark:text-blue-400" : "text-emerald-700 dark:text-emerald-400"}`}
-                  >
-                    {usarUSD
-                      ? "Dólares Recibidos (USD)"
-                      : "Dinero Recibido (MXN)"}
-                  </label>
-
-                  {usarUSD && (
-                    <div className="mb-3 p-2 bg-blue-100/50 dark:bg-blue-500/20 rounded-lg border border-blue-200 dark:border-blue-500/30">
-                      <p className="text-[11px] font-black text-blue-700 dark:text-blue-300 uppercase">
-                        Cobrar al menos:{" "}
-                        <span className="text-sm">
-                          U${" "}
-                          {(
-                            (parseFloat(anticipo) || total) / exchangeRate.rate
-                          ).toFixed(2)}
-                        </span>
-                      </p>
-                      <p className="text-[9px] text-blue-500 font-bold uppercase mt-1">
-                        Para cubrir{" "}
-                        {formatearDinero(parseFloat(anticipo) || total)}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-4 items-center">
-                    <div className="relative flex-1">
-                      <span
-                        className={`absolute left-3 top-1/2 -translate-y-1/2 font-bold ${usarUSD ? "text-blue-600" : "text-emerald-600"}`}
-                      >
-                        {usarUSD ? "U$" : "$"}
-                      </span>
+                <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl space-y-3 border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-black font-bold">
+                      Pagó Con {usarUSD ? "(USD)" : ""}:
+                    </span>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{usarUSD ? "U$" : "$"}</span>
                       <input
                         type="number"
-                        className={`w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border rounded-xl outline-none focus:ring-2 text-xl font-bold text-black dark:text-white ${usarUSD ? "border-blue-200 focus:ring-blue-500" : "border-emerald-200 focus:ring-emerald-500"}`}
+                        min="0"
+                        className="w-32 pl-7 pr-3 py-2 text-sm text-right bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-black dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={usarUSD ? montoRecibidoUSD : montoRecibido}
                         onChange={(e) =>
                           usarUSD
@@ -1082,37 +1086,33 @@ export const Sales = () => {
                         autoFocus
                       />
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={`text-xs mb-1 ${usarUSD ? "text-blue-600" : "text-emerald-600"}`}
-                      >
-                        Cambio (MXN)
-                      </p>
-                      <p
-                        className={`text-2xl font-black ${usarUSD ? "text-blue-600" : "text-blue-400"}`}
-                      >
-                        {(() => {
-                          const recibidoMXN = usarUSD
-                            ? (parseFloat(montoRecibidoUSD) || 0) *
-                              exchangeRate.rate
-                            : parseFloat(montoRecibido) || 0;
-                          const totalACobrar = parseFloat(anticipo) || total;
-                          return formatearDinero(
-                            Math.max(0, recibidoMXN - totalACobrar),
-                          );
-                        })()}
-                      </p>
-                    </div>
                   </div>
+                  
                   {usarUSD && (
-                    <p className="text-[10px] mt-2 font-bold text-blue-500 uppercase">
-                      Equivalente:{" "}
-                      {formatearDinero(
-                        (parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate,
-                      )}{" "}
-                      MXN
-                    </p>
+                    <div className="flex flex-col gap-1 text-[10px] text-blue-600 font-bold bg-blue-50 dark:bg-blue-500/10 p-2 rounded-lg">
+                      <div className="flex justify-between">
+                        <span>Cobrar al menos:</span>
+                        <span>U$ {((parseFloat(anticipo) || finalTotal) / exchangeRate.rate).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>Equivale a:</span>
+                        <span>{formatearDinero((parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate)} MXN</span>
+                      </div>
+                    </div>
                   )}
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-black font-bold">Su Cambio:</span>
+                    <span className="text-lg font-black text-emerald-600">
+                      {(() => {
+                        const recibidoMXN = usarUSD
+                          ? (parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate
+                          : parseFloat(montoRecibido) || 0;
+                        const totalACobrar = parseFloat(anticipo) || finalTotal;
+                        return formatearDinero(Math.max(0, recibidoMXN - totalACobrar));
+                      })()}
+                    </span>
+                  </div>
                 </div>
               )}
 
@@ -1128,7 +1128,7 @@ export const Sales = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-black font-bold">Saldo pendiente:</span>
                   <span className="font-bold text-rose-500">
-                    {formatearDinero(Math.max(0, total - anticipo))}
+                    {formatearDinero(Math.max(0, finalTotal - (parseFloat(anticipo) || 0)))}
                   </span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 {
   "name": "pos-multicajas-pro",
-  "version": "1.4.32",
+  "version": "1.4.33",
   "description": "Sistema completo de punto de venta con escaneo de códigos de barras, gestión de inventario y estadísticas en tiempo real",
   "main": "electron-main.js",
   "scripts": {
@@ -57,15 +57,16 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.ico",
-      "signAndEditExecutable": false
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Sistema de Ventas"
+      "shortcutName": "Sistema de Ventas",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
     }
   },
   "dependencies": {

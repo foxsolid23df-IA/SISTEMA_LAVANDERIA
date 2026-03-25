@@ -1,5 +1,5 @@
 // ===== ELECTRON MAIN PROCESS (FINAL STABILITY VERSION) =====
-const { app, BrowserWindow, dialog, utilityProcess, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, utilityProcess, ipcMain, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const path = require('path');
@@ -290,6 +290,80 @@ function crearVentana() {
         const indexPath = path.join(__dirname, 'dist', 'index.html');
         mainWindow.loadFile(indexPath);
     }
+
+    // Configurar menú personalizado adaptado con opciones de Zoom
+    configurarMenu();
+}
+
+function configurarMenu() {
+    const template = [
+        {
+            label: 'Archivo',
+            submenu: [
+                { label: 'Salir', role: 'quit' }
+            ]
+        },
+        {
+            label: 'Editar',
+            submenu: [
+                { label: 'Deshacer', role: 'undo' },
+                { label: 'Rehacer', role: 'redo' },
+                { type: 'separator' },
+                { label: 'Cortar', role: 'cut' },
+                { label: 'Copiar', role: 'copy' },
+                { label: 'Pegar', role: 'paste' },
+                { label: 'Eliminar', role: 'delete' },
+                { type: 'separator' },
+                { label: 'Seleccionar Todo', role: 'selectAll' }
+            ]
+        },
+        {
+            label: 'Ver',
+            submenu: [
+                { label: 'Recargar', role: 'reload' },
+                { label: 'Forzar Recarga', role: 'forceReload' },
+                { label: 'Alternar DevTools', role: 'toggleDevTools' },
+                { type: 'separator' },
+                { label: 'Pantalla Completa', role: 'togglefullscreen' }
+            ]
+        },
+        {
+            label: 'Ventana',
+            submenu: [
+                { label: 'Minimizar', role: 'minimize' },
+                {
+                    label: 'Zoom',
+                    submenu: [
+                        { label: 'Aumentar Zoom (+)', role: 'zoomIn', accelerator: 'CmdOrCtrl+Plus' },
+                        { label: 'Disminuir Zoom (-)', role: 'zoomOut', accelerator: 'CmdOrCtrl+-' },
+                        { label: 'Restablecer Zoom (0)', role: 'resetZoom', accelerator: 'CmdOrCtrl+0' }
+                    ]
+                },
+                { type: 'separator' },
+                { label: 'Cerrar', role: 'close' }
+            ]
+        },
+        {
+            label: 'Ayuda',
+            submenu: [
+                {
+                    label: 'Acerca de',
+                    click: async () => {
+                        if (mainWindow) {
+                            dialog.showMessageBox(mainWindow, {
+                                type: 'info',
+                                title: 'Acerca de',
+                                message: 'Sistema de Ventas - Lavandería Isla Mujeres\nVersión 1.0.0'
+                            });
+                        }
+                    }
+                }
+            ]
+        }
+    ];
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
 }
 
 app.whenReady().then(async () => {

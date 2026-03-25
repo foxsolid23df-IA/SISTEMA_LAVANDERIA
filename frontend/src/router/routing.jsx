@@ -24,6 +24,7 @@ import { Orders } from "../components/sales/Orders";
 import { ClientManager } from "../components/admin/ClientManager";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
 import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
+import TaxSettings from "../components/admin/TaxSettings";
 import { PriceConfiguration } from "../components/admin/PriceConfiguration";
 import { TicketConfiguration } from "../components/admin/TicketConfiguration";
 import { terminalService } from "../services/terminalService";
@@ -320,12 +321,21 @@ export const Routing = () => {
                     />
 
                     <Route
-                      path="/configuracion-dolares"
-                      element={
-                        <PrivateLayout>
-                          <ExchangeRateSettings />
-                        </PrivateLayout>
-                      }
+                        path="/configuracion-dolares"
+                        element={
+                            <PrivateLayout>
+                                <ExchangeRateSettings />
+                            </PrivateLayout>
+                        }
+                    />
+
+                    <Route
+                        path="/configuracion-impuestos"
+                        element={
+                            <PrivateLayout>
+                                <TaxSettings />
+                            </PrivateLayout>
+                        }
                     />
 
                     <Route

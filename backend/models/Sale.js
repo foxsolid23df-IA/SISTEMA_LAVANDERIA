@@ -9,6 +9,9 @@ const Sale = sequelize.define('Sale', {
     payment_method: { type: DataTypes.STRING, defaultValue: 'efectivo' },
     terminal_id: { type: DataTypes.UUID },                   // Terminal que realizó la venta
     status: { type: DataTypes.STRING, defaultValue: 'pending' }, // 'pending' | 'synced'
+    has_tax: { type: DataTypes.BOOLEAN, defaultValue: false },
+    tax_amount: { type: DataTypes.FLOAT, defaultValue: 0 },
+    invoice_requested: { type: DataTypes.BOOLEAN, defaultValue: false },
     supabase_id: { type: DataTypes.BIGINT, unique: true },   // ID en Supabase tras sincronizar
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, {

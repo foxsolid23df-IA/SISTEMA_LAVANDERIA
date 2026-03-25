@@ -1,6 +1,7 @@
 const { Supply } = require('../models/Supply');
 const { SupplyMovement } = require('../models/SupplyMovement');
 const { WeeklyReconciliation } = require('../models/WeeklyReconciliation');
+const { Op } = require('sequelize');
 
 // Obtener todos los insumos
 exports.getAllSupplies = async (req, res) => {
@@ -106,7 +107,7 @@ exports.closeWeek = async (req, res) => {
                 supply.current_stock = physical;
                 await supply.save();
 
-                results.push({ name: supply.name, theoretical, physical, diff });
+                results.push({ name: supply.name, theoretical, physical_stock: physical, diff, last_count: item.last_count });
             }
         }
         res.json({ message: 'Cierre de semana completado', summary: results });
@@ -128,6 +129,64 @@ exports.getReconciliationHistory = async (req, res) => {
         });
         res.json(history);
     } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Generar tabla de corte semanal de insumos
+exports.getWeeklyCutTable = async (req, res) => {
+    try {
+        const supplies = await Supply.findAll();
+        const results = [];
+
+        for (const supply of supplies) {
+            // Último corte (reconciliation cerrado)
+            const lastReconciliation = await WeeklyReconciliation.findOne({
+                where: { supply_id: supply.id, status: 'CLOSED' },
+                order: [['reconciliation_date', 'DESC']]
+            });
+
+            let ultimo_corte = 0;
+            let fecha_ultimo_corte = null;
+            let conditionDate = {};
+
+            if (lastReconciliation) {
+                ultimo_corte = lastReconciliation.physical_stock;
+                fecha_ultimo_corte = lastReconciliation.reconciliation_date;
+                // Filtrar movimientos posteriores a la fecha del último corte
+                conditionDate = {
+                    createdAt: { [Op.gt]: fecha_ultimo_corte }
+                };
+            }
+
+            // Suma de entradas (compras) desde el último corte
+            const movements = await SupplyMovement.findAll({
+                where: {
+                    supply_id: supply.id,
+                    type: 'ENTRY_WEEKLY',
+                    ...conditionDate
+                }
+            });
+
+            const ultima_compra = movements.reduce((sum, mov) => sum + parseFloat(mov.quantity), 0);
+            const stock_sistema = supply.current_stock;
+            
+            // Fórmula corregida según confirmación: (Corte + Compras) - Stock
+            const total_gastado = (ultimo_corte + ultima_compra) - stock_sistema;
+
+            results.push({
+                insumo: supply.name,
+                ultima_compra: ultima_compra,
+                ultimo_corte: ultimo_corte,
+                fecha_ultimo_corte: fecha_ultimo_corte,
+                stock_sistema: stock_sistema,
+                total_gastado: total_gastado
+            });
+        }
+
+        res.json(results);
+    } catch (error) {
+        console.error("Error en getWeeklyCutTable:", error);
         res.status(500).json({ message: error.message });
     }
 };
