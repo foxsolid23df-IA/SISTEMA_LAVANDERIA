@@ -398,7 +398,8 @@ export const AuthProvider = ({ children }) => {
       },
 
       // Info de la tienda
-      storeName: profile?.store_name,
+      storeName: profile?.store_name || user?.user_metadata?.store_name,
+
       masterPinConfigured: !!profile?.master_pin,
     }),
     [

@@ -10,7 +10,9 @@ import { exportToExcel } from "../../utils/exportToExcel";
 import Swal from "sweetalert2";
 import "./AdminPanel.css";
 
-const APP_VERSION = "1.4.27";
+import packageInfo from "../../../package.json";
+const APP_VERSION = packageInfo.version;
+
 
 export const AdminPanel = () => {
   const { isAdmin } = useAuth();
@@ -1035,9 +1037,10 @@ const SettingsView = () => {
           <div className="setting-item">
             <span className="setting-label">Nombre de la Tienda</span>
             <span className="setting-value">
-              {storeName || user?.store_name || "N/A"}
+              {storeName || user?.store_name || user?.user_metadata?.store_name || "N/A"}
             </span>
           </div>
+
           <div className="setting-item">
             <span className="setting-label">Usuario Actual</span>
             <span className="setting-value">
