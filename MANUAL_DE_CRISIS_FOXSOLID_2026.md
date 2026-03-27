@@ -1,4 +1,4 @@
-# 🚨 Manual de Crisis: Sistema de Gestión FoxSolid 2026
+# 🚨 Manual de Crisis: Sistema de Gestión NexusProLavanderia 2026
 
 **Versión:** 1.0
 **Estado:** Operativo / Emergencia
@@ -38,7 +38,7 @@ Este manual describe los procedimientos de acción inmediata ante situaciones cr
 - **Cómo evitarlo:** Uso obligatorio de No-Break (UPS) con al menos 15 minutos de autonomía.
 - **Cómo resolverlo:**
   1. Al encender, verifica que el servicio de base de datos local (Backend) inicie correctamente.
-  2. Si el sistema no abre, ejecuta el acceso directo `FoxSolid Repair` o reinicia la PC.
+  2. Si el sistema no abre, ejecuta el acceso directo `NexusPro Repair` o reinicia la PC.
   3. Verifica la última venta realizada para asegurar que se guardó.
 
 ### 1.3 Falla de la Impresora de Tickets
@@ -132,10 +132,10 @@ Este manual describe los procedimientos de acción inmediata ante situaciones cr
 | :----------------------- | :--------------------------- | :------------------ |
 | **Nivel 1 (Operación)**  | Gerente de Sucursal          | Inmediato           |
 | **Nivel 2 (Soporte TI)** | whatsapp: +52 [TU_NUMERO]    | < 2 horas           |
-| **Nivel 3 (Desarrollo)** | foxsolid.systems@soporte.com | < 24 horas          |
+| **Nivel 3 (Desarrollo)** | nexuspro.systems@soporte.com | < 24 horas          |
 
 ---
 
 > **⚠ REGLA DE ORO:** Ante cualquier duda o comportamiento extraño del sistema, **TOMA UNA CAPTURA DE PANTALLA O FOTO** antes de reiniciar. Esto ayuda al equipo técnico a resolver el problema más rápido.
 
-_FoxSolid Systems © 2026_
+_NexusPro Systems © 2026_

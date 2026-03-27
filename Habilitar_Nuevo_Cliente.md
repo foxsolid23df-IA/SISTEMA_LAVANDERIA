@@ -73,4 +73,4 @@ UPDATE public.profiles SET license_expires_at = now() - interval '1 day' WHERE i
 
 ---
 
-_Soporte Técnico Especializado FoxSolid 2026_
+_Soporte Técnico Especializado NexusProLavanderia 2026_

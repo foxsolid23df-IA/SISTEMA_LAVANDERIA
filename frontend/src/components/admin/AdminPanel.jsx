@@ -1088,7 +1088,7 @@ const SettingsView = () => {
       </div>
 
       <div className="settings-card security-card">
-        <h3>Seguridad de la Cuenta (FoxSolid 2026)</h3>
+        <h3>Seguridad de la Cuenta (NexusProLavanderia 2026)</h3>
         <p className="text-slate-400 mb-4" style={{ fontSize: "0.85rem" }}>
           Protege tu cuenta maestra configurando métodos de acceso local que no
           requieran tu contraseña principal.

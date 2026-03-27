@@ -1,4 +1,4 @@
-# 🔐 Accesos Confidenciales: Soporte FoxSolid
+# 🔐 Accesos Confidenciales: Soporte NexusProLavanderia
 
 Esta guía es de uso **EXCLUSIVO** para el equipo de desarrollo, soporte nivel 1/2 y administradores del programa. **No compartir con clientes.**
 
@@ -11,10 +11,10 @@ Dado que la herramienta de mantenimiento ha sido eliminada de todos los menús v
 ### 1. Dirección Secreta
 
 Escriba lo siguiente al final de la URL de su aplicación:
-`#/soporte-tecnico-especializado-foxsolid`
+`#/soporte-tecnico-especializado-nexusprolavanderia`
 
 **Ejemplo completo:**
-`https://tu-pos-url.com/#/soporte-tecnico-especializado-foxsolid`
+`https://tu-pos-url.com/#/soporte-tecnico-especializado-nexusprolavanderia`
 
 ### 2. PIN Maestro de Desbloqueo
 

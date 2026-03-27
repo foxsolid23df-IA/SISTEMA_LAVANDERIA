@@ -357,7 +357,7 @@ export const Routing = () => {
                     />
 
                     <Route
-                      path="/soporte-tecnico-especializado-foxsolid"
+                      path="/soporte-tecnico-especializado-nexusprolavanderia"
                       element={
                         <PrivateLayout>
                           <AdminRoute>

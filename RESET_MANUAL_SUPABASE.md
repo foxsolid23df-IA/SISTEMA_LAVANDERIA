@@ -1,6 +1,6 @@
 # ☢️ Guía de Reset de Fábrica Manual (Supabase)
 
-Esta guía es para técnicos de FoxSolid. Siga estos pasos para evitar borrar un cliente por error.
+Esta guía es para técnicos de NexusProLavanderia. Siga estos pasos para evitar borrar un cliente por error.
 
 ## Paso 0: Verificación de Identidad (¡CRÍTICO!)
 
