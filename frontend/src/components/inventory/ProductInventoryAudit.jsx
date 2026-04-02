@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { supplyService } from "../../services/supplyService";
+import { productService } from "../../services/productService";
 import { useAuth } from "../../hooks/useAuth";
 import Swal from "sweetalert2";
 import * as XLSX from "xlsx";
-import ReconciliationTab from "./ReconciliationTab";
+import ProductReconciliationTab from "./ProductReconciliationTab";
 
-export const SupplyInventory = () => {
-  const [supplies, setSupplies] = useState([]);
+export const ProductInventoryAudit = () => {
+  const [products, setProducts] = useState([]);
   const [history, setHistory] = useState([]);
   const [movements, setMovements] = useState([]);
   const [latestRecons, setLatestRecons] = useState({});
@@ -15,19 +15,19 @@ export const SupplyInventory = () => {
   const [adjustedStocks, setAdjustedStocks] = useState({}); // Estado para el cálculo reactivo de la tabla de auditoría
   const [weeklyData, setWeeklyData] = useState([]);
 
-  const { isAdmin, activeRole, canManageInventory, canViewSupplies } = useAuth();
+  const { isAdmin, activeRole, canManageInventory, canViewProducts } = useAuth();
   const canEditOrDelete = canManageInventory;
 
   // Estados para filtros de historial
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState("");
-  const [selectedUsageSupplyId, setSelectedUsageSupplyId] = useState("");
+  const [selectedUsageProductId, setSelectedUsageProductId] = useState("");
 
-  // Insumo seleccionado en Libreta Digital para mostrar su unidad
-  const selectedUsageSupply = supplies.find((s) => s.id === selectedUsageSupplyId);
+  // Producto seleccionado en Libreta Digital para mostrar su unidad
+  const selectedUsageProduct = products.find((s) => s.id === selectedUsageProductId);
 
   useEffect(() => {
-    loadSupplies();
+    loadProducts();
   }, []);
 
   useEffect(() => {
@@ -43,10 +43,10 @@ export const SupplyInventory = () => {
     }
   }, [activeTab]);
 
-  const loadSupplies = async () => {
+  const loadProducts = async () => {
     try {
-      const data = await supplyService.getAll();
-      setSupplies(data);
+      const data = await productService.getProducts({ forceRefresh: true });
+      setProducts(data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -56,7 +56,7 @@ export const SupplyInventory = () => {
 
   const loadHistory = async () => {
     try {
-      const data = await supplyService.getReconciliationHistory();
+      const data = await productService.getReconciliationHistory();
       setHistory(data);
     } catch (error) {
       console.error(error);
@@ -65,7 +65,7 @@ export const SupplyInventory = () => {
 
   const loadMovements = async () => {
     try {
-      const data = await supplyService.getMovementHistory();
+      const data = await productService.getMovementHistory();
       setMovements(data);
     } catch (error) {
       console.error(error);
@@ -74,9 +74,9 @@ export const SupplyInventory = () => {
 
   const loadLatestRecons = async () => {
     try {
-      const data = await supplyService.getLatestReconciliations();
+      const data = await productService.getLatestReconciliations();
       const map = {};
-      data.forEach(r => { map[r.supply_id] = r.physical_stock });
+      data.forEach(r => { map[r.product_id] = r.physical_stock });
       setLatestRecons(map);
     } catch (e) { console.error(e); }
   };
@@ -84,7 +84,7 @@ export const SupplyInventory = () => {
   const loadWeeklyData = async () => {
     try {
       setLoading(true);
-      const data = await supplyService.getWeeklyTable();
+      const data = await productService.getWeeklyTable();
       setWeeklyData(data);
     } catch (error) {
       console.error(error);
@@ -97,7 +97,7 @@ export const SupplyInventory = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = {
-      supply_id: formData.get("supply_id"),
+      product_id: formData.get("product_id"),
       quantity: formData.get("quantity"),
       type: formData.get("type"),
       notes: formData.get("notes"),
@@ -106,7 +106,7 @@ export const SupplyInventory = () => {
     };
 
     try {
-      await supplyService.recordUsage(data);
+      await productService.recordUsage(data);
       Swal.fire(
         "¡Éxito!",
         "Consumo registrado en la libreta digital.",
@@ -118,7 +118,7 @@ export const SupplyInventory = () => {
         const dateInput = document.getElementsByName("usage_date")[0];
         if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
       }, 100);
-      loadSupplies();
+      loadProducts();
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -128,16 +128,16 @@ export const SupplyInventory = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = {
-      supply_id: formData.get("supply_id"),
+      product_id: formData.get("product_id"),
       quantity: formData.get("quantity"),
       notes: formData.get("notes"),
     };
 
     try {
-      await supplyService.addWeekly(data);
-      Swal.fire("¡Éxito!", "Insumos agregados al inventario.", "success");
+      await productService.addWeekly(data);
+      Swal.fire("¡Éxito!", "Productos agregados al inventario.", "success");
       e.target.reset();
-      loadSupplies();
+      loadProducts();
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
@@ -153,7 +153,7 @@ export const SupplyInventory = () => {
       // Filtrar los datos que se están visualizando actualmente (según búsqueda y fecha)
       const filteredData = history.filter((h) => {
         const matchSearch =
-          (h.supply?.name || "")
+          (h.product?.name || "")
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           (h.responsible || "")
@@ -174,7 +174,7 @@ export const SupplyInventory = () => {
       const excelData = filteredData.map((h) => ({
         Fecha: new Date(h.reconciliation_date || h.createdAt).toLocaleDateString(),
         Responsable: h.responsible,
-        Insumo: h.supply?.name || "Insumo Eliminado",
+        Producto: h.product?.name || "Producto Eliminado",
         "Stock Teórico": parseFloat(h.theoretical_stock).toFixed(2),
         "Stock Físico": parseFloat(h.physical_stock).toFixed(2),
         Diferencia: h.difference,
@@ -189,7 +189,7 @@ export const SupplyInventory = () => {
       const wscols = [
         { wch: 15 }, // Fecha
         { wch: 25 }, // Responsable
-        { wch: 25 }, // Insumo
+        { wch: 25 }, // Producto
         { wch: 15 }, // Stock Teórico
         { wch: 15 }, // Stock Físico
         { wch: 15 }, // Diferencia
@@ -197,7 +197,7 @@ export const SupplyInventory = () => {
       worksheet["!cols"] = wscols;
 
       // Generar y descargar el archivo
-      const fileName = `Historial_Cortes_Insumos_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const fileName = `Historial_Cortes_Productos_${new Date().toISOString().split("T")[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
     } catch (error) {
@@ -206,7 +206,7 @@ export const SupplyInventory = () => {
     }
   };
 
-  const handleCreateSupply = async (e) => {
+  const handleCreateProduct = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = {
@@ -218,28 +218,28 @@ export const SupplyInventory = () => {
     };
 
     try {
-      await supplyService.create(data);
-      Swal.fire("¡Éxito!", "Nuevo insumo creado.", "success");
+      await productService.create(data);
+      Swal.fire("¡Éxito!", "Nuevo producto creado.", "success");
       e.target.reset();
-      loadSupplies();
+      loadProducts();
     } catch (error) {
       Swal.fire("Error", error.message, "error");
     }
   };
 
   const handleExportExcel = () => {
-    const dataToExport = supplies.map((s) => {
+    const dataToExport = products.map((s) => {
       // Intentar obtener el valor actual del input si existe, si no, usar stock actual
       const inputElement = document.getElementsByName(`physical_${s.id}`)[0];
       const physical = inputElement
         ? parseFloat(inputElement.value)
-        : s.current_stock;
-      const diff = physical - s.current_stock;
+        : s.stock;
+      const diff = physical - s.stock;
 
       return {
-        Insumo: s.name,
+        Producto: s.name,
         Unidad: s.unit_measure,
-        "Stock Sistema": s.current_stock,
+        "Stock Sistema": s.stock,
         "Conteo Físico": physical,
         Diferencia: diff,
       };
@@ -258,22 +258,22 @@ export const SupplyInventory = () => {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Corte Semanal");
-    XLSX.writeFile(wb, `Corte_Insumos_${dateStr}_${responsibleStr}.xlsx`);
+    XLSX.writeFile(wb, `Corte_Productos_${dateStr}_${responsibleStr}.xlsx`);
   };
 
   const handleReconciliation = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const reconciliations = supplies.map((s) => {
+    const reconciliations = products.map((s) => {
       const inputElement = document.getElementsByName(`physical_${s.id}`)[0];
       const val = inputElement ? inputElement.value : formData.get(`physical_${s.id}`);
-      const physical = (val !== "" && val !== null && val !== undefined) ? parseFloat(val) : s.current_stock;
+      const physical = (val !== "" && val !== null && val !== undefined) ? parseFloat(val) : s.stock;
 
       const last_count = latestRecons[s.id] !== undefined ? latestRecons[s.id] : null;
 
       return {
-        supply_id: s.id,
-        previous_stock: s.current_stock,
+        product_id: s.id,
+        previous_stock: s.stock,
         physical_stock: physical,
         last_count: last_count
       };
@@ -283,7 +283,7 @@ export const SupplyInventory = () => {
     const reconciliation_date = formData.get("reconciliation_date");
 
     try {
-      const result = await supplyService.closeWeek({
+      const result = await productService.closeWeek({
         reconciliations,
         responsible,
         reconciliation_date,
@@ -294,14 +294,14 @@ export const SupplyInventory = () => {
         html: `Se ha ajustado el inventario.<br/><br/><b>Ticket a imprimir:</b><br/> 
         <div class="max-h-80 overflow-y-auto text-left text-sm mt-4">
           ${result.summary.map((r) => {
-             const supplyData = supplies.find(s => s.name === r.name) || {};
-             const weekData = weeklyData.find(w => w.id === supplyData.id) || {};
+             const productData = products.find(s => s.name === r.name) || {};
+             const weekData = weeklyData.find(w => w.id === productData.id) || {};
              
              const ultimoCorteObj = weekData["Ultimo Corte"] || 0;
              const ultimaCompraObj = weekData["Ultima Compra"] || 0;
              const gastoPeriodo = (ultimoCorteObj + ultimaCompraObj) - r.physical_stock;
              
-             const stockMinimo = parseFloat(supplyData.min_stock || 0);
+             const stockMinimo = parseFloat(productData.min_stock || 0);
              const compraSugerida = Math.max(0, stockMinimo - r.physical_stock);
              
              // Evitar errores de zona horaria usando split/substring si es formato ISO, o pasarlo seguro a string local.
@@ -377,20 +377,20 @@ export const SupplyInventory = () => {
               </style>
             </head>
             <body>
-              <h2>Ticket de Corte de Insumos</h2>
+              <h2>Ticket de Corte de Productos</h2>
               <div class="info-head">
                 <p><strong>Fecha de Corte:</strong> ${reconciliation_date || new Date().toLocaleDateString()}</p>
                 <p><strong>Responsable:</strong> ${responsible}</p>
               </div>
               ${result.summary.map(r => {
-                 const supplyData = supplies.find(s => s.name === r.name) || {};
-                 const weekData = weeklyData.find(w => w.id === supplyData.id) || {};
+                 const productData = products.find(s => s.name === r.name) || {};
+                 const weekData = weeklyData.find(w => w.id === productData.id) || {};
                  
                  const ultimoCorteObj = weekData["Ultimo Corte"] || 0;
                  const ultimaCompraObj = weekData["Ultima Compra"] || 0;
                  const gastoPeriodo = (ultimoCorteObj + ultimaCompraObj) - r.physical_stock;
                  
-                 const stockMinimo = parseFloat(supplyData.min_stock || 0);
+                 const stockMinimo = parseFloat(productData.min_stock || 0);
                  const compraSugerida = Math.max(0, stockMinimo - r.physical_stock);
                  
                  const formatearFecha = (fechaStr) => {
@@ -429,7 +429,7 @@ export const SupplyInventory = () => {
           printWindow.document.close();
         }
       });
-      loadSupplies();
+      loadProducts();
       loadLatestRecons();
       setActiveTab("inventory");
     } catch (error) {
@@ -437,22 +437,22 @@ export const SupplyInventory = () => {
     }
   };
 
-  const handleEditSupply = async (supply) => {
+  const handleEditProduct = async (product) => {
     const { value: formValues } = await Swal.fire({
-      title: "Editar Insumo",
+      title: "Editar Producto",
       html: `<div class="text-left">
-          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre del Insumo</label>
-          <input id="swal-edit-name" class="swal2-input w-full mx-0 mb-4" value="${supply.name}">
+          <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre del Producto</label>
+          <input id="swal-edit-name" class="swal2-input w-full mx-0 mb-4" value="${product.name}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Presentación (Galón, Bote, etc)</label>
-          <input id="swal-edit-presentation" class="swal2-input w-full mx-0 mb-4" value="${supply.presentation || 'Galón'}">
+          <input id="swal-edit-presentation" class="swal2-input w-full mx-0 mb-4" value="${product.presentation || 'Galón'}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Contenido por Presentación</label>
-          <input id="swal-edit-content" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${supply.content_per_presentation || 1}">
+          <input id="swal-edit-content" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${product.content_per_presentation || 1}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Unidad Base (L, Kg, mL, Pza)</label>
-          <input id="swal-edit-unit" class="swal2-input w-full mx-0 mb-4" value="${supply.unit_measure}">
+          <input id="swal-edit-unit" class="swal2-input w-full mx-0 mb-4" value="${product.unit_measure}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Stock Mínimo</label>
-          <input id="swal-edit-min" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${supply.min_stock}">
+          <input id="swal-edit-min" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${product.min_stock}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase text-indigo-500">Stock Actual (Ajuste Manual)</label>
-          <input id="swal-edit-current" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4 font-bold text-indigo-600" value="${supply.current_stock}">
+          <input id="swal-edit-current" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4 font-bold text-indigo-600" value="${product.stock}">
         </div>`,
       focusConfirm: false,
       showCancelButton: true,
@@ -465,7 +465,7 @@ export const SupplyInventory = () => {
           content_per_presentation: document.getElementById("swal-edit-content").value,
           unit_measure: document.getElementById("swal-edit-unit").value,
           min_stock: document.getElementById("swal-edit-min").value,
-          current_stock: document.getElementById("swal-edit-current").value,
+          stock: document.getElementById("swal-edit-current").value,
         };
       },
     });
@@ -475,25 +475,25 @@ export const SupplyInventory = () => {
         !formValues.name ||
         !formValues.unit_measure ||
         formValues.min_stock === "" ||
-        formValues.current_stock === ""
+        formValues.stock === ""
       ) {
         Swal.fire("Error", "Todos los campos son requeridos", "error");
         return;
       }
       try {
-        await supplyService.update(supply.id, formValues);
-        Swal.fire("¡Actualizado!", "El insumo ha sido actualizado.", "success");
-        loadSupplies();
+        await productService.update(product.id, formValues);
+        Swal.fire("¡Actualizado!", "El producto ha sido actualizado.", "success");
+        loadProducts();
       } catch (error) {
         Swal.fire("Error", error.message, "error");
       }
     }
   };
 
-  const handleDeleteSupply = async (supply) => {
+  const handleDeleteProduct = async (product) => {
     const { isConfirmed } = await Swal.fire({
-      title: "¿Borrar Insumo?",
-      html: `<p class="mb-4">¿Estás seguro de que deseas borrar el insumo <b>${supply.name}</b>?</p>`,
+      title: "¿Borrar Producto?",
+      html: `<p class="mb-4">¿Estás seguro de que deseas borrar el producto <b>${product.name}</b>?</p>`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -504,13 +504,13 @@ export const SupplyInventory = () => {
 
     if (isConfirmed) {
       try {
-        await supplyService.delete(supply.id);
+        await productService.delete(product.id);
         Swal.fire(
           "¡Borrado!",
-          "El insumo ha sido eliminado.",
+          "El producto ha sido eliminado.",
           "success",
         );
-        loadSupplies();
+        loadProducts();
       } catch (error) {
         Swal.fire("Error", error.message, "error");
       }
@@ -520,7 +520,7 @@ export const SupplyInventory = () => {
   if (loading)
     return (
       <div className="p-8 text-center text-slate-500 font-bold">
-        Cargando inventario de insumos...
+        Cargando inventario de productos...
       </div>
     );
 
@@ -532,7 +532,7 @@ export const SupplyInventory = () => {
             <span className="material-icons-outlined text-primary text-4xl">
               inventory_2
             </span>
-            Control de Insumos
+            Control de Productos
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium">
             Libreta digital y gestión de inventario interno.
@@ -563,8 +563,8 @@ export const SupplyInventory = () => {
           .filter((tab) => {
             // Si tiene permiso completo, ve todas las tabs
             if (canManageInventory) return true;
-            // Si solo tiene can_view_supplies, solo ve Libreta Digital y Existencias
-            if (canViewSupplies) return ["usage", "inventory"].includes(tab.id);
+            // Si solo tiene can_view_products, solo ve Libreta Digital y Existencias
+            if (canViewProducts) return ["usage", "inventory"].includes(tab.id);
             return true;
           })
           .map((tab) => (
@@ -601,17 +601,17 @@ export const SupplyInventory = () => {
             >
               <div className="space-y-2 lg:col-span-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Insumo
+                  Producto
                 </label>
                 <select
-                  name="supply_id"
+                  name="product_id"
                   required
-                  value={selectedUsageSupplyId}
-                  onChange={(e) => setSelectedUsageSupplyId(e.target.value)}
+                  value={selectedUsageProductId}
+                  onChange={(e) => setSelectedUsageProductId(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Seleccionar...</option>
-                  {supplies.map((s) => (
+                  {products.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.unit_measure})
                     </option>
@@ -620,7 +620,7 @@ export const SupplyInventory = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Cantidad Gastada {selectedUsageSupply ? `(${selectedUsageSupply.unit_measure})` : ""}
+                  Cantidad Gastada {selectedUsageProduct ? `(${selectedUsageProduct.unit_measure})` : ""}
                 </label>
                 <div className="relative">
                   <input
@@ -631,15 +631,15 @@ export const SupplyInventory = () => {
                     placeholder="0.00"
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 pr-16 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                   />
-                  {selectedUsageSupply && (
+                  {selectedUsageProduct && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg uppercase pointer-events-none">
-                      {selectedUsageSupply.unit_measure}
+                      {selectedUsageProduct.unit_measure}
                     </span>
                   )}
                 </div>
-                {selectedUsageSupply && (
+                {selectedUsageProduct && (
                   <p className="text-[10px] text-amber-500 font-bold mt-1">
-                    * Ingrese el gasto exacto en {selectedUsageSupply.unit_measure}, NO en presentaciones.
+                    * Ingrese el gasto exacto en {selectedUsageProduct.unit_measure}, NO en presentaciones.
                   </p>
                 )}
               </div>
@@ -707,7 +707,7 @@ export const SupplyInventory = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    <th className="px-6 py-4">Insumo</th>
+                    <th className="px-6 py-4">Producto</th>
                     <th className="px-6 py-4">Stock Actual</th>
                     <th className="px-6 py-4">Presentación</th>
                     <th className="px-6 py-4">Unidad Base</th>
@@ -718,7 +718,7 @@ export const SupplyInventory = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {supplies.map((s) => (
+                  {products.map((s) => (
                     <tr
                       key={s.id}
                       className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
@@ -728,9 +728,9 @@ export const SupplyInventory = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`text-lg font-black ${s.current_stock <= s.min_stock ? "text-rose-500" : "text-emerald-500"}`}
+                          className={`text-lg font-black ${s.stock <= s.min_stock ? "text-rose-500" : "text-emerald-500"}`}
                         >
-                          {s.current_stock.toFixed(2)}
+                          {s.stock.toFixed(2)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-xs font-bold text-slate-400">
@@ -740,7 +740,7 @@ export const SupplyInventory = () => {
                         {s.unit_measure}
                       </td>
                       <td className="px-6 py-4">
-                        {s.current_stock <= s.min_stock ? (
+                        {s.stock <= s.min_stock ? (
                           <span className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black px-2 py-1 rounded-md uppercase">
                             Stock Bajo
                           </span>
@@ -754,18 +754,18 @@ export const SupplyInventory = () => {
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => handleEditSupply(s)}
+                              onClick={() => handleEditProduct(s)}
                               className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
-                              title="Editar Insumo"
+                              title="Editar Producto"
                             >
                               <span className="material-icons-outlined text-[18px]">
                                 edit
                               </span>
                             </button>
                             <button
-                              onClick={() => handleDeleteSupply(s)}
+                              onClick={() => handleDeleteProduct(s)}
                               className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors"
-                              title="Borrar Insumo"
+                              title="Borrar Producto"
                             >
                               <span className="material-icons-outlined text-[18px]">
                                 delete
@@ -776,13 +776,13 @@ export const SupplyInventory = () => {
                       )}
                     </tr>
                   ))}
-                  {supplies.length === 0 && (
+                  {products.length === 0 && (
                     <tr>
                       <td
                         colSpan={canEditOrDelete ? "7" : "6"}
                         className="px-6 py-12 text-center text-slate-400"
                       >
-                        No hay insumos registrados.
+                        No hay productos registrados.
                       </td>
                     </tr>
                   )}
@@ -792,12 +792,12 @@ export const SupplyInventory = () => {
           </div>
         )}
 
-        {/* Tab: Add Weekly Supply (Entry) */}
+        {/* Tab: Add Weekly Product (Entry) */}
         {activeTab === "entry" && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-primary">
               <span className="material-icons-outlined">add_circle</span>
-              Entrada de Insumos (Semanal)
+              Entrada de Productos (Semanal)
             </h2>
             <form
               onSubmit={handleAddWeekly}
@@ -805,15 +805,15 @@ export const SupplyInventory = () => {
             >
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Insumo
+                  Producto
                 </label>
                 <select
-                  name="supply_id"
+                  name="product_id"
                   required
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Seleccionar...</option>
-                  {supplies.map((s) => (
+                  {products.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} — {s.presentation || 'Galón'} ({s.content_per_presentation || 1} {s.unit_measure})
                     </option>
@@ -850,15 +850,15 @@ export const SupplyInventory = () => {
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl shadow-black/5 animate-in fade-in slide-in-from-bottom-4">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-primary">
               <span className="material-icons-outlined">settings_suggest</span>
-              Configuración de Insumos
+              Configuración de Productos
             </h2>
             <form
-              onSubmit={handleCreateSupply}
+              onSubmit={handleCreateProduct}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
               <div className="space-y-2 lg:col-span-3">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Nombre del Insumo
+                  Nombre del Producto
                 </label>
                 <input
                   name="name"
@@ -948,7 +948,7 @@ export const SupplyInventory = () => {
                   type="submit"
                   className="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary/20"
                 >
-                  Crear Insumo
+                  Crear Producto
                 </button>
               </div>
             </form>
@@ -957,12 +957,12 @@ export const SupplyInventory = () => {
 
         {/* Tab: Weekly Reconciliation (Corte) */}
         {activeTab === "reconciliation" && (
-          <ReconciliationTab
-            supplies={supplies}
+          <ProductReconciliationTab
+            products={products}
             onCancel={() => setActiveTab("inventory")}
             onSuccess={() => {
               setActiveTab("inventory");
-              loadSupplies();
+              loadProducts();
               loadHistory();
             }}
           />
@@ -978,14 +978,14 @@ export const SupplyInventory = () => {
                   Lista de Compras Automática
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
-                  Insumos que han alcanzado su nivel crítico de Stock Mínimo.
+                  Productos que han alcanzado su nivel crítico de Stock Mínimo.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   const printWindow = window.open('', '_blank');
-                  const criticalSupplies = supplies.filter(s => s.current_stock <= s.min_stock);
+                  const criticalProducts = products.filter(s => s.stock <= s.min_stock);
                   const dateStr = new Date().toLocaleDateString();
                   
                   const printHtml = `
@@ -1007,13 +1007,13 @@ export const SupplyInventory = () => {
                       <h2>LISTA DE COMPRAS</h2>
                       <p>Fecha: ${dateStr}</p>
                       <div class="divider"></div>
-                      ${criticalSupplies.length === 0 ? '<p>TODO EL STOCK ESTÁ BIEN</p>' : ''}
-                      ${criticalSupplies.map(s => {
-                        const falta = s.min_stock - s.current_stock;
-                        const sugerido = falta > 0 ? (s.min_stock * 2) - s.current_stock : Math.max(s.min_stock, 1);
+                      ${criticalProducts.length === 0 ? '<p>TODO EL STOCK ESTÁ BIEN</p>' : ''}
+                      ${criticalProducts.map(s => {
+                        const falta = s.min_stock - s.stock;
+                        const sugerido = falta > 0 ? (s.min_stock * 2) - s.stock : Math.max(s.min_stock, 1);
                         return `
                         <div class="item">
-                          <div class="title">${s.name} <span class="small">Min: ${s.min_stock} | Act: ${s.current_stock.toFixed(2)}</span></div>
+                          <div class="title">${s.name} <span class="small">Min: ${s.min_stock} | Act: ${s.stock.toFixed(2)}</span></div>
                           <div class="qty"><span style="font-size: 10px; color:#666;">Sug:</span> <b>${parseFloat(sugerido).toFixed(2)}</b> ${s.unit_measure}</div>
                         </div>
                         `;
@@ -1039,18 +1039,18 @@ export const SupplyInventory = () => {
               </button>
             </div>
             
-            {supplies.filter(s => s.current_stock <= s.min_stock).length === 0 ? (
+            {products.filter(s => s.stock <= s.min_stock).length === 0 ? (
               <div className="p-12 text-center flex flex-col items-center justify-center">
                 <span className="material-icons-outlined text-emerald-500 text-6xl mb-4">check_circle</span>
                 <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">¡Todo en orden!</h3>
-                <p className="text-slate-500">No hay ningún insumo por debajo de su stock mínimo.</p>
+                <p className="text-slate-500">No hay ningún producto por debajo de su stock mínimo.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      <th className="px-6 py-4 animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "0ms"}}>Insumo</th>
+                      <th className="px-6 py-4 animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "0ms"}}>Producto</th>
                       <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "50ms"}}>Stock Actual</th>
                       <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "100ms"}}>Stock Mínimo</th>
                       <th className="px-6 py-4 text-center animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: "150ms"}}>Estado</th>
@@ -1058,12 +1058,12 @@ export const SupplyInventory = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {supplies.map((s, index) => {
-                      const isCritical = s.current_stock <= s.min_stock;
+                    {products.map((s, index) => {
+                      const isCritical = s.stock <= s.min_stock;
                       if (!isCritical) return null;
                       
-                      const falta = s.min_stock - s.current_stock;
-                      const sugerido = falta > 0 ? (s.min_stock * 2) - s.current_stock : Math.max(s.min_stock, 1);
+                      const falta = s.min_stock - s.stock;
+                      const sugerido = falta > 0 ? (s.min_stock * 2) - s.stock : Math.max(s.min_stock, 1);
                       
                       return (
                         <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: `${250 + (index * 50)}ms`}}>
@@ -1072,7 +1072,7 @@ export const SupplyInventory = () => {
                             <span className="block text-[10px] text-slate-400 font-normal">{s.unit_measure}</span>
                           </td>
                           <td className="px-6 py-4 text-center font-mono font-medium text-slate-600 dark:text-slate-300">
-                             {s.current_stock.toFixed(2)}
+                             {s.stock.toFixed(2)}
                           </td>
                           <td className="px-6 py-4 text-center font-mono font-medium text-slate-400">
                              {s.min_stock.toFixed(2)}
@@ -1118,7 +1118,7 @@ export const SupplyInventory = () => {
                 <thead>
                   <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <th className="px-6 py-4">Fecha</th>
-                    <th className="px-6 py-4">Insumo</th>
+                    <th className="px-6 py-4">Producto</th>
                     <th className="px-6 py-4">Tipo</th>
                     <th className="px-6 py-4 text-center">Cantidad</th>
                     <th className="px-6 py-4">Responsable</th>
@@ -1140,8 +1140,8 @@ export const SupplyInventory = () => {
                           {m.usage_date ? new Date(m.usage_date + 'T12:00:00').toLocaleDateString() : new Date(m.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                          {m.supply?.name || 'Insumo Eliminado'}
-                          <span className="block text-[10px] text-slate-400 font-normal">{m.supply?.unit_measure}</span>
+                          {m.product?.name || 'Producto Eliminado'}
+                          <span className="block text-[10px] text-slate-400 font-normal">{m.product?.unit_measure}</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${
@@ -1199,7 +1199,7 @@ export const SupplyInventory = () => {
                   </span>
                   <input
                     type="text"
-                    placeholder="Buscar por insumo o responsable..."
+                    placeholder="Buscar por producto o responsable..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl text-sm font-bold text-black dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-black/5 w-full md:w-64 transition-all"
@@ -1266,7 +1266,7 @@ export const SupplyInventory = () => {
                   <tr className="bg-slate-50 dark:bg-black/20 text-[10px] font-black uppercase tracking-widest text-slate-400">
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Responsable</th>
-                    <th className="px-6 py-4">Insumo</th>
+                    <th className="px-6 py-4">Producto</th>
                     <th className="px-6 py-4 text-center">Teórico</th>
                     <th className="px-6 py-4 text-center">Físico</th>
                     <th className="px-6 py-4 text-center">Diferencia</th>
@@ -1276,7 +1276,7 @@ export const SupplyInventory = () => {
                   {history
                     .filter((h) => {
                       const matchSearch =
-                        (h.supply?.name || "")
+                        (h.product?.name || "")
                           .toLowerCase()
                           .includes(searchTerm.toLowerCase()) ||
                         (h.responsible || "")
@@ -1303,7 +1303,7 @@ export const SupplyInventory = () => {
                           {h.responsible}
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                          {h.supply?.name || "Insumo Eliminado"}
+                          {h.product?.name || "Producto Eliminado"}
                         </td>
                         <td className="px-6 py-4 text-center font-mono text-slate-500">
                           {parseFloat(h.theoretical_stock).toFixed(2)}
@@ -1335,7 +1335,7 @@ export const SupplyInventory = () => {
                   {history.length > 0 &&
                     history.filter((h) => {
                       const matchSearch =
-                        (h.supply?.name || "")
+                        (h.product?.name || "")
                           .toLowerCase()
                           .includes(searchTerm.toLowerCase()) ||
                         (h.responsible || "")

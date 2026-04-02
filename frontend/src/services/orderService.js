@@ -136,6 +136,17 @@ export const orderService = {
     return true;
   },
 
+  // Actualizar solo el método de pago de una orden
+  async updateOrderPaymentMethod(orderId, newMethod) {
+    const { error } = await supabase
+      .from('orders')
+      .update({ payment_method: newMethod })
+      .eq('id', orderId);
+
+    if (error) throw error;
+    return true;
+  },
+
   // Obtener órdenes de hoy
   async getTodayOrders() {
     const today = new Date();

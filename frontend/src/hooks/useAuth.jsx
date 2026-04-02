@@ -304,37 +304,38 @@ export const AuthProvider = ({ children }) => {
   const activeRole = activeStaff?.role || "cajero";
   const canAccessAdmin = activeStaff?.isOwner || activeRole === "admin";
 
-  // Mapear los nuevos permisos granulares si existen, si no, usar defaults
-  const canAccessReports =
-    activeStaff?.permissions?.can_see_reports ??
-    (canAccessAdmin || activeRole === "gerente");
+  // Permisos Granulares 2026
+  const p = activeStaff?.permissions || {};
 
-  const canManageInventory =
-    activeStaff?.permissions?.can_manage_inventory ??
-    (canAccessAdmin || activeRole === "gerente");
+  const canAccessSales = p.can_access_sales ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canManageOrders = p.can_manage_orders ?? true;
+  const canAccessServices = p.can_access_services ?? (canAccessAdmin || activeRole === "gerente");
+  const canAccessProducts = p.can_access_products ?? (canAccessAdmin || activeRole === "gerente");
+  const canManageSupplies = p.can_manage_supplies ?? (canAccessAdmin || activeRole === "gerente");
+  const canManageClients = p.can_manage_clients ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canViewAudit = p.can_view_audit ?? (canAccessAdmin || activeRole === "gerente");
+  const canViewDashboard = p.can_view_dashboard ?? (canAccessAdmin || activeRole === "gerente");
+  const canAccessSettings = p.can_access_settings ?? canAccessAdmin;
+  const canUseIAVision = p.can_use_ia_vision ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canManageCash = p.can_manage_cash ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canLockTerminal = p.can_lock_terminal ?? true;
+  const canRestartCash = p.can_restart_cash ?? canAccessAdmin;
+  const canLogout = p.can_logout ?? true;
 
-  const canViewSupplies =
-    activeStaff?.permissions?.can_view_supplies ?? false;
-
-  const canManageStaff =
-    activeStaff?.permissions?.can_manage_staff ?? canAccessAdmin;
-
-  const canDeleteOrders =
-    activeStaff?.permissions?.can_delete_orders ?? canAccessAdmin;
-
-  const canProcessOrders =
-    activeStaff?.permissions?.can_process_orders ??
+  // Compatibilidad con código antiguo
+  const canAccessReports = canViewDashboard;
+  const canManageInventory = p.can_manage_inventory ?? (canAccessAdmin || activeRole === "gerente");
+  const canViewSupplies = p.can_view_supplies ?? canManageSupplies;
+  const canManageStaff = p.can_manage_staff ?? canAccessAdmin;
+  const canDeleteOrders = p.can_delete_orders ?? canAccessAdmin;
+  const canVoidSales = p.can_void_sales ?? canAccessAdmin;
+  
+  const canProcessOrders = p.can_process_orders ?? 
     (canAccessAdmin || activeRole === "gerente" || activeRole === "operador");
 
-  const canDeliverOrders =
-    activeStaff?.permissions?.can_deliver_orders ??
-    (canAccessAdmin ||
-      activeRole === "gerente" ||
-      activeRole === "repartidor" ||
-      activeRole === "cajero");
+  const canDeliverOrders = p.can_deliver_orders ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "repartidor" || activeRole === "cajero");
 
-  const canVoidSales =
-    activeStaff?.permissions?.can_void_sales ?? canAccessAdmin;
 
   // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios
   const memoizedUser = React.useMemo(
@@ -356,7 +357,21 @@ export const AuthProvider = ({ children }) => {
       loading,
 
       // PERMISOS basados en el empleado activo
-      isAdmin: canManageStaff || canAccessAdmin, // Permitimos que isAdmin se base en canManageStaff temporalmente para retrocompatibilidad
+      isAdmin: canManageStaff || canAccessAdmin,
+      canAccessSales,
+      canManageOrders,
+      canAccessServices,
+      canAccessProducts,
+      canManageSupplies,
+      canManageClients,
+      canViewAudit,
+      canViewDashboard,
+      canAccessSettings,
+      canUseIAVision,
+      canManageCash,
+      canLockTerminal,
+      canRestartCash,
+      canLogout,
       canAccessReports,
       canManageInventory,
       canViewSupplies,
@@ -365,7 +380,8 @@ export const AuthProvider = ({ children }) => {
       canProcessOrders,
       canDeliverOrders,
       canVoidSales,
-      activeRole, // Rol del empleado actual
+      activeRole, 
+
 
       // Sistema de empleados
       activeStaff, // Quien está operando la caja actualmente
@@ -407,6 +423,20 @@ export const AuthProvider = ({ children }) => {
       session?.access_token,
       loading,
       canAccessAdmin,
+      canAccessSales,
+      canManageOrders,
+      canAccessServices,
+      canAccessProducts,
+      canManageSupplies,
+      canManageClients,
+      canViewAudit,
+      canViewDashboard,
+      canAccessSettings,
+      canUseIAVision,
+      canManageCash,
+      canLockTerminal,
+      canRestartCash,
+      canLogout,
       canAccessReports,
       canManageInventory,
       canViewSupplies,

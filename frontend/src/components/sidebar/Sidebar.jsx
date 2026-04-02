@@ -16,15 +16,30 @@ export const Sidebar = () => {
   const {
     logout,
     isAdmin,
-    canAccessReports,
-    canManageInventory,
-    canViewSupplies,
     activeStaff,
     lockScreen,
     storeName,
     activeRole,
     cashSession,
     adminMode,
+    // Nuevos permisos granulares
+    canAccessSales,
+    canManageOrders,
+    canAccessServices,
+    canAccessProducts,
+    canManageSupplies,
+    canManageClients,
+    canViewAudit,
+    canViewDashboard,
+    canAccessSettings,
+    canUseIAVision,
+    canManageCash,
+    canLockTerminal,
+    canRestartCash,
+    canLogout,
+    // Compatibilidad
+    canViewSupplies,
+    canManageInventory,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
@@ -49,8 +64,7 @@ export const Sidebar = () => {
   }, []);
 
   useEffect(() => {
-    const isManagerOrAdmin = isAdmin || activeRole === "GERENTE";
-    if (!isManagerOrAdmin || !canViewSupplies) return;
+    if (!canViewSupplies && !canManageSupplies) return;
 
     const checkLowStock = async () => {
       try {
@@ -256,108 +270,89 @@ export const Sidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-          <NavLink
-            to="/"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-            end
-          >
-            <span className="material-icons-outlined text-[20px]">
-              shopping_cart
-            </span>
-            <span className="text-sm font-bold">Ventas</span>
-          </NavLink>
-
-          <NavLink
-            to="/ordenes"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              assignment
-            </span>
-            <span className="text-sm font-bold">Gestión de Órdenes</span>
-          </NavLink>
-
-          {canManageInventory && (
-            <>
-              <NavLink
-                to="/servicios"
-                className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
-                onClick={() => setIsOpen(false)}
-              >
-                <span className="material-icons-outlined text-[20px]">
-                  local_laundry_service
-                </span>
-                <span className="text-sm font-bold">Catálogo de Servicios</span>
-              </NavLink>
-
-              <NavLink
-                to="/productos"
-                className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
-                onClick={() => setIsOpen(false)}
-              >
-                <span className="material-icons-outlined text-[20px]">
-                  shopping_bag
-                </span>
-                <span className="text-sm font-bold">Catálogo de Productos</span>
-              </NavLink>
-
-              <NavLink
-                to="/insumos"
-                className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
-                onClick={() => setIsOpen(false)}
-              >
-                <span className="material-icons-outlined text-[20px]">
-                  inventory_2
-                </span>
-                <span className="text-sm font-bold flex-1">Insumos (Interno)</span>
-                {(isAdmin || activeRole === "GERENTE") && lowStockCount > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-rose-500/30">
-                    {lowStockCount}
-                  </span>
-                )}
-              </NavLink>
-            </>
+          {canAccessSales && (
+            <NavLink
+              to="/"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+              end
+            >
+              <span className="material-icons-outlined text-[20px]">
+                shopping_cart
+              </span>
+              <span className="text-sm font-bold">Ventas</span>
+            </NavLink>
           )}
 
-          {/* Insumos Solo Lectura: solo si tiene can_view_supplies pero NO can_manage_inventory */}
-          {!canManageInventory && canViewSupplies && (
+          {canManageOrders && (
+            <NavLink
+              to="/ordenes"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                assignment
+              </span>
+              <span className="text-sm font-bold">Gestión de Órdenes</span>
+            </NavLink>
+          )}
+
+
+          {canAccessServices && (
+            <NavLink
+              to="/servicios"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                local_laundry_service
+              </span>
+              <span className="text-sm font-bold">Catálogo de Servicios</span>
+            </NavLink>
+          )}
+
+          {canAccessProducts && (
+            <NavLink
+              to="/productos"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                shopping_bag
+              </span>
+              <span className="text-sm font-bold">Catálogo de Productos</span>
+            </NavLink>
+          )}
+
+          {(canManageSupplies || canViewSupplies) && (
             <NavLink
               to="/insumos"
               className={({ isActive }) => `
@@ -382,39 +377,44 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          <NavLink
-            to="/clientes"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">group</span>
-            <span className="text-sm font-bold">Clientes</span>
-          </NavLink>
 
-          <NavLink
-            to="/historial"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">history</span>
-            <span className="text-sm font-bold">Auditoría</span>
-          </NavLink>
+          {canManageClients && (
+            <NavLink
+              to="/clientes"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">group</span>
+              <span className="text-sm font-bold">Clientes</span>
+            </NavLink>
+          )}
 
-          {canAccessReports && (
+          {canViewAudit && (
+            <NavLink
+              to="/historial"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">history</span>
+              <span className="text-sm font-bold">Auditoría</span>
+            </NavLink>
+          )}
+
+          {canViewDashboard && (
             <NavLink
               to="/estadisticas"
               className={({ isActive }) => `
@@ -434,45 +434,50 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          {/* Enlace Directo a Portal de Configuración */}
-          <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
-            <NavLink
-              to="/configuracion"
-              className={({ isActive }) => `
-                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                              ${
-                                isActive
-                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                              }
-                          `}
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="material-icons-outlined text-[20px]">
-                settings
-              </span>
-              <span className="text-sm font-bold">Configuración</span>
-            </NavLink>
-          </div>
 
-          {/* AI Vision POC Button */}
-          <button
-            onClick={() => {
-              setShowAIModal(true);
-              setIsOpen(false);
-            }}
-            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <span className="material-icons-outlined text-[20px]">
-                auto_awesome
-              </span>
-              <span className="text-sm font-bold">IA Vision</span>
+          {canAccessSettings && (
+            <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
+              <NavLink
+                to="/configuracion"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px]">
+                  settings
+                </span>
+                <span className="text-sm font-bold">Configuración</span>
+              </NavLink>
             </div>
-            <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-md font-black tracking-tighter">
-              BETA
-            </span>
-          </button>
+          )}
+
+
+          {canUseIAVision && (
+            <button
+              onClick={() => {
+                setShowAIModal(true);
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-icons-outlined text-[20px]">
+                  auto_awesome
+                </span>
+                <span className="text-sm font-bold">IA Vision</span>
+              </div>
+              <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-md font-black tracking-tighter">
+                BETA
+              </span>
+            </button>
+          )}
+
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
             {!adminMode && (
@@ -496,19 +501,21 @@ export const Sidebar = () => {
               </button>
             )}
 
-            <button
-              onClick={() => {
-                lockScreen();
-                setIsOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-            >
-              <span className="material-icons-outlined text-[20px]">lock</span>
-              <span className="text-sm font-bold">Bloquear</span>
-            </button>
+            {canLockTerminal && (
+              <button
+                onClick={() => {
+                  lockScreen();
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+              >
+                <span className="material-icons-outlined text-[20px]">lock</span>
+                <span className="text-sm font-bold">Bloquear</span>
+              </button>
+            )}
 
-            {isAdmin && (
-              <div className="space-y-1">
+            <div className="space-y-1">
+              {canRestartCash && (
                 <button
                   onClick={async () => {
                     const { value: password } = await Swal.fire({
@@ -547,7 +554,9 @@ export const Sidebar = () => {
                   </span>
                   <span className="text-sm font-bold">Reiniciar Caja</span>
                 </button>
+              )}
 
+              {canLogout && (
                 <button
                   onClick={() => {
                     logout();
@@ -560,8 +569,9 @@ export const Sidebar = () => {
                   </span>
                   <span className="text-sm font-bold">Cerrar Sesión</span>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
+
           </div>
         </nav>
 

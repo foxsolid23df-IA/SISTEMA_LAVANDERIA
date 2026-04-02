@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.36] - 2026-04-02
+
+### Added
+
+- **Impresión Automática de Corte de Insumos:** Se implementó la generación y apertura automática del ticket de impresión tras confirmar un ajuste de auditoría o balance de período en el inventario de insumos, optimizando el flujo de trabajo del operador.
+
 ## [1.4.32] - 2026-03-12
 
 ### Fixed

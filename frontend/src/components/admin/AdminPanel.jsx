@@ -11,6 +11,7 @@ import { exportToExcel } from "../../utils/exportToExcel";
 import Swal from "sweetalert2";
 import "./AdminPanel.css";
 
+import { KardexView } from "./KardexView";
 import packageInfo from "../../../package.json";
 const APP_VERSION = packageInfo.version;
 
@@ -79,6 +80,7 @@ export const AdminPanel = () => {
     { id: "customers", label: "Clientes", icon: "people" },
     { id: "staff", label: "Personal", icon: "badge" },
     { id: "cashcuts", label: "Cortes de Caja", icon: "account_balance_wallet" },
+    { id: "kardex", label: "Kardex / Inventario", icon: "inventory" },
     { id: "settings", label: "Configuración", icon: "settings" },
   ];
 
@@ -135,13 +137,16 @@ export const AdminPanel = () => {
           {activeSection === "orders" && <OrdersView />}
           {activeSection === "customers" && <CustomersView />}
           {activeSection === "staff" && <StaffView />}
-          {activeSection === "cashcuts" && <CashCutsView />}
-          {activeSection === "settings" && <SettingsView />}
+          { activeSection === "cashcuts" && <CashCutsView /> }
+          { activeSection === "kardex" && <KardexView /> }
+          { activeSection === "settings" && <SettingsView /> }
         </div>
       </main>
     </div>
   );
 };
+
+export { KardexView } from "./KardexView";
 
 const DashboardView = ({ stats, loading }) => {
   if (loading) return <div className="loading">Cargando estadísticas...</div>;

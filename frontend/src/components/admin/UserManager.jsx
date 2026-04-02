@@ -12,11 +12,25 @@ const ROLES = {
         class: 'role-admin',
         desc: 'Acceso total a todas las funciones y configuraciones.',
         permissions: {
+            can_access_sales: true,
+            can_manage_orders: true,
             can_delete_orders: true,
+            can_access_services: true,
+            can_access_products: true,
+            can_manage_supplies: true,
             can_see_reports: true,
+            can_view_dashboard: true,
             can_manage_inventory: true,
-            can_view_supplies: false,
+            can_view_supplies: true,
             can_manage_staff: true,
+            can_manage_clients: true,
+            can_view_audit: true,
+            can_access_settings: true,
+            can_use_ia_vision: true,
+            can_manage_cash: true,
+            can_lock_terminal: true,
+            can_restart_cash: true,
+            can_logout: true,
             can_process_orders: true,
             can_deliver_orders: true,
             can_void_sales: true
@@ -29,11 +43,25 @@ const ROLES = {
         class: 'role-gerente',
         desc: 'Gestión operativa, reportes y supervisión.',
         permissions: {
+            can_access_sales: true,
+            can_manage_orders: true,
             can_delete_orders: false,
+            can_access_services: true,
+            can_access_products: true,
+            can_manage_supplies: true,
             can_see_reports: true,
+            can_view_dashboard: true,
             can_manage_inventory: true,
-            can_view_supplies: false,
+            can_view_supplies: true,
             can_manage_staff: false,
+            can_manage_clients: true,
+            can_view_audit: true,
+            can_access_settings: false,
+            can_use_ia_vision: true,
+            can_manage_cash: true,
+            can_lock_terminal: true,
+            can_restart_cash: false,
+            can_logout: true,
             can_process_orders: true,
             can_deliver_orders: true,
             can_void_sales: false
@@ -46,11 +74,25 @@ const ROLES = {
         class: 'role-cajero',
         desc: 'Ventas, cobros y atención al cliente.',
         permissions: {
+            can_access_sales: true,
+            can_manage_orders: true,
             can_delete_orders: false,
+            can_access_services: false,
+            can_access_products: false,
+            can_manage_supplies: false,
             can_see_reports: false,
+            can_view_dashboard: false,
             can_manage_inventory: false,
             can_view_supplies: false,
             can_manage_staff: false,
+            can_manage_clients: true,
+            can_view_audit: false,
+            can_access_settings: false,
+            can_use_ia_vision: true,
+            can_manage_cash: true,
+            can_lock_terminal: true,
+            can_restart_cash: false,
+            can_logout: true,
             can_process_orders: false,
             can_deliver_orders: true,
             can_void_sales: false
@@ -63,11 +105,25 @@ const ROLES = {
         class: 'role-operador',
         desc: 'Procesamiento de prendas (Lavado/Secado).',
         permissions: {
+            can_access_sales: false,
+            can_manage_orders: true,
             can_delete_orders: false,
+            can_access_services: false,
+            can_access_products: false,
+            can_manage_supplies: false,
             can_see_reports: false,
+            can_view_dashboard: false,
             can_manage_inventory: false,
             can_view_supplies: false,
             can_manage_staff: false,
+            can_manage_clients: false,
+            can_view_audit: false,
+            can_access_settings: false,
+            can_use_ia_vision: false,
+            can_manage_cash: false,
+            can_lock_terminal: true,
+            can_restart_cash: false,
+            can_logout: true,
             can_process_orders: true,
             can_deliver_orders: false,
             can_void_sales: false
@@ -80,27 +136,51 @@ const ROLES = {
         class: 'role-repartidor',
         desc: 'Entrega de pedidos a domicilio.',
         permissions: {
+            can_access_sales: false,
+            can_manage_orders: true,
             can_delete_orders: false,
+            can_access_services: false,
+            can_access_products: false,
+            can_manage_supplies: false,
             can_see_reports: false,
+            can_view_dashboard: false,
             can_manage_inventory: false,
             can_view_supplies: false,
             can_manage_staff: false,
+            can_manage_clients: false,
+            can_view_audit: false,
+            can_access_settings: false,
+            can_use_ia_vision: false,
+            can_manage_cash: false,
+            can_lock_terminal: true,
+            can_restart_cash: false,
+            can_logout: true,
             can_process_orders: false,
             can_deliver_orders: true,
             can_void_sales: false
         }
     }
+
 };
 
 const PERMISSION_LABELS = {
+    can_access_sales: { label: 'Ventas', desc: 'Acceso a caja y realizar ventas' },
+    can_manage_orders: { label: 'Gestión de Órdenes', desc: 'Ver y gestionar el listado de pedidos' },
+    can_access_services: { label: 'Catálogo de Servicios', desc: 'Administrar servicios y precios' },
+    can_access_products: { label: 'Catálogo de Productos', desc: 'Administrar productos y precios' },
+    can_manage_supplies: { label: 'Insumos Internos', desc: 'Control de detergentes y químicos' },
+    can_manage_clients: { label: 'Clientes', desc: 'Gestionar base de datos de clientes' },
+    can_view_audit: { label: 'Auditoría', desc: 'Acceso al historial de movimientos' },
+    can_view_dashboard: { label: 'Dashboard', desc: 'Ver estadísticas y reportes' },
+    can_access_settings: { label: 'Configuración', desc: 'Acceso ajustes generales del sistema' },
+    can_use_ia_vision: { label: 'IA Vision', desc: 'Uso de reconocimiento de prendas por IA' },
+    can_manage_cash: { label: 'Caja', desc: 'Aperturas, retiros y cortes de caja' },
+    can_lock_terminal: { label: 'Bloquear', desc: 'Posibilidad de bloquear la pantalla' },
+    can_restart_cash: { label: 'Reiniciar Caja', desc: 'Reiniciar configuración de terminal' },
+    can_logout: { label: 'Cerrar Sesión', desc: 'Salir completamente de la app' },
     can_delete_orders: { label: 'Eliminar Órdenes', desc: 'Permite borrar registros de órdenes' },
-    can_see_reports: { label: 'Ver Reportes', desc: 'Acceso a estadísticas y reportes' },
-    can_manage_inventory: { label: 'Gestionar Inventario', desc: 'Modificar productos y stock' },
-    can_view_supplies: { label: 'Ver Insumos (Solo Lectura)', desc: 'Ver existencias y usar libreta digital, sin editar stock' },
-    can_manage_staff: { label: 'Gestionar Personal', desc: 'Crear o editar usuarios' },
-    can_process_orders: { label: 'Procesar Lavado', desc: 'Cambiar estado a Procesando/Listo' },
-    can_deliver_orders: { label: 'Entregar Pedidos', desc: 'Marcar pedidos como entregados' },
-    can_void_sales: { label: 'Anular Ventas', desc: 'Cancelar ventas ya cobradas' }
+    can_void_sales: { label: 'Anular Ventas', desc: 'Cancelar ventas ya cobradas' },
+    can_manage_staff: { label: 'Persona & Seguridad', desc: 'Crear o editar usuarios' }
 };
 
 export const UserManager = () => {
@@ -418,28 +498,62 @@ export const UserManager = () => {
                                 />
                             </div>
 
-                            <div className="permissions-section">
-                                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff', display: 'block' }}>
-                                    Permisos Granulares
+                            <div className="permissions-section" style={{ marginTop: '2rem' }}>
+                                <label style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', display: 'block', marginBottom: '1.5rem', borderBottom: '2px solid rgba(99, 102, 241, 0.3)', paddingBottom: '0.5rem' }}>
+                                    Panel de Control de Permisos 2026
                                 </label>
-                                <div className="permissions-grid">
-                                    {Object.entries(PERMISSION_LABELS).map(([key, info]) => (
-                                        <div key={key} className="permission-item">
-                                            <div className="permission-info">
-                                                <div className="permission-title">{info.label}</div>
-                                                <div className="permission-desc">{info.desc}</div>
-                                            </div>
-                                            <label className="switch">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={formData.permissions[key] || false}
-                                                    onChange={() => handlePermissionToggle(key)}
-                                                />
-                                                <span className="slider round"></span>
-                                            </label>
+
+                                {[
+                                    { 
+                                        title: 'Ventas y Operaciones', 
+                                        icon: 'shopping_cart',
+                                        keys: ['can_access_sales', 'can_manage_orders', 'can_delete_orders', 'can_void_sales', 'can_manage_clients', 'can_use_ia_vision'] 
+                                    },
+                                    { 
+                                        title: 'Catálogos e Inventario', 
+                                        icon: 'inventory_2',
+                                        keys: ['can_access_services', 'can_access_products', 'can_manage_supplies', 'can_view_supplies', 'can_manage_inventory'] 
+                                    },
+                                    { 
+                                        title: 'Administración y Reportes', 
+                                        icon: 'analytics',
+                                        keys: ['can_view_dashboard', 'can_view_audit', 'can_manage_staff', 'can_see_reports'] 
+                                    },
+                                    { 
+                                        title: 'Sistema y Terminal', 
+                                        icon: 'settings',
+                                        keys: ['can_access_settings', 'can_manage_cash', 'can_lock_terminal', 'can_restart_cash', 'can_logout'] 
+                                    }
+                                ].map(category => (
+                                    <div key={category.title} style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <h4 style={{ color: '#6366f1', fontSize: '0.9rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                            <span className="material-icons-outlined" style={{ fontSize: '18px' }}>{category.icon}</span>
+                                            {category.title}
+                                        </h4>
+                                        <div className="permissions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                            {category.keys.map(key => {
+                                                const info = PERMISSION_LABELS[key];
+                                                if (!info) return null;
+                                                return (
+                                                    <div key={key} className="permission-item" style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                                                        <div className="permission-info" style={{ pointerEvents: 'none' }}>
+                                                            <div className="permission-title" style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>{info.label}</div>
+                                                            <div className="permission-desc" style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{info.desc}</div>
+                                                        </div>
+                                                        <label className="switch">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={formData.permissions[key] || false}
+                                                                onChange={() => handlePermissionToggle(key)}
+                                                            />
+                                                            <span className="slider round"></span>
+                                                        </label>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
                             </div>
 
                             <div className="modal-actions" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

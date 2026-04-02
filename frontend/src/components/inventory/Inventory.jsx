@@ -4,6 +4,7 @@ import { productService } from '../../services/productService';
 import Swal from 'sweetalert2';
 import { useProducts } from '../../contexts/ProductContext';
 import { supabase } from '../../supabase';
+import QuickProductEntryModal from './QuickProductEntryModal';
 
 // Icons
 import * as XLSX from 'xlsx';
@@ -48,6 +49,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
+    const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
     // Form State
@@ -516,6 +518,12 @@ const Inventory = ({ mode = 'SERVICE' }) => {
 
     const uniqueCategories = Array.from(new Set([...predefinedCategories, ...customCategories, ...existingCategories])).sort();
 
+    const productCategories = Array.from(new Set([
+        'Venta', 'Limpieza', 'Químicos', 'Bolsas', 'Accesorios', 'Hogar', 'General',
+        ...customCategories,
+        ...products.filter(p => p.type === 'PRODUCT').map(p => p.category || 'General')
+    ])).sort();
+
     const getFilterCount = () => {
         let count = 0;
         if (filters.category !== 'all') count++;
@@ -691,6 +699,21 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                 <span className="filter-badge">{getFilterCount()}</span>
                             )}
                         </button>
+                        {!isServiceMode && (
+                            <button 
+                                className="control-btn" 
+                                onClick={() => setShowQuickEntryModal(true)}
+                                style={{ 
+                                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                    color: 'white',
+                                    border: 'none'
+                                }}
+                                title="Registrar Entradas"
+                            >
+                                <span className="material-symbols-outlined btn-icon">inventory_2</span>
+                                <span className="hidden md:inline">Entradas</span>
+                            </button>
+                        )}
                         <button className="control-btn primary" onClick={() => handleOpenModal()}>
                             <FiPlus className="btn-icon" />
                             {isServiceMode ? 'Nuevo Servicio' : 'Nuevo Producto'}
@@ -1090,6 +1113,25 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                     </div>
                 </div>
             )}
+
+            <QuickProductEntryModal 
+                isOpen={showQuickEntryModal}
+                onClose={() => setShowQuickEntryModal(false)}
+                onProductCreated={() => {
+                    fetchProducts();
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: 'Operación realizada correctamente',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#fff',
+                        color: document.documentElement.classList.contains('dark') ? '#fff' : '#000'
+                    });
+                }}
+                categories={productCategories}
+                products={products.filter(p => p.type === 'PRODUCT')}
+            />
         </div>
     );
 };

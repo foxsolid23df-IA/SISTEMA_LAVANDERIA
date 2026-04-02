@@ -47,6 +47,9 @@ export const Orders = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [orderToPrint, setOrderToPrint] = useState(null);
   const ticketRef = useRef(null);
+  const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
+  const [orderToUpdateMethod, setOrderToUpdateMethod] = useState(null);
+  const [newMethodSelection, setNewMethodSelection] = useState("");
 
   const loadOrders = async () => {
     setLoading(true);
@@ -283,6 +286,34 @@ export const Orders = () => {
     setOrderToPrint(ventaData);
   };
 
+  const handleUpdateMethod = (order) => {
+    setOrderToUpdateMethod(order);
+    setNewMethodSelection(order.payment_method || "cash");
+    setIsMethodModalOpen(true);
+  };
+
+  const finalizeMethodUpdate = async () => {
+    if (!orderToUpdateMethod || !newMethodSelection) return;
+    setIsProcessing(true);
+    try {
+      await orderService.updateOrderPaymentMethod(orderToUpdateMethod.id, newMethodSelection);
+      setOrders(prev => prev.map(o => o.id === orderToUpdateMethod.id ? { ...o, payment_method: newMethodSelection } : o));
+      Swal.fire({
+        title: "Método de Pago Actualizado",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setIsMethodModalOpen(false);
+      setOrderToUpdateMethod(null);
+    } catch (error) {
+      console.error("Error updating method:", error);
+      Swal.fire("Error", "No se pudo actualizar el método de pago", "error");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const imprimirTicket = async () => {
     if (!ticketRef.current || !businessSettings || isPrinting) return;
 
@@ -479,10 +510,16 @@ export const Orders = () => {
                 <button
                   onClick={() => handleReprint(order)}
                   className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400"
+                  title="Imprimir ticket"
                 >
-                  <span className="material-symbols-outlined text-sm">
-                    print
-                  </span>
+                  <span className="material-symbols-outlined text-sm">print</span>
+                </button>
+                <button
+                  onClick={() => handleUpdateMethod(order)}
+                  className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded text-emerald-500"
+                  title="Cambiar método de pago"
+                >
+                  <span className="material-symbols-outlined text-sm">currency_exchange</span>
                 </button>
               </div>
             </div>
@@ -910,6 +947,10 @@ export const Orders = () => {
                     <button onClick={() => handleOrderDelete(order.id)} className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar permanentemente">
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
+
+                    <button onClick={() => handleUpdateMethod(order)} className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Cambiar método de pago">
+                      <span className="material-symbols-outlined text-[18px]">currency_exchange</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1096,6 +1137,56 @@ export const Orders = () => {
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 )}
                 LIQUIDAR PAGO
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CAMBIO DE MÉTODO DE PAGO */}
+      {isMethodModalOpen && orderToUpdateMethod && (
+        <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-bold text-lg dark:text-white uppercase tracking-tighter">Cambiar Método</h3>
+              <button onClick={() => setIsMethodModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-[10px] text-slate-500 uppercase font-bold">Orden # {orderToUpdateMethod.folio || orderToUpdateMethod.id}</p>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Selecciona el nuevo método de pago</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: "cash", label: "Efectivo", icon: "payments" },
+                  { id: "card", label: "Tarjeta", icon: "credit_card" },
+                  { id: "transferencia", label: "Transferencia", icon: "account_balance" }
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setNewMethodSelection(m.id)}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${newMethodSelection === m.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "border-slate-100 dark:border-slate-800 text-slate-400"}`}
+                  >
+                    <span className="material-symbols-outlined text-2xl">{m.icon}</span>
+                    <span className="text-sm font-bold uppercase">{m.label}</span>
+                    {newMethodSelection === m.id && (
+                      <span className="material-symbols-outlined ml-auto text-emerald-500">check_circle</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 dark:bg-slate-950 flex gap-3">
+              <button onClick={() => setIsMethodModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs text-center">Cancelar</button>
+              <button
+                onClick={finalizeMethodUpdate}
+                disabled={isProcessing}
+                className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all text-xs flex items-center justify-center gap-2"
+              >
+                {isProcessing && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                GUARDAR CAMBIO
               </button>
             </div>
           </div>

@@ -746,7 +746,7 @@ export const Sales = () => {
         </div>
 
         <div className="p-4 lg:p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10 rounded-t-3xl lg:rounded-none">
-          <h2 className="text-lg lg:text-xl font-bold dark:text-white flex items-center gap-2">
+          <h2 className="text-lg lg:text-xl font-bold text-black dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-emerald-500">
               shopping_basket
             </span>
@@ -763,7 +763,7 @@ export const Sales = () => {
         {/* SECCIÓN CLIENTE (Movido arriba) */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-20">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-black uppercase tracking-widest">
+            <label className="text-[10px] font-black text-black dark:text-slate-400 uppercase tracking-widest">
               Cliente (OBLIGATORIO)
             </label>
             <div className="flex gap-2">
@@ -889,7 +889,7 @@ export const Sales = () => {
         <div className="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold text-black uppercase tracking-widest">
+              <label className="text-[10px] font-black text-black dark:text-slate-400 uppercase tracking-widest">
                 Notas de la Orden
               </label>
               <button
@@ -911,7 +911,7 @@ export const Sales = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-black uppercase tracking-widest">
+            <label className="text-[10px] font-black text-black dark:text-slate-400 uppercase tracking-widest">
               Entrega
             </label>
             <input
@@ -923,7 +923,7 @@ export const Sales = () => {
           </div>
 
           <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800">
-            <span className="text-slate-500 dark:text-slate-400 font-bold">
+            <span className="text-black dark:text-slate-400 font-black uppercase text-[10px] tracking-widest">
               Total a Pagar
             </span>
             <span className="text-3xl font-black text-slate-800 dark:text-white">

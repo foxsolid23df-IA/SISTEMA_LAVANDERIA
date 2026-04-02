@@ -120,8 +120,7 @@ export default function ReconciliationTab({ supplies, onCancel, onSuccess }) {
         reconciliation_date: endDate // Se toma la fecha fin como fecha de corte
       });
 
-      // Nota: Si hubieran observaciones, el backend/services actual no las guarda en el history. 
-      // Podríamos agregarlas a closeWeek si se actualiza.
+      handlePrint();
 
       Swal.fire('Corte Aplicado', 'Las diferencias se han ajustado en el sistema.', 'success');
       onSuccess();
