@@ -176,8 +176,8 @@ const PERMISSION_LABELS = {
     can_use_ia_vision: { label: 'IA Vision', desc: 'Uso de reconocimiento de prendas por IA' },
     can_manage_cash: { label: 'Caja', desc: 'Aperturas, retiros y cortes de caja' },
     can_lock_terminal: { label: 'Bloquear', desc: 'Posibilidad de bloquear la pantalla' },
-    can_restart_cash: { label: 'Reiniciar Caja', desc: 'Reiniciar configuración de terminal' },
-    can_logout: { label: 'Cerrar Sesión', desc: 'Salir completamente de la app' },
+    can_restart_cash: { label: 'Reiniciar Caja/Terminal', desc: 'Borrar ajustes locales de conexión (Soporte)' },
+    can_logout: { label: 'Cerrar Sesión (Desvincular)', desc: 'Desvincular cuenta de la terminal/dispositivo' },
     can_delete_orders: { label: 'Eliminar Órdenes', desc: 'Permite borrar registros de órdenes' },
     can_void_sales: { label: 'Anular Ventas', desc: 'Cancelar ventas ya cobradas' },
     can_manage_staff: { label: 'Persona & Seguridad', desc: 'Crear o editar usuarios' }

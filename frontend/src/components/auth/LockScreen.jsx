@@ -7,7 +7,7 @@ import './LockScreen.css';
 export const LockScreen = () => {
     const [pin, setPin] = useState('');
     const [isValidating, setIsValidating] = useState(false);
-    const { loginWithPin, unlockAsOwner, storeName, logout, user, verifyMasterPin, verifyRecoveryCode } = useAuth();
+    const { loginWithPin, unlockAsOwner, storeName, logout, user, verifyMasterPin, verifyRecoveryCode, canLogout } = useAuth();
     const containerRef = React.useRef(null);
 
     // Auto-enfocar el contenedor al montar para habilitar teclado de inmediato
@@ -306,7 +306,9 @@ export const LockScreen = () => {
 
                 <div className="lock-card-footer">
                     <button className="footer-action-btn" onClick={handleOwnerAccess}>Soy Propietario</button>
-                    <button className="footer-action-btn" onClick={handleLogout}>Cerrar Sesión</button>
+                    {canLogout && (
+                        <button className="footer-action-btn" onClick={handleLogout}>Cerrar Sesión</button>
+                    )}
                 </div>
             </div>
         </div>
