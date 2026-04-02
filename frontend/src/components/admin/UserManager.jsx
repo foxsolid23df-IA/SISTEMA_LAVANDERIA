@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { staffService } from '../../services/staffService';
 import Swal from 'sweetalert2';
 import './UserManager.css';
@@ -103,6 +104,7 @@ const PERMISSION_LABELS = {
 };
 
 export const UserManager = () => {
+    const navigate = useNavigate();
     const [staff, setStaff] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -279,6 +281,14 @@ export const UserManager = () => {
 
     return (
         <div className="user-manager-container">
+            <div style={{ marginBottom: '1rem' }}>
+                <button 
+                    onClick={() => navigate('/configuracion')}
+                    style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
+                    <span className="material-icons-outlined">arrow_back</span>
+                    Volver a Configuración
+                </button>
+            </div>
             <header className="manager-header">
                 <div>
                     <div className="header-badge">Personal & Seguridad</div>

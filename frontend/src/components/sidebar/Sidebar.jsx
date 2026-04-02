@@ -28,6 +28,7 @@ export const Sidebar = () => {
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -433,101 +434,26 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          {isAdmin && (
+          {/* Enlace Directo a Portal de Configuración */}
+          <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
             <NavLink
-              to="/usuarios"
+              to="/configuracion"
               className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
               onClick={() => setIsOpen(false)}
             >
               <span className="material-icons-outlined text-[20px]">
-                people
+                settings
               </span>
-              <span className="text-sm font-bold">Usuarios</span>
+              <span className="text-sm font-bold">Configuración</span>
             </NavLink>
-          )}
-
-          {isAdmin && (
-            <NavLink
-              to="/configuracion-ticket"
-              className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="material-icons-outlined text-[20px]">
-                receipt_long
-              </span>
-              <span className="text-sm font-bold">Config. Ticket</span>
-            </NavLink>
-          )}
-
-          {isAdmin && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) => `
-                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                                ${
-                                  isActive
-                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                                }
-                            `}
-              onClick={() => setIsOpen(false)}
-            >
-              <span className="material-icons-outlined text-[20px]">
-                admin_panel_settings
-              </span>
-              <span className="text-sm font-bold">Admin Panel</span>
-            </NavLink>
-          )}
-
-          <NavLink
-            to="/configuracion-impuestos"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              request_quote
-            </span>
-            <span className="text-sm font-bold">Impuestos</span>
-          </NavLink>
-
-          <NavLink
-            to="/configuracion-dolares"
-            className={({ isActive }) => `
-                            flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
-                            ${
-                              isActive
-                                ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
-                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
-                            }
-                        `}
-            onClick={() => setIsOpen(false)}
-          >
-            <span className="material-icons-outlined text-[20px]">
-              currency_exchange
-            </span>
-            <span className="text-sm font-bold">Dólares</span>
-          </NavLink>
+          </div>
 
           {/* AI Vision POC Button */}
           <button

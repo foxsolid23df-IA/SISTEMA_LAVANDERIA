@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { productService } from "../../services/productService";
 import { salesService } from "../../services/salesService";
@@ -15,6 +16,7 @@ const APP_VERSION = packageInfo.version;
 
 
 export const AdminPanel = () => {
+  const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
   const [stats, setStats] = useState(null);
@@ -84,6 +86,14 @@ export const AdminPanel = () => {
     <div className="admin-panel">
       {/* Sidebar */}
       <aside className="admin-sidebar">
+        <div style={{ padding: '1rem' }}>
+            <button 
+                onClick={() => navigate('/configuracion')}
+                style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', width: '100%', padding: '0.5rem 0' }}>
+                <span className="material-icons-outlined">arrow_back</span>
+                Atrás
+            </button>
+        </div>
         <div className="admin-brand">
           <span className="material-icons-outlined">admin_panel_settings</span>
           <h2>Admin Panel</h2>

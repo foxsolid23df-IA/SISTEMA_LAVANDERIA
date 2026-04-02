@@ -20,6 +20,7 @@ import { SupplyInventory } from "../components/supplies/SupplyInventory";
 
 import { AuthProvider, useAuth } from "../hooks/useAuth";
 import { TerminalSetup } from "../components/config/TerminalSetup";
+import { ConfiguracionPortal } from "../components/config/ConfiguracionPortal";
 import { Orders } from "../components/sales/Orders";
 import { ClientManager } from "../components/admin/ClientManager";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
@@ -292,6 +293,16 @@ export const Routing = () => {
                       element={
                         <PrivateLayout>
                           <ClientManager />
+                        </PrivateLayout>
+                      }
+                    />
+
+                    {/* Portal de Configuración Principal */}
+                    <Route
+                      path="/configuracion"
+                      element={
+                        <PrivateLayout>
+                          <ConfiguracionPortal />
                         </PrivateLayout>
                       }
                     />

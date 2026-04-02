@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSettings } from "../../contexts/SettingsContext";
 import Swal from "sweetalert2";
 
 export default function TaxSettings() {
+    const navigate = useNavigate();
     const { settings, updateSettings, loading } = useSettings();
     const [taxPercentage, setTaxPercentage] = useState("");
     const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +50,14 @@ export default function TaxSettings() {
     return (
         <div className="flex-1 p-6 md:p-8 ml-0 lg:ml-64 bg-slate-50 dark:bg-slate-900 min-h-screen text-slate-800 dark:text-slate-200">
             <div className="max-w-3xl mx-auto space-y-6">
+                <div>
+                    <button 
+                        onClick={() => navigate('/configuracion')}
+                        style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '1.5rem', padding: 0 }}>
+                        <span className="material-icons-outlined">arrow_back</span>
+                        Volver a Configuración
+                    </button>
+                </div>
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                         <span className="material-icons-outlined text-primary">request_quote</span>

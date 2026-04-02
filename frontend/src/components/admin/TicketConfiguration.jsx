@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useSettings } from "../../contexts/SettingsContext";
 import { printService } from "../../services/printService";
 import "./TicketConfiguration.css";
 
 export const TicketConfiguration = () => {
+  const navigate = useNavigate();
   const { settings, updateSettings, loading: loadingContext } = useSettings();
   const [formData, setFormData] = useState({
     name: "",
@@ -113,6 +115,14 @@ export const TicketConfiguration = () => {
 
   return (
     <div className="ticket-config-container">
+      <div style={{ marginBottom: '1rem' }}>
+        <button 
+          onClick={() => navigate('/configuracion')}
+          style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
+          <span className="material-icons-outlined">arrow_back</span>
+          Volver a Configuración
+        </button>
+      </div>
       <div className="ticket-config-header">
         <h1>Configuración del Ticket</h1>
         <p>
