@@ -15,8 +15,8 @@ export const SupplyInventory = () => {
   const [adjustedStocks, setAdjustedStocks] = useState({}); // Estado para el cálculo reactivo de la tabla de auditoría
   const [weeklyData, setWeeklyData] = useState([]);
 
-  const { isAdmin, activeRole, canManageInventory, canViewSupplies } = useAuth();
-  const canEditOrDelete = canManageInventory;
+  const { isAdmin, activeRole, canManageSupplies, canViewSupplies } = useAuth();
+  const canEditOrDelete = canManageSupplies;
 
   // Estados para filtros de historial
   const [searchTerm, setSearchTerm] = useState("");
@@ -562,7 +562,7 @@ export const SupplyInventory = () => {
         ]
           .filter((tab) => {
             // Si tiene permiso completo, ve todas las tabs
-            if (canManageInventory) return true;
+            if (canManageSupplies) return true;
             // Si solo tiene can_view_supplies, solo ve Libreta Digital y Existencias
             if (canViewSupplies) return ["usage", "inventory"].includes(tab.id);
             return true;

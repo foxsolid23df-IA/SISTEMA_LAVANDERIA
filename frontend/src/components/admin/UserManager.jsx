@@ -95,7 +95,8 @@ const ROLES = {
             can_logout: true,
             can_process_orders: false,
             can_deliver_orders: true,
-            can_void_sales: false
+            can_void_sales: false,
+            can_view_supplies: true
         }
     },
     operador: { 
@@ -168,7 +169,8 @@ const PERMISSION_LABELS = {
     can_manage_orders: { label: 'Gestión de Órdenes', desc: 'Ver y gestionar el listado de pedidos' },
     can_access_services: { label: 'Catálogo de Servicios', desc: 'Administrar servicios y precios' },
     can_access_products: { label: 'Catálogo de Productos', desc: 'Administrar productos y precios' },
-    can_manage_supplies: { label: 'Insumos Internos', desc: 'Control de detergentes y químicos' },
+    can_manage_supplies: { label: 'Administrar Insumos Internos', desc: 'Control total: stock, catálogo e historial' },
+    can_view_supplies: { label: 'Insumos: Libreta Digital', desc: 'Solo registrar uso de detergentes y ver existencias' },
     can_manage_clients: { label: 'Clientes', desc: 'Gestionar base de datos de clientes' },
     can_view_audit: { label: 'Auditoría', desc: 'Acceso al historial de movimientos' },
     can_view_dashboard: { label: 'Dashboard', desc: 'Ver estadísticas y reportes' },

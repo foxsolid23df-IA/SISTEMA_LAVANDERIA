@@ -287,6 +287,15 @@ export const Orders = () => {
   };
 
   const handleUpdateMethod = (order) => {
+    if (order.status === "delivered") {
+      Swal.fire({
+        title: "Acción no permitida",
+        text: "No se puede cambiar el método de pago de una orden que ya ha sido entregada.",
+        icon: "error",
+        confirmButtonColor: "#10b981",
+      });
+      return;
+    }
     setOrderToUpdateMethod(order);
     setNewMethodSelection(order.payment_method || "cash");
     setIsMethodModalOpen(true);
@@ -514,13 +523,15 @@ export const Orders = () => {
                 >
                   <span className="material-symbols-outlined text-sm">print</span>
                 </button>
-                <button
-                  onClick={() => handleUpdateMethod(order)}
-                  className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded text-emerald-500"
-                  title="Cambiar método de pago"
-                >
-                  <span className="material-symbols-outlined text-sm">currency_exchange</span>
-                </button>
+                {order.status !== "delivered" && (
+                  <button
+                    onClick={() => handleUpdateMethod(order)}
+                    className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded text-emerald-500"
+                    title="Cambiar método de pago"
+                  >
+                    <span className="material-symbols-outlined text-sm">currency_exchange</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -948,9 +959,11 @@ export const Orders = () => {
                       <span className="material-symbols-outlined text-[18px]">delete</span>
                     </button>
 
-                    <button onClick={() => handleUpdateMethod(order)} className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Cambiar método de pago">
-                      <span className="material-symbols-outlined text-[18px]">currency_exchange</span>
-                    </button>
+                    {order.status !== "delivered" && (
+                      <button onClick={() => handleUpdateMethod(order)} className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Cambiar método de pago">
+                        <span className="material-symbols-outlined text-[18px]">currency_exchange</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
