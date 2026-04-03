@@ -1,0 +1,446 @@
+/* ============================================
+   CashReportsView — Reportes de Caja (Web Admin)
+   ============================================ */
+
+.cash-reports {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cash-reports__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cash-reports__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  letter-spacing: -0.02em;
+}
+
+.cash-reports__title .material-icons-outlined {
+  font-size: 28px;
+  color: var(--primary, #0f172a);
+  background: var(--bg-subtle, #f1f5f9);
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.cash-reports__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+/* Filters */
+.cash-reports__filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: white;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.cash-reports__filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.cash-reports__filter-group label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.cash-reports__filter-group input,
+.cash-reports__filter-group select {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  background: var(--bg-subtle, #f8fafc);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cash-reports__filter-group input:focus,
+.cash-reports__filter-group select:focus {
+  border-color: var(--primary, #0f172a);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
+.cash-reports__filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 1.25rem;
+  background: var(--primary, #0f172a);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.cash-reports__filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.cash-reports__filter-btn:active {
+  transform: scale(0.97);
+}
+
+/* Summary Cards */
+.cash-reports__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cash-reports__card {
+  padding: 1.25rem;
+  background: white;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cash-reports__card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.cash-reports__card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cash-reports__card-icon .material-icons-outlined {
+  font-size: 22px;
+  color: white;
+}
+
+.cash-reports__card-icon--cuts { background: linear-gradient(135deg, #0f172a, #334155); }
+.cash-reports__card-icon--sales { background: linear-gradient(135deg, #059669, #10b981); }
+.cash-reports__card-icon--total { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+.cash-reports__card-icon--diff { background: linear-gradient(135deg, #dc2626, #ef4444); }
+
+.cash-reports__card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.cash-reports__card-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cash-reports__card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+/* Table */
+.cash-reports__table-wrapper {
+  background: white;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cash-reports__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.cash-reports__table thead {
+  background: var(--bg-subtle, #f8fafc);
+  border-bottom: 2px solid var(--border, #e2e8f0);
+}
+
+.cash-reports__table th {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.cash-reports__table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  font-weight: 600;
+}
+
+.cash-reports__table tbody tr {
+  transition: background 0.15s;
+}
+
+.cash-reports__table tbody tr:hover {
+  background: var(--bg-subtle, #f8fafc);
+}
+
+.cash-reports__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Type badges */
+.cash-reports__type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cash-reports__type-badge--turno {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.cash-reports__type-badge--dia {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.cash-reports__type-badge--parcial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Difference cell */
+.cash-reports__diff--positive {
+  color: #059669;
+  font-weight: 700;
+}
+
+.cash-reports__diff--negative {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.cash-reports__diff--zero {
+  color: var(--text-muted, #94a3b8);
+}
+
+/* Empty state */
+.cash-reports__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.cash-reports__empty .material-icons-outlined {
+  font-size: 56px;
+  color: var(--border, #e2e8f0);
+  margin-bottom: 1rem;
+}
+
+.cash-reports__empty h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 0.5rem;
+}
+
+.cash-reports__empty p {
+  font-size: 0.8rem;
+  color: var(--text-muted, #94a3b8);
+  max-width: 300px;
+}
+
+/* Loading */
+.cash-reports__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cash-reports__loading .material-icons-outlined {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Dark mode ===== */
+:root.dark .cash-reports__title {
+  color: #f1f5f9;
+}
+
+:root.dark .cash-reports__title .material-icons-outlined {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+:root.dark .cash-reports__badge {
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+}
+
+:root.dark .cash-reports__filters {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__filter-group label {
+  color: #64748b;
+}
+
+:root.dark .cash-reports__filter-group input,
+:root.dark .cash-reports__filter-group select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+:root.dark .cash-reports__card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__card-value {
+  color: #f1f5f9;
+}
+
+:root.dark .cash-reports__table-wrapper {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__table thead {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__table td {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+:root.dark .cash-reports__table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:root.dark .cash-reports__type-badge--turno {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+:root.dark .cash-reports__type-badge--dia {
+  background: rgba(190, 24, 93, 0.15);
+  color: #f472b6;
+}
+
+:root.dark .cash-reports__type-badge--parcial {
+  background: rgba(146, 64, 14, 0.15);
+  color: #fbbf24;
+}
+
+:root.dark .cash-reports__empty .material-icons-outlined {
+  color: #334155;
+}
+
+:root.dark .cash-reports__empty h3 {
+  color: #e2e8f0;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .cash-reports {
+    padding: 1rem;
+  }
+
+  .cash-reports__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cash-reports__summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cash-reports__filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cash-reports__filter-group {
+    min-width: auto;
+  }
+
+  .cash-reports__table-wrapper {
+    overflow-x: auto;
+  }
+
+  .cash-reports__table {
+    min-width: 700px;
+  }
+}

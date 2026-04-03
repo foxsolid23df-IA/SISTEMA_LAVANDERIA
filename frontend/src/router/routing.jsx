@@ -37,6 +37,7 @@ import { SettingsProvider } from "../contexts/SettingsContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
 import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
+import { CashReportsView } from "../components/reports/CashReportsView";
 import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
 import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
 import { LatencyIndicator } from "../components/common/LatencyIndicator";
@@ -303,6 +304,19 @@ export const Routing = () => {
                       element={
                         <PrivateLayout>
                           <ConfiguracionPortal />
+                        </PrivateLayout>
+                      }
+                    />
+
+
+                    {/* Reportes de Caja — Solo Admin/Web */}
+                    <Route
+                      path="/reportes-caja"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <CashReportsView />
+                          </AdminRoute>
                         </PrivateLayout>
                       }
                     />

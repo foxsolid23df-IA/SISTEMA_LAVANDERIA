@@ -156,6 +156,16 @@ export const AuthProvider = ({ children }) => {
     const ownerStaff = { name: "Propietario", role: "admin", isOwner: true };
     setActiveStaff(ownerStaff);
     localStorage.setItem("activeStaff", JSON.stringify(ownerStaff));
+
+    // Detección de plataforma: Si NO es Electron (.exe), activar modo admin automáticamente
+    // Los usuarios web son siempre administradores y no necesitan configurar terminal/caja
+    const isDesktop = !!window?.electron?.isElectron;
+    if (!isDesktop) {
+      console.log("[Auth] Plataforma Web detectada. Activando adminMode automático.");
+      setAdminMode(true);
+      sessionStorage.setItem("adminMode", "true");
+    }
+
     return data;
   };
 
@@ -208,6 +218,15 @@ export const AuthProvider = ({ children }) => {
     const ownerStaff = { name: fullName, role: "admin", isOwner: true };
     setActiveStaff(ownerStaff);
     localStorage.setItem("activeStaff", JSON.stringify(ownerStaff));
+
+    // Detección de plataforma: Si NO es Electron (.exe), activar modo admin automáticamente
+    const isDesktop = !!window?.electron?.isElectron;
+    if (!isDesktop) {
+      console.log("[Auth] Plataforma Web detectada (registro). Activando adminMode automático.");
+      setAdminMode(true);
+      sessionStorage.setItem("adminMode", "true");
+    }
+
     return authData;
   };
 

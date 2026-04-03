@@ -434,6 +434,29 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
+          {adminMode && isAdmin && (
+            <NavLink
+              to="/reportes-caja"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                receipt_long
+              </span>
+              <span className="text-sm font-bold">Reportes de Caja</span>
+              <span className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
+                WEB
+              </span>
+            </NavLink>
+          )}
+
 
           {canAccessSettings && (
             <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
