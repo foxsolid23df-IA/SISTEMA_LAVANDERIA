@@ -140,6 +140,58 @@ export const cashCutService = {
         return data || [];
     },
 
+    // Obtener detalles de un corte específico (Ventas + Órdenes)
+    getCutDetails: async (startTime, endTime, terminalId = null) => {
+        try {
+            // Cargar ventas y órdenes en paralelo
+            const [sales, orders] = await Promise.all([
+                salesService.getSalesInRange(startTime, endTime, terminalId),
+                orderService.getOrdersInRange(startTime, endTime, terminalId)
+            ]);
+
+            // Normalizar órdenes para que se vean como "ventas"
+            const normalizedOrders = orders.map(order => ({
+                ...order,
+                total: parseFloat(order.total),
+                payment_method: 
+                    order.payment_method === 'cash' ? 'efectivo' :
+                    order.payment_method === 'card' ? 'tarjeta' :
+                    order.payment_method === 'transfer' ? 'transferencia' :
+                    order.payment_method === 'usd_cash' ? 'dolares' :
+                    order.payment_method?.toLowerCase() || 'efectivo',
+                is_order: true,
+                customer_name: order.customers?.name || 'Cliente General',
+                items_summary: order.order_items?.map(it => it.product_name).join(', ')
+            }));
+
+            // Normalizar ventas de productos
+            const normalizedSales = sales.map(sale => ({
+                ...sale,
+                total: parseFloat(sale.total),
+                payment_method: 
+                    sale.payment_method === 'cash' ? 'efectivo' :
+                    sale.payment_method === 'card' ? 'tarjeta' :
+                    sale.payment_method === 'transfer' ? 'transferencia' :
+                    sale.payment_method === 'usd_cash' ? 'dolares' :
+                    sale.payment_method?.toLowerCase() || 'efectivo',
+                is_sale: true,
+                customer_name: 'Venta de Mostrador',
+                items_summary: sale.sale_items?.map(it => it.product_name).join(', ')
+            }));
+
+            return {
+                transactions: [...normalizedSales, ...normalizedOrders].sort((a, b) => 
+                    new Date(b.created_at) - new Date(a.created_at)
+                ),
+                startTime,
+                endTime
+            };
+        } catch (error) {
+            console.error('Error in getCutDetails:', error);
+            throw error;
+        }
+    },
+
     // Calcular resumen de turno actual o día
     getCurrentShiftSummary: async (cutType = 'turno') => {
         let startTime = null;

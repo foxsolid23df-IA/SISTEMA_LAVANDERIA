@@ -162,6 +162,33 @@ export const orderService = {
     return data || [];
   },
 
+  // Obtener órdenes en un rango de fechas
+  async getOrdersInRange(startTime, endTime, terminalId = null) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user');
+
+    let query = supabase
+      .from('orders')
+      .select(`
+        *,
+        customers (name, phone),
+        order_items (*)
+      `)
+      .eq('user_id', user.id)
+      .gte('created_at', startTime)
+      .lte('created_at', endTime)
+      .order('created_at', { ascending: false });
+
+    // En muchas de nuestras tablas terminal_id existe, filtramos si está disponible
+    if (terminalId) {
+      query = query.eq('terminal_id', terminalId);
+    }
+
+    const { data: orders, error } = await query;
+    if (error) throw error;
+    return orders || [];
+  },
+
   // Obtener órdenes desde una fecha
   async getOrdersSince(startTime, terminalId = null) {
     if (!startTime) return [];

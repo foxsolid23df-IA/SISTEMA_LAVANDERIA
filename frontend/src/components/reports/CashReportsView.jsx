@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { cashCutService } from "../../services/cashCutService";
+import Modal from "../common/Modal"; // Importación por defecto corregida
 import "./CashReportsView.css";
 
 const TYPE_LABELS = {
@@ -45,6 +46,10 @@ export const CashReportsView = () => {
     cutType: "all",
     staffName: "",
   });
+  const [selectedCut, setSelectedCut] = useState(null);
+  const [details, setDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState("orders"); // 'orders' | 'clients'
 
   const fetchCuts = useCallback(async () => {
     setLoading(true);
@@ -77,6 +82,54 @@ export const CashReportsView = () => {
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
+
+  const handleRowClick = async (cut) => {
+    setSelectedCut(cut);
+    setLoadingDetails(true);
+    setDetails(null);
+    try {
+      const data = await cashCutService.getCutDetails(cut.start_time, cut.created_at, cut.terminal_id);
+      setDetails(data);
+    } catch (err) {
+      console.error("[CashReportsView] Error al cargar detalles:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  // Group transactions by client
+  const clientsData = useMemo(() => {
+    if (!details?.transactions) return [];
+    const groups = {};
+    details.transactions.forEach((tx) => {
+      const name = tx.customer_name || "Cliente General";
+      if (!groups[name]) {
+        groups[name] = { name, count: 0, total: 0, transactions: [] };
+      }
+      groups[name].count += 1;
+      groups[name].total += parseFloat(tx.total) || 0;
+      groups[name].transactions.push(tx);
+    });
+    return Object.values(groups).sort((a, b) => b.total - a.total);
+  }, [details]);
+
+  // Totals by payment method
+  const paymentSummary = useMemo(() => {
+    if (!details?.transactions) return null;
+    const summary = {
+      efectivo: 0,
+      tarjeta: 0,
+      transferencia: 0,
+      dolares: 0
+    };
+    details.transactions.forEach(tx => {
+      const method = tx.payment_method?.toLowerCase();
+      if (summary.hasOwnProperty(method)) {
+          summary[method] += parseFloat(tx.total) || 0;
+      }
+    });
+    return summary;
+  }, [details]);
 
   // Summary calculations
   const totalSales = cuts.reduce(
@@ -240,7 +293,11 @@ export const CashReportsView = () => {
                       : "cash-reports__diff--zero";
 
                 return (
-                  <tr key={cut.id}>
+                  <tr 
+                    key={cut.id} 
+                    onClick={() => handleRowClick(cut)}
+                    className="cash-reports__row-clickable"
+                  >
                     <td>{formatDate(cut.created_at)}</td>
                     <td>{formatTime(cut.created_at)}</td>
                     <td>
@@ -267,6 +324,134 @@ export const CashReportsView = () => {
           </table>
         )}
       </div>
+
+      {/* Modal de Detalles */}
+      {selectedCut && (
+        <Modal 
+            isOpen={true} 
+            onClose={() => setSelectedCut(null)}
+            title={`Detalles de Corte - ${formatDate(selectedCut.created_at)} ${formatTime(selectedCut.created_at)}`}
+            width="900px"
+        >
+            <div className="cut-details">
+                <div className="cut-details__info">
+                    <div className="cut-details__info-item">
+                        <label>Empleado:</label>
+                        <span>{selectedCut.staff_name}</span>
+                    </div>
+                    <div className="cut-details__info-item">
+                        <label>Tipo:</label>
+                        <span>{TYPE_LABELS[selectedCut.cut_type]}</span>
+                    </div>
+                    <div className="cut-details__info-item">
+                        <label>Inicio:</label>
+                        <span>{formatDate(selectedCut.start_time)} {formatTime(selectedCut.start_time)}</span>
+                    </div>
+                </div>
+
+                {loadingDetails ? (
+                    <div className="cut-details__loading">
+                        <span className="material-icons-outlined">sync</span>
+                        Cargando desglose de ventas...
+                    </div>
+                ) : (
+                    <>
+                        {/* Resumen de Métodos */}
+                        {paymentSummary && (
+                            <div className="cut-details__payment-summary">
+                                <div className="payment-card payment-card--cash">
+                                    <span className="payment-card__label">Efectivo</span>
+                                    <span className="payment-card__value">{formatCurrency(paymentSummary.efectivo)}</span>
+                                </div>
+                                <div className="payment-card payment-card--card">
+                                    <span className="payment-card__label">Tarjeta</span>
+                                    <span className="payment-card__value">{formatCurrency(paymentSummary.tarjeta)}</span>
+                                </div>
+                                <div className="payment-card payment-card--transfer">
+                                    <span className="payment-card__label">Transferencia</span>
+                                    <span className="payment-card__value">{formatCurrency(paymentSummary.transferencia)}</span>
+                                </div>
+                                {paymentSummary.dolares > 0 && (
+                                    <div className="payment-card payment-card--usd">
+                                        <span className="payment-card__label">Dólares (MXN eq)</span>
+                                        <span className="payment-card__value">{formatCurrency(paymentSummary.dolares)}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Tabs */}
+                        <div className="cut-details__tabs">
+                            <button 
+                                className={`cut-details__tab ${activeTab === 'orders' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('orders')}
+                            >
+                                <span className="material-icons-outlined">list_alt</span>
+                                Por Orden / Venta
+                            </button>
+                            <button 
+                                className={`cut-details__tab ${activeTab === 'clients' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('clients')}
+                            >
+                                <span className="material-icons-outlined">people</span>
+                                Por Clientes
+                            </button>
+                        </div>
+
+                        <div className="cut-details__content">
+                            {activeTab === 'orders' ? (
+                                <table className="cut-details__table">
+                                    <thead>
+                                        <tr>
+                                            <th>Hora</th>
+                                            <th>Cliente</th>
+                                            <th>Detalle</th>
+                                            <th>Método</th>
+                                            <th className="text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {details?.transactions.map((tx, idx) => (
+                                            <tr key={idx}>
+                                                <td>{formatTime(tx.created_at)}</td>
+                                                <td>{tx.customer_name}</td>
+                                                <td className="cut-details__items-cell">{tx.items_summary || "—"}</td>
+                                                <td>
+                                                    <span className={`method-badge method-badge--${tx.payment_method?.toLowerCase()}`}>
+                                                        {tx.payment_method}
+                                                    </span>
+                                                </td>
+                                                <td className="text-right font-bold">{formatCurrency(tx.total)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <table className="cut-details__table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Ctd. Transacciones</th>
+                                            <th className="text-right">Monto Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {clientsData.map((client, idx) => (
+                                            <tr key={idx}>
+                                                <td>{client.name}</td>
+                                                <td>{client.count}</td>
+                                                <td className="text-right font-bold">{formatCurrency(client.total)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+        </Modal>
+      )}
     </div>
   );
 };

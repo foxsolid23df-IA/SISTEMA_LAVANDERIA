@@ -444,3 +444,189 @@
     min-width: 700px;
   }
 }
+
+/* ============================================
+   Detailed Breakdown Modal Styles
+   ============================================ */
+
+.cash-reports__row-clickable {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cash-reports__row-clickable:hover {
+    background-color: var(--bg-hover, #f1f5f9) !important;
+}
+
+.cut-details {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.cut-details__info {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem;
+    background: var(--bg-subtle, #f8fafc);
+    border-radius: 12px;
+}
+
+.cut-details__info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.cut-details__info-item label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted, #94a3b8);
+}
+
+.cut-details__info-item span {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+}
+
+/* Payment Summary Cards in Modal */
+.cut-details__payment-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.payment-card {
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.payment-card--cash { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.payment-card--card { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.payment-card--transfer { background: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
+.payment-card--usd { background: #fffbeb; color: #92400e; border-color: #fef3c7; }
+
+.payment-card__label {
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.payment-card__value {
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+
+/* Tabs */
+.cut-details__tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-light, #f1f5f9);
+    gap: 1.5rem;
+}
+
+.cut-details__tab {
+    background: none;
+    border: none;
+    padding: 0.75rem 0.25rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.cut-details__tab:hover {
+    color: var(--text-primary, #0f172a);
+}
+
+.cut-details__tab.active {
+    color: var(--primary, #0f172a);
+}
+
+.cut-details__tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary, #0f172a);
+}
+
+/* Modal Tables */
+.cut-details__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.cut-details__table th {
+    text-align: left;
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-muted, #94a3b8);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+.cut-details__table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-light, #f1f5f9);
+    color: var(--text-primary, #0f172a);
+    font-weight: 500;
+}
+
+.cut-details__items-cell {
+    font-size: 0.75rem;
+    color: var(--text-muted, #64748b);
+    max-width: 300px;
+}
+
+.method-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.method-badge--efectivo { background: #dcfce7; color: #166534; }
+.method-badge--tarjeta { background: #dbeafe; color: #1e40af; }
+.method-badge--transferencia { background: #f3e8ff; color: #6b21a8; }
+.method-badge--dolares { background: #fef3c7; color: #92400e; }
+
+.text-right { text-align: right !important; }
+.font-bold { font-weight: 800 !important; }
+
+/* Dark Mode Adjustments */
+:root.dark .cut-details__info {
+    background: #0f172a;
+}
+
+:root.dark .cut-details__info-item span {
+    color: #f1f5f9;
+}
+
+:root.dark .payment-card { border-color: rgba(255,255,255,0.1); }
+:root.dark .payment-card--cash { background: rgba(22, 101, 52, 0.2); color: #4ade80; }
+:root.dark .payment-card--card { background: rgba(30, 64, 175, 0.2); color: #60a5fa; }
+:root.dark .payment-card--transfer { background: rgba(107, 33, 168, 0.2); color: #c084fc; }
+:root.dark .payment-card--usd { background: rgba(146, 64, 14, 0.2); color: #fbbf24; }
+
+:root.dark .cut-details__tab.active { color: #f1f5f9; }
+:root.dark .cut-details__tab.active::after { background: #f1f5f9; }
+
+:root.dark .cut-details__table td {
+    color: #e2e8f0;
+    border-color: #334155;
+}

@@ -118,4 +118,5 @@ export const ConfirmationModal = ({
     </Modal>
 )
 
+export { Modal }
 export default Modal

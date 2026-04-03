@@ -6,7 +6,7 @@ import './Login.css';
 
 export const Login = () => {
     const { login, signUp, user } = useAuth();
-    const { invitationCode } = useParams(); // Para rutas como /register/ADMIN2024
+    const { invitationCode } = useParams();
 
     // UI State
     const [isRegistering, setIsRegistering] = useState(false);
@@ -22,10 +22,10 @@ export const Login = () => {
         invitationCode: ''
     });
 
-    // Estado para el código de invitación validado
+    // Validated invitation code state
     const [validatedCode, setValidatedCode] = useState(null);
 
-    // Si hay código de invitación en la URL, activar modo registro y pre-llenar el código
+    // If there's an invitation code in the URL, activate registration mode
     useEffect(() => {
         if (invitationCode) {
             setIsRegistering(true);
@@ -55,7 +55,6 @@ export const Login = () => {
 
         try {
             if (isRegistering) {
-                // Validar código de invitación contra la base de datos
                 if (!formData.invitationCode) {
                     setError('Código de invitación requerido. Solo el área administrativa puede proporcionar códigos de registro.');
                     setLoading(false);
@@ -70,11 +69,7 @@ export const Login = () => {
                     return;
                 }
 
-                // Proceder con el registro pasando el código validado
                 await signUp(formData.email, formData.password, formData.storeName, formData.fullName, validation.codeId);
-                // Signup usually logs in automatically in Supabase, or requires email confirmation.
-                // Si auto-login, el efecto 'user' redirigirá. 
-                // Si requiere confirmación, podríamos necesitar un mensaje. 
             } else {
                 await login(formData.email, formData.password);
             }
@@ -89,8 +84,12 @@ export const Login = () => {
     return (
         <div className="login-container">
             <div className="login-card">
+                {/* Logo completo - imagen incluye ícono + NEXUM + POS */}
+                <div className="login-logo-area">
+                    <img src="/logo_nexum.png" alt="Nexum POS" className="login-logo-full" />
+                </div>
+
                 <div className="login-header">
-                    <div className="login-icon">🔐</div>
                     <h1>{isRegistering ? 'Crear Cuenta' : 'Bienvenido'}</h1>
                     <p>{isRegistering ? 'Registra tu negocio en Business Pro' : 'Gestiona tu negocio profesionalmente'}</p>
                 </div>
@@ -101,13 +100,13 @@ export const Login = () => {
                     {isRegistering && (
                         <>
                             <div className="form-group">
-                                <label>Código de Invitación *</label>
+                                <label>Código de Invitación</label>
                                 <input
                                     type="text"
                                     name="invitationCode"
                                     value={formData.invitationCode}
                                     onChange={handleChange}
-                                    placeholder="Código proporcionado por administración"
+                                    placeholder="Proporcionado por administración"
                                     required
                                     style={{ 
                                         textTransform: 'uppercase',
@@ -115,14 +114,6 @@ export const Login = () => {
                                         fontWeight: '600'
                                     }}
                                 />
-                                <small style={{ 
-                                    color: '#888', 
-                                    fontSize: '12px', 
-                                    marginTop: '4px',
-                                    display: 'block'
-                                }}>
-                                    Solo disponible para el área administrativa
-                                </small>
                             </div>
                             <div className="form-group">
                                 <label>Nombre del Negocio</label>
@@ -158,6 +149,7 @@ export const Login = () => {
                             onChange={handleChange}
                             placeholder="nombre@ejemplo.com"
                             required
+                            autoFocus
                         />
                     </div>
 
@@ -175,12 +167,10 @@ export const Login = () => {
                     </div>
 
                     <button type="submit" className="login-submit-btn" disabled={loading}>
-                        {loading ? 'Procesando...' : (isRegistering ? 'Registrarse' : 'Iniciar Sesión')}
+                        {loading ? 'Procesando...' : (isRegistering ? 'Registrar Negocio' : 'Iniciar Sesión')}
                     </button>
                 </form>
 
-                {/* Ocultar el enlace de registro público - Solo área administrativa puede registrar */}
-                {/* El registro solo está disponible con código de invitación */}
                 {isRegistering && (
                     <div className="login-footer">
                         <p>

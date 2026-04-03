@@ -248,6 +248,31 @@ export const salesService = {
         return data || [];
     },
 
+    // Obtener ventas en un rango de fechas
+    getSalesInRange: async (startTime, endTime, terminalId = null) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        let query = supabase
+            .from('sales')
+            .select(`
+                *,
+                sale_items (*)
+            `)
+            .eq('user_id', user.id)
+            .gte('created_at', startTime)
+            .lte('created_at', endTime)
+            .order('created_at', { ascending: false });
+
+        if (terminalId) {
+            query = query.eq('terminal_id', terminalId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    },
+
     // Obtener ventas desde una fecha (con items)
     getSalesSince: async (startTime, terminalId = null) => {
         const { data: { user } } = await supabase.auth.getUser();
