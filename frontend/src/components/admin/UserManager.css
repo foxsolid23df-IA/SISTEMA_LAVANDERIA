@@ -69,6 +69,29 @@
     cursor: pointer;
 }
 
+.btn-add-user {
+    background: linear-gradient(135deg, var(--accent) 0%, #059669 100%);
+    color: #000 !important;
+    padding: 0.6rem 1.25rem !important;
+    font-size: 0.9rem !important;
+    border-radius: 12px !important;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.btn-add-user:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+    filter: brightness(1.05);
+}
+
+.btn-add-user .material-icons-outlined {
+    font-size: 1.2rem;
+}
+
 .btn-delete {
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger);

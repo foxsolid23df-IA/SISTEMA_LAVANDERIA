@@ -379,8 +379,9 @@ export const UserManager = () => {
                         Administra roles y permisos para el acceso al punto de venta
                     </p>
                 </div>
-                <button className="btn-primary" onClick={() => handleOpenModal()}>
-                    + Nuevo Empleado
+                <button className="btn-primary btn-add-user" onClick={() => handleOpenModal()}>
+                    <span className="material-icons-outlined">person_add</span>
+                    Nuevo Empleado
                 </button>
             </header>
 
