@@ -503,7 +503,7 @@ export const Sidebar = () => {
 
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            {!adminMode && (
+            {(canManageCash || isAdmin) && (
               <button
                 onClick={() => {
                   setShowCashCut(true);

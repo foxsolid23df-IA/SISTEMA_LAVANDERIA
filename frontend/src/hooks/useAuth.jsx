@@ -273,6 +273,11 @@ export const AuthProvider = ({ children }) => {
       const staff = await staffService.validatePin(pin);
       setActiveStaff(staff);
       localStorage.setItem("activeStaff", JSON.stringify(staff));
+      
+      // Asegurar que al entrar un empleado se desactive el modo admin
+      setAdminMode(false);
+      sessionStorage.removeItem("adminMode");
+      
       return staff;
     } catch (error) {
       throw new Error("PIN inválido o empleado inactivo");
