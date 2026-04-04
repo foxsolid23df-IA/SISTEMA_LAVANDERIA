@@ -30,6 +30,7 @@ import { PriceConfiguration } from "../components/admin/PriceConfiguration";
 import { TicketConfiguration } from "../components/admin/TicketConfiguration";
 import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
+import BillingIssuers from "../components/config/BillingIssuers";
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
@@ -377,6 +378,18 @@ export const Routing = () => {
                       element={
                         <PrivateLayout>
                           <TicketConfiguration />
+                        </PrivateLayout>
+                      }
+                    />
+
+                    {/* Emisores Fiscales (CSD / Facturama) — Solo Admin */}
+                    <Route
+                      path="/config-emisores"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <BillingIssuers />
+                          </AdminRoute>
                         </PrivateLayout>
                       }
                     />

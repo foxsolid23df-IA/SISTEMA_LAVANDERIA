@@ -73,6 +73,16 @@ export const ConfiguracionPortal = () => {
                     <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Tipos de Cambio</h3>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Ajustar la tasa de cambio aplicable a transacciones en dólares</p>
                 </NavLink>
+
+                {isAdmin && (
+                    <NavLink to="/config-emisores" className="flex flex-col p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-500 flex items-center justify-center mb-5">
+                            <span className="material-icons-outlined">account_balance</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Emisores Fiscales</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Configuración de RFC, CSD y datos de facturación</p>
+                    </NavLink>
+                )}
             </div>
         </div>
     );
