@@ -333,11 +333,11 @@
 }
 
 /* ===== Dark mode ===== */
-:root.dark .cash-reports__title {
+:root.dark .cash-reports__title-v2 {
   color: #f1f5f9;
 }
 
-:root.dark .cash-reports__title .material-icons-outlined {
+:root.dark .cash-reports__title-v2 .material-icons-outlined {
   background: rgba(255, 255, 255, 0.05);
   color: #e2e8f0;
 }
