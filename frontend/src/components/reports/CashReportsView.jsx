@@ -149,7 +149,7 @@ export const CashReportsView = () => {
     <div className="cash-reports">
       {/* Header */}
       <div className="cash-reports__header">
-        <h1 className="cash-reports__title">
+        <h1 className="cash-reports__title dark:text-white">
           <span className="material-icons-outlined">receipt_long</span>
           Reportes de Caja
         </h1>

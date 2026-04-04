@@ -745,13 +745,13 @@
    Dark Mode Support for CashReportsView
    ============================================ */
 
-:root.dark .cash-reports__title {
-  color: #f8fafc;
+.dark .cash-reports__title {
+  color: #f1f5f9 !important;
 }
 
-:root.dark .cash-reports__title .material-icons-outlined {
-  color: #f8fafc;
-  background: #1e293b;
+.dark .cash-reports__title .material-icons-outlined {
+  color: #f1f5f9 !important;
+  background: #1e293b !important;
 }
 
 :root.dark .cash-reports__filters {
