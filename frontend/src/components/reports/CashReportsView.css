@@ -741,6 +741,77 @@
     background: #334155;
 }
 
+/* ============================================
+   Dark Mode Support for CashReportsView
+   ============================================ */
+
+:root.dark .cash-reports__title {
+  color: #f8fafc;
+}
+
+:root.dark .cash-reports__title .material-icons-outlined {
+  color: #f8fafc;
+  background: #1e293b;
+}
+
+:root.dark .cash-reports__filters {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__filter-group label {
+  color: #94a3b8;
+}
+
+:root.dark .cash-reports__filter-group input,
+:root.dark .cash-reports__filter-group select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+:root.dark .cash-reports__card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__card-label {
+  color: #94a3b8;
+}
+
+:root.dark .cash-reports__card-value {
+  color: #f1f5f9;
+}
+
+:root.dark .cash-reports__table-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root.dark .cash-reports__table th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+:root.dark .cash-reports__table td {
+  color: #e2e8f0;
+  border-bottom-color: #334155;
+}
+
+:root.dark .method-badge--efectivo { background: rgba(22, 101, 52, 0.2); color: #4ade80; }
+:root.dark .method-badge--tarjeta { background: rgba(30, 64, 175, 0.2); color: #60a5fa; }
+:root.dark .method-badge--transferencia { background: rgba(107, 33, 168, 0.2); color: #c084fc; }
+
+:root.dark .modal-content {
+    background: #0f172a;
+    color: #f1f5f9;
+}
+
+:root.dark .report-card {
+    background: #1e293b;
+}
+
 @media print {
     body * {
         visibility: hidden;
