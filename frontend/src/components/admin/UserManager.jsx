@@ -83,7 +83,6 @@ const ROLES = {
             can_see_reports: false,
             can_view_dashboard: false,
             can_manage_inventory: false,
-            can_view_supplies: false,
             can_manage_staff: false,
             can_manage_clients: true,
             can_view_audit: false,
