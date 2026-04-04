@@ -209,7 +209,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
                 fontSize: "0.95em",
               }}
             >
-              <span>IVA ({settings?.tax_percentage || 16}%):</span>
+              <span>IVA ({settings?.tax_percentage !== undefined && settings?.tax_percentage !== null ? settings.tax_percentage : 16}%):</span>
               <span>{formatearDinero(taxAmount)}</span>
             </div>
           </>

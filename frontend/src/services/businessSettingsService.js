@@ -27,27 +27,17 @@ export const businessSettingsService = {
         // Primero intentamos obtener el registro existente
         const existingSettings = await businessSettingsService.getSettings();
 
-        // Limpiamos los campos que se guardarán
+        // Limpiamos y combinamos los campos que se guardarán
         const payloadToSave = {
-            name: settingsData.name,
-            address: settingsData.address,
-            phone: settingsData.phone,
-            logo_url: settingsData.logo_url,
-            ticket_message: settingsData.ticket_message,
-            printer_width: settingsData.printer_width || 80,
-            printer_font_size: settingsData.printer_font_size || 12,
-            printer_font_family: settingsData.printer_font_family || 'Courier New',
-            printer_is_bold: settingsData.printer_is_bold || false,
-            printer_margin: settingsData.printer_margin || 0,
-            ticket_double_print: settingsData.ticket_double_print || false,
-            billing_url: settingsData.billing_url || 'https://lavanderia-facturacion.vercel.app/',
-            rfc: settingsData.rfc,
-            razon_social: settingsData.razon_social,
-            regimen_fiscal: settingsData.regimen_fiscal,
-            codigo_postal: settingsData.codigo_postal,
-            enable_billing_system: settingsData.enable_billing_system ?? false,
+            ...(existingSettings || {}),
+            ...settingsData,
             updated_at: new Date().toISOString()
         };
+        
+        // Evitamos enviar campos inmutables
+        delete payloadToSave.id;
+        delete payloadToSave.user_id;
+        delete payloadToSave.created_at;
 
         if (existingSettings && existingSettings.id) {
             // Actualizar el de este usuario en concreto

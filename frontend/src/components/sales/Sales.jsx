@@ -191,7 +191,9 @@ export const Sales = () => {
   };
 
   // Cálculo de totales con impuestos
-  const globalTaxRate = businessSettings?.tax_percentage ? parseFloat(businessSettings.tax_percentage) : 16;
+  const globalTaxRate = businessSettings?.tax_percentage !== undefined && businessSettings?.tax_percentage !== null 
+    ? parseFloat(businessSettings.tax_percentage) 
+    : 16;
   const taxAmount = wantsInvoice ? (total * (globalTaxRate / 100)) : 0;
   const finalTotal = total + taxAmount;
 
@@ -965,12 +967,11 @@ export const Sales = () => {
                   {formatearDinero(finalTotal)}
                 </h4>
 
-                {/* Switch de Facturación */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl mb-6">
                   <div>
                     <p className="text-sm font-bold text-slate-800 dark:text-white">¿Desea Facturar?</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {wantsInvoice ? `Se agregará el ${globalTaxRate}% de impuestos.` : 'Sin impuestos adicionales.'}
+                      {wantsInvoice ? `Se agregará el ${globalTaxRate}% de impuestos.` : 'Sin impuestos adicionales (0%).'}
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -984,19 +985,17 @@ export const Sales = () => {
                   </label>
                 </div>
                 
-                {/* Desglose de impuestos si facturan */}
-                {wantsInvoice && (
-                  <div className="flex flex-col gap-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-4 text-left">
-                    <div className="flex justify-between font-bold text-slate-600 dark:text-slate-400">
-                      <span>Subtotal:</span>
-                      <span>{formatearDinero(total)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-rose-500">
-                      <span>Impuestos ({globalTaxRate}%):</span>
-                      <span>+ {formatearDinero(taxAmount)}</span>
-                    </div>
+                {/* Desglose de impuestos siempre visible para evitar confusión */}
+                <div className="flex flex-col gap-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-4 text-left">
+                  <div className="flex justify-between font-bold text-slate-600 dark:text-slate-400">
+                    <span>Subtotal:</span>
+                    <span>{formatearDinero(total)}</span>
                   </div>
-                )}
+                  <div className={`flex justify-between font-bold ${wantsInvoice ? 'text-rose-500' : 'text-slate-500'}`}>
+                    <span>Impuestos ({wantsInvoice ? globalTaxRate : '0'}%):</span>
+                    <span>{wantsInvoice ? '+' : ''} {formatearDinero(wantsInvoice ? taxAmount : 0)}</span>
+                  </div>
+                </div>
               </div>
 
 
