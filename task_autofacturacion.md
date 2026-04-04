@@ -22,5 +22,6 @@
 ## 4. Portal de Facturación
 - [ ] Copiar `C:\POS\portal-facturacion` al directorio de trabajo actual (o configurar repo independiente).
 - [ ] Actualizar variables de entorno (URL de Lavandería, Supabase Key Pública).
-- [ ] Realizar pruebas de validación de folio/pin/total.
-- [ ] Desplegar en Vercel (`lavanderia-facturacion.vercel.app`).
+- [x] Corrección de esquema de base de datos (billing_portals y terminals).
+- [ ] Configuración de parámetros de branding (Opcional por ahora).
+- [ ] Despliegue final de funciones y portal.

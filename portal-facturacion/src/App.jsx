@@ -36,64 +36,90 @@ export default function App() {
     try {
       if (!folioValue || !pinValue || !totalValue) throw new Error("Por favor, rellena todos los campos.");
 
-      // Buscamos venta por Folio (ID) y PIN primero
-      const { data, error } = await supabase
+      const cleanFolio = folioValue.trim();
+      const cleanPin = pinValue.trim().toUpperCase();
+
+      // 1. Intentamos buscar en la tabla 'sales' primero (para ventas directas)
+      let { data, error } = await supabase
         .from('sales')
         .select('*')
-        .eq('folio', folioValue.trim()) 
-        .eq('pin_facturacion', pinValue.trim().toUpperCase())
-        .single();
+        .eq('folio', cleanFolio) 
+        .eq('pin_facturacion', cleanPin)
+        .maybeSingle();
+
+      // 2. Si no se encontró en 'sales', intentamos buscar en la tabla 'orders' (lavandería)
+      if (!data && !error) {
+        const folioNum = parseInt(cleanFolio, 10);
+        
+        if (!isNaN(folioNum)) {
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('folio', folioNum)
+            .eq('pin',  cleanPin)
+            .maybeSingle();
+          
+          if (orderError) {
+              console.error("Error buscando en orders:", orderError);
+              error = orderError;
+          }
+          if (orderData) {
+          // Adaptamos los datos de 'orders' para que tengan el formato que espera el portal (usando 'pin_facturacion' en lugar de 'pin')
+          data = { 
+            ...orderData, 
+            pin_facturacion: orderData.pin,
+            ticket_uuid: orderData.id // En orders por ahora usamos el id como uuid (puedes ajustarlo si tienes un uuid real)
+          };
+        }
+      }
+    }
 
       if (error) {
         console.error("DB Error fetching ticket:", error);
-        if (error.code === 'PGRST116') {
-          throw new Error('No se encontró ningún ticket con esos datos. Verifica el Folio y PIN.');
-        }
         throw new Error(`Error BD: ${error.message}`);
       }
 
-      if (!data) throw new Error("No se encontró ningún ticket devuelto por el servidor.");
+      if (!data) {
+        throw new Error('No se encontró ningún ticket con esos datos. Verifica el Folio y PIN.');
+      }
 
-      // Validamos el monto con tolerancia de 0.01 para evitar errores de precisión (visto en DB 40.5999... vs input 40.60)
+      // Validamos el monto con tolerancia de 0.01 para evitar errores de precisión
       const dbTotal = parseFloat(data.total);
       const inputTotal = parseFloat(totalValue);
       
       if (Math.abs(dbTotal - inputTotal) > 0.01) {
-        throw new Error('El monto ingresado no coincide con el registrado en el ticket.');
+        throw new Error(`El monto ingresado ($${inputTotal.toFixed(2)}) no coincide con el registrado en el ticket ($${dbTotal.toFixed(2)}).`);
       }
 
-      if (data.facturado) {
-        // Si ya está facturado, buscamos la factura en la tabla invoices
-        const { data: invData, error: invErr } = await supabase
+      // Identificamos el origen para buscar facturas previas
+      const isOrder = 'customer_id' in data; // 'orders' tiene customer_id
+      data._table = isOrder ? 'orders' : 'sales'; // Usamos el nombre plural de la tabla para facilitar la lógica SQL
+
+      if (data.facturado || data.status === 'facturado') {
+        const idQueryField = isOrder ? 'order_id' : 'sale_id';
+        const { data: invData } = await supabase
           .from('invoices')
           .select('*')
-          .eq('sale_id', data.id)
+          .eq(idQueryField, data.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (invErr) {
-          console.error("Error al buscar factura previa:", invErr);
-        }
-
         if (invData) {
           setInvoiceResult({
             id: invData.id,
-            facturama_id: invData.facturama_id,
             uuid: invData.uuid_cfdi,
             xml_url: invData.xml_url,
             pdf_url: invData.pdf_url,
-            status: invData.status,
-            created_at: invData.created_at
           });
           setTicketData(data);
-          setStep(4); // Saltamos directo a la pantalla final si ya existe
+          setStep(4);
           return;
         }
       }
 
       setTicketData(data);
-      setStep(2); // Pasar a confirmación de recibo
+      setStep(2);
     } catch (err) {
       setErrorMsg(err.message || 'Error al buscar el ticket.');
     } finally {
@@ -165,15 +191,19 @@ export default function App() {
       // 2. Aquí llamaremos a la Edge Function 'timbrar'
       // Simularemos por ahora el proceso de timbrado.
       
-      const { data: timbradoData, error: timbrarErr } = await supabase.functions.invoke('timbrar', {
+      const { data: timbradoData, error: timbrarErr } = await supabase.functions.invoke('Timbrar', {
         body: {
           ticket_uuid: ticketData.ticket_uuid,
-          rfc: rfc.toUpperCase(),
-          razon_social: razonSocial,
-          codigo_postal: codigoPostal,
-          regimen_fiscal: regimenFiscal,
-          uso_cfdi: usoCfdi,
-          email: email
+          pin: ticketData.pin_facturacion,
+          table: ticketData._table,
+          client_data: {
+            rfc: rfc.toUpperCase(),
+            razon_social: razonSocial,
+            codigo_postal: codigoPostal,
+            regimen_fiscal: regimenFiscal,
+            uso_cfdi: usoCfdi,
+            email: email
+          }
         }
       });
 
