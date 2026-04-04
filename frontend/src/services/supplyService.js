@@ -31,6 +31,7 @@ export const supplyService = {
                 content_per_presentation: parseFloat(supplyData.content_per_presentation || 1),
                 min_stock: parseFloat(supplyData.min_stock || 0),
                 current_stock: 0,
+                is_fractional: supplyData.is_fractional || false,
                 user_id: user.id
             }])
             .select()
@@ -53,7 +54,8 @@ export const supplyService = {
                 presentation: supplyData.presentation || 'Galón',
                 content_per_presentation: parseFloat(supplyData.content_per_presentation || 1),
                 min_stock: parseFloat(supplyData.min_stock || 0),
-                current_stock: parseFloat(supplyData.current_stock || 0)
+                current_stock: parseFloat(supplyData.current_stock || 0),
+                is_fractional: supplyData.is_fractional || false
             })
             .eq('id', id)
             .eq('user_id', user.id)
@@ -134,19 +136,35 @@ export const supplyService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No hay una sesión activa.");
 
-        // 1. Obtener stock actual y unidad de medida
+        // 1. Obtener stock actual, unidad de medida y configuración fraccional
         const { data: supply, error: getError } = await supabase
             .from('supplies')
-            .select('current_stock, unit_measure')
+            .select('current_stock, unit_measure, is_fractional, content_per_presentation, presentation')
             .eq('id', usageData.supply_id)
             .single();
 
         if (getError) throw getError;
 
-        // 2. Calcular nuevo stock
-        const newStock = parseFloat(supply.current_stock || 0) - parseFloat(usageData.quantity);
+        // 2. Calcular cantidad real a descontar
+        let realQuantity = parseFloat(usageData.quantity);
+        let fractionLabel = '';
 
-        // 3. Actualizar
+        if (supply.is_fractional && usageData.is_fraction) {
+            // Convertir fracción visual → gramos reales
+            // Ej: fracción=0.25, content_per_presentation=2000 → realQuantity=500g
+            const fraction = parseFloat(usageData.quantity);
+            const weightPerRoll = parseFloat(supply.content_per_presentation || 1000);
+            realQuantity = fraction * weightPerRoll;
+
+            // Etiqueta legible para la nota
+            const fractionMap = { '0.25': '1/4', '0.5': '1/2', '0.75': '3/4', '1': '1 entero' };
+            fractionLabel = fractionMap[String(fraction)] || `${fraction}`;
+        }
+
+        // 3. Calcular nuevo stock
+        const newStock = parseFloat(supply.current_stock || 0) - realQuantity;
+
+        // 4. Actualizar stock
         const { data, error } = await supabase
             .from('supplies')
             .update({ current_stock: Math.max(0, newStock) })
@@ -156,10 +174,16 @@ export const supplyService = {
 
         if (error) throw error;
 
-        // 4. REGISTRAR MOVIMIENTO en supply_movements (FIX: antes se omitía)
-        const qty = parseFloat(usageData.quantity);
+        // 5. REGISTRAR MOVIMIENTO en supply_movements
         const cleanUnit = supply.unit_measure ? supply.unit_measure.replace(/^\d+\s*/, '') : '';
-        const baseNote = `${qty} ${cleanUnit}`;
+
+        // Nota descriptiva según tipo de insumo
+        let baseNote;
+        if (supply.is_fractional && usageData.is_fraction) {
+            baseNote = `${fractionLabel} de ${supply.presentation || 'Rollo'} = ${realQuantity.toFixed(2)} ${cleanUnit}`;
+        } else {
+            baseNote = `${realQuantity} ${cleanUnit}`;
+        }
         const finalNote = usageData.notes ? `${baseNote} | ${usageData.notes}` : baseNote;
 
         await supabase
@@ -168,7 +192,7 @@ export const supplyService = {
                 user_id: user.id,
                 supply_id: usageData.supply_id,
                 type: usageData.type,  // USAGE_MORNING o USAGE_AFTERNOON
-                quantity: qty,
+                quantity: realQuantity,
                 notes: finalNote,
                 staff_name: usageData.user_name || 'Desconocido',
                 usage_date: usageData.usage_date || new Date().toISOString().split('T')[0]

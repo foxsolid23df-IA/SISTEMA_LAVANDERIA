@@ -22,9 +22,12 @@ export const SupplyInventory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [selectedUsageSupplyId, setSelectedUsageSupplyId] = useState("");
+  const [selectedEntrySupplyId, setSelectedEntrySupplyId] = useState("");
+  const [selectedFraction, setSelectedFraction] = useState(null); // Para bolsas fraccionales
 
   // Insumo seleccionado en Libreta Digital para mostrar su unidad
   const selectedUsageSupply = supplies.find((s) => s.id === selectedUsageSupplyId);
+  const isFractionalSupply = selectedUsageSupply?.is_fractional === true;
 
   useEffect(() => {
     loadSupplies();
@@ -96,23 +99,43 @@ export const SupplyInventory = () => {
   const handleRecordUsage = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+
+    // Para insumos fraccionales, usar la fracción seleccionada
+    const quantity = isFractionalSupply ? selectedFraction : formData.get("quantity");
+
+    if (isFractionalSupply && !selectedFraction) {
+      Swal.fire("Atención", "Selecciona qué porción del rollo gastaste.", "warning");
+      return;
+    }
+
     const data = {
       supply_id: formData.get("supply_id"),
-      quantity: formData.get("quantity"),
+      quantity: quantity,
       type: formData.get("type"),
       notes: formData.get("notes"),
       user_name: formData.get("user_name"),
       usage_date: formData.get("usage_date"),
+      is_fraction: isFractionalSupply, // Flag para el servicio
     };
 
     try {
       await supplyService.recordUsage(data);
-      Swal.fire(
-        "¡Éxito!",
-        "Consumo registrado en la libreta digital.",
-        "success",
-      );
+
+      // Mensaje de éxito con detalles para fraccionales
+      if (isFractionalSupply) {
+        const fractionLabels = { 0.25: '1/4', 0.5: '1/2', 0.75: '3/4', 1: '1 entero' };
+        const gramsDeducted = selectedFraction * (selectedUsageSupply.content_per_presentation || 1000);
+        Swal.fire(
+          "¡Registrado!",
+          `Se descontaron ${gramsDeducted.toFixed(0)}g (${fractionLabels[selectedFraction]} del rollo).`,
+          "success",
+        );
+      } else {
+        Swal.fire("¡Éxito!", "Consumo registrado en la libreta digital.", "success");
+      }
+
       e.target.reset();
+      setSelectedFraction(null);
       // Restablecer fecha a hoy por defecto después del reset
       setTimeout(() => {
         const dateInput = document.getElementsByName("usage_date")[0];
@@ -215,6 +238,7 @@ export const SupplyInventory = () => {
       presentation: formData.get("presentation"),
       content_per_presentation: formData.get("content_per_presentation"),
       min_stock: formData.get("min_stock"),
+      is_fractional: formData.get("is_fractional") === "on",
     };
 
     try {
@@ -453,6 +477,15 @@ export const SupplyInventory = () => {
           <input id="swal-edit-min" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4" value="${supply.min_stock}">
           <label class="block text-xs font-bold text-slate-500 mb-1 uppercase text-indigo-500">Stock Actual (Ajuste Manual)</label>
           <input id="swal-edit-current" type="number" step="0.01" class="swal2-input w-full mx-0 mb-4 font-bold text-indigo-600" value="${supply.current_stock}">
+          
+          <!-- CAMPO FRACCIONAL -->
+          <div class="flex items-center gap-3 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+            <input id="swal-edit-fractional" type="checkbox" class="w-5 h-5 accent-indigo-600" ${supply.is_fractional ? 'checked' : ''}>
+            <div>
+              <label for="swal-edit-fractional" class="block text-sm font-black text-indigo-900 cursor-pointer">Bolsas/Uso Fraccional</label>
+              <span class="text-[10px] text-indigo-400 font-bold uppercase">Habilita selección 1/4, 1/2, 3/4 en la libreta</span>
+            </div>
+          </div>
         </div>`,
       focusConfirm: false,
       showCancelButton: true,
@@ -466,6 +499,7 @@ export const SupplyInventory = () => {
           unit_measure: document.getElementById("swal-edit-unit").value,
           min_stock: document.getElementById("swal-edit-min").value,
           current_stock: document.getElementById("swal-edit-current").value,
+          is_fractional: document.getElementById("swal-edit-fractional").checked,
         };
       },
     });
@@ -607,7 +641,7 @@ export const SupplyInventory = () => {
                   name="supply_id"
                   required
                   value={selectedUsageSupplyId}
-                  onChange={(e) => setSelectedUsageSupplyId(e.target.value)}
+                  onChange={(e) => { setSelectedUsageSupplyId(e.target.value); setSelectedFraction(null); }}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Seleccionar...</option>
@@ -620,27 +654,78 @@ export const SupplyInventory = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Cantidad Gastada {selectedUsageSupply ? `(${selectedUsageSupply.unit_measure})` : ""}
+                  {isFractionalSupply ? "¿Cuánto del rollo gastaste?" : `Cantidad Gastada ${selectedUsageSupply ? `(${selectedUsageSupply.unit_measure})` : ""}`}
                 </label>
-                <div className="relative">
-                  <input
-                    name="quantity"
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="0.00"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 pr-16 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                  />
-                  {selectedUsageSupply && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg uppercase pointer-events-none">
-                      {selectedUsageSupply.unit_measure}
-                    </span>
-                  )}
-                </div>
-                {selectedUsageSupply && (
-                  <p className="text-[10px] text-amber-500 font-bold mt-1">
-                    * Ingrese el gasto exacto en {selectedUsageSupply.unit_measure}, NO en presentaciones.
-                  </p>
+
+                {/* === MODO FRACCIONAL: Botones visuales para bolsas === */}
+                {isFractionalSupply ? (
+                  <div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { value: 0.25, label: '1/4', icon: '◔',
+                          active: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/30 scale-105' },
+                        { value: 0.5,  label: '1/2', icon: '◑',
+                          active: 'border-amber-500 bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/30 scale-105' },
+                        { value: 0.75, label: '3/4', icon: '◕',
+                          active: 'border-orange-500 bg-orange-50 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 ring-2 ring-orange-500/30 scale-105' },
+                        { value: 1,    label: '1',   icon: '●',
+                          active: 'border-rose-500 bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/30 scale-105' },
+                      ].map((frac) => (
+                        <button
+                          key={frac.value}
+                          type="button"
+                          onClick={() => setSelectedFraction(frac.value)}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all font-bold ${
+                            selectedFraction === frac.value
+                              ? frac.active
+                              : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                          }`}
+                        >
+                          <span className="text-2xl leading-none">{frac.icon}</span>
+                          <span className="text-sm mt-1">{frac.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Preview: cuántos gramos se van a descontar */}
+                    {selectedFraction && (
+                      <div className="mt-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg px-3 py-2">
+                        <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                          📦 Se descontarán{' '}
+                          <span className="text-sm">
+                            {(selectedFraction * (selectedUsageSupply.content_per_presentation || 1000)).toFixed(0)}g
+                          </span>
+                          {' '}del inventario
+                          <span className="text-blue-400 dark:text-blue-500 ml-1">
+                            ({selectedUsageSupply.presentation || 'Rollo'} de {selectedUsageSupply.content_per_presentation || 1000}g)
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* === MODO NORMAL: Input numérico estándar === */
+                  <div>
+                    <div className="relative">
+                      <input
+                        name="quantity"
+                        type="number"
+                        step="0.01"
+                        required
+                        placeholder="0.00"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 pr-16 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                      />
+                      {selectedUsageSupply && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary/10 text-primary text-xs font-black px-2 py-1 rounded-lg uppercase pointer-events-none">
+                          {selectedUsageSupply.unit_measure}
+                        </span>
+                      )}
+                    </div>
+                    {selectedUsageSupply && (
+                      <p className="text-[10px] text-amber-500 font-bold mt-1">
+                        * Ingrese el gasto exacto en {selectedUsageSupply.unit_measure}, NO en presentaciones.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
@@ -732,6 +817,11 @@ export const SupplyInventory = () => {
                         >
                           {s.current_stock.toFixed(2)}
                         </span>
+                        {s.is_fractional && s.content_per_presentation > 0 && (
+                          <span className="block text-[10px] font-bold text-indigo-400 mt-0.5">
+                            (≈ {(s.current_stock / s.content_per_presentation).toFixed(2)} rollos)
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-xs font-bold text-slate-400">
                         {s.presentation || '—'} ({s.content_per_presentation || 1} {s.unit_measure})
@@ -810,6 +900,7 @@ export const SupplyInventory = () => {
                 <select
                   name="supply_id"
                   required
+                  onChange={(e) => setSelectedEntrySupplyId(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">Seleccionar...</option>
@@ -822,7 +913,10 @@ export const SupplyInventory = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Cantidad (en Presentaciones)
+                  {(() => {
+                    const entrySupply = supplies.find(s => s.id === selectedEntrySupplyId);
+                    return entrySupply?.is_fractional ? 'Cantidad (# Rollos)' : 'Cantidad (en Presentaciones)';
+                  })()}
                 </label>
                 <input
                   name="quantity"
@@ -832,6 +926,17 @@ export const SupplyInventory = () => {
                   placeholder="0.00"
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 />
+                {(() => {
+                  const entrySupply = supplies.find(s => s.id === selectedEntrySupplyId);
+                  if (entrySupply?.is_fractional && entrySupply?.content_per_presentation > 0) {
+                    return (
+                      <p className="text-[10px] font-bold text-indigo-400 mt-1">
+                        📦 Cada rollo = {entrySupply.content_per_presentation}g — Se sumarán al stock en gramos automáticamente
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div className="flex items-end">
                 <button
@@ -885,6 +990,7 @@ export const SupplyInventory = () => {
                   <option value="Costal">Costal</option>
                   <option value="Caja">Caja</option>
                   <option value="Bolsa">Bolsa</option>
+                  <option value="Rollo">Rollo</option>
                   <option value="Frasco">Frasco</option>
                   <option value="Pieza">Pieza</option>
                   <option value="Kilos">Kilos</option>
@@ -941,6 +1047,26 @@ export const SupplyInventory = () => {
                   placeholder="0.00"
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 />
+              </div>
+
+              {/* CHECKBOX FRACCIONAL */}
+              <div className="lg:col-span-3">
+                <div className="flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+                  <input
+                    name="is_fractional"
+                    type="checkbox"
+                    id="create-fractional"
+                    className="w-5 h-5 accent-indigo-600 rounded"
+                  />
+                  <div>
+                    <label htmlFor="create-fractional" className="block text-sm font-black text-indigo-900 dark:text-indigo-300 cursor-pointer">
+                      Bolsas / Uso Fraccional
+                    </label>
+                    <span className="text-[10px] text-indigo-400 font-bold uppercase">
+                      Habilita selección de 1/4, 1/2, 3/4 en la Libreta Digital
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="lg:col-span-3 flex justify-end">
