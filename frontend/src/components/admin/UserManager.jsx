@@ -231,7 +231,10 @@ export const UserManager = () => {
                 name: staffMember.name,
                 role: staffMember.role,
                 pin: staffMember.pin,
-                permissions: staffMember.permissions || ROLES[staffMember.role]?.permissions || ROLES.cajero.permissions
+                permissions: { 
+                    ...(ROLES[staffMember.role]?.permissions || ROLES.cajero.permissions),
+                    ...staffMember.permissions 
+                }
             });
         } else {
             resetForm();

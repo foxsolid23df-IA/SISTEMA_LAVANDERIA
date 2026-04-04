@@ -45,34 +45,44 @@ export async function createFacturamaInvoice(
       taxAmount = rawTotal - subtotal;
       itemTotal = rawTotal;
     } else {
-      // Total es neto → agregarle IVA para el CFDI
+      // Total es neto y el local no desglosa impuestos para esta orden
       subtotal = rawTotal;
-      taxAmount = rawTotal * 0.16;
-      itemTotal = rawTotal + taxAmount;
+      taxAmount = 0;
+      itemTotal = rawTotal;
     }
 
-    const unitPrice = subtotal / quantity;
+    const unitPrice = Number((subtotal / quantity).toFixed(6));
+    const subtotalFixed = Number(subtotal.toFixed(2));
+    const totalFixed = Number(itemTotal.toFixed(2));
+    const taxFixed = Number(taxAmount.toFixed(2));
 
-    return {
+    const itemNode: any = {
       ProductCode: "76111501",  // Servicio de lavandería
       Description: item.product_name || item.description || "Servicio de lavandería",
       UnitCode: "E48",  // Unidad de servicio
       Quantity: quantity,
-      UnitPrice: Number(unitPrice.toFixed(2)),
-      Subtotal: Number(subtotal.toFixed(2)),
-      TaxObject: "02",  // Sí objeto de impuesto
-      Taxes: [
+      UnitPrice: unitPrice,
+      Subtotal: subtotalFixed,
+      Total: totalFixed,
+    };
+
+    if (hasTax) {
+      itemNode.TaxObject = "02";  // Sí objeto de impuesto
+      itemNode.Taxes = [
         {
-          Total: Number(taxAmount.toFixed(2)),
+          Total: taxFixed,
           Name: "IVA",
-          Base: Number(subtotal.toFixed(2)),
+          Base: subtotalFixed,
           Rate: 0.16,
           IsRetention: false,
           Type: "IVA",  // ← OBLIGATORIO en API Multiemisor
         },
-      ],
-      Total: Number(itemTotal.toFixed(2)),
-    };
+      ];
+    } else {
+      itemNode.TaxObject = "01";  // No objeto de impuesto
+    }
+
+    return itemNode;
   });
 
   // Generar folio alfanumérico corto basado en el ID del registro

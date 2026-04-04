@@ -45,6 +45,7 @@ export const businessSettingsService = {
             razon_social: settingsData.razon_social,
             regimen_fiscal: settingsData.regimen_fiscal,
             codigo_postal: settingsData.codigo_postal,
+            enable_billing_system: settingsData.enable_billing_system ?? false,
             updated_at: new Date().toISOString()
         };
 

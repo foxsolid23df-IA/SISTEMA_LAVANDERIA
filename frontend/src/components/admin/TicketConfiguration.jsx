@@ -26,6 +26,7 @@ export const TicketConfiguration = () => {
     printer_margin: 0,
     printer_name: "",
     ticket_double_print: false,
+    enable_billing_system: false,
   });
   const [printersList, setPrintersList] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -51,6 +52,7 @@ export const TicketConfiguration = () => {
         printer_margin: settings.printer_margin || 0,
         printer_name: settings.printer_name || "",
         ticket_double_print: settings.ticket_double_print || false,
+        enable_billing_system: settings.enable_billing_system || false,
       });
     }
     loadPrinters();
@@ -281,6 +283,33 @@ export const TicketConfiguration = () => {
                     placeholder="00000"
                   />
                 </div>
+              </div>
+
+              {/* TOGGLE: ACTIVAR FACTURACIÓN ELECTRÓNICA EN TICKETS */}
+              <div className="col-span-full pt-4 mt-2 border-t border-emerald-100 dark:border-emerald-900/30">
+                <div className="flex items-center justify-between p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${formData.enable_billing_system ? 'bg-emerald-500 shadow-lg shadow-emerald-200 dark:shadow-none' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                      <span className="material-icons-outlined text-white text-lg">{formData.enable_billing_system ? 'receipt_long' : 'receipt'}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">Facturación Electrónica en Tickets</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Muestra el QR, enlace y PIN de facturación en cada ticket impreso</p>
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => setFormData(p => ({ ...p, enable_billing_system: !p.enable_billing_system }))}
+                    className={`w-14 h-7 rounded-full transition-all relative cursor-pointer ${formData.enable_billing_system ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${formData.enable_billing_system ? 'left-8' : 'left-1'}`}></div>
+                  </div>
+                </div>
+                {!formData.enable_billing_system && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-2 ml-1 flex items-center gap-1">
+                    <span className="material-icons-outlined text-xs">info</span>
+                    Los tickets se imprimirán sin datos de facturación electrónica
+                  </p>
+                )}
               </div>
             </div>
           </div>

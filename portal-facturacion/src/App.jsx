@@ -194,7 +194,19 @@ export default function App() {
       if (data) {
         setRazonSocial(data.razon_social);
         setCodigoPostal(data.codigo_postal);
-        setRegimenFiscal(data.regimen_fiscal);
+        
+        // Ensure fetched regimen matches RFC type
+        const isMoral = rfc.length === 12;
+        const isFisica = rfc.length === 13;
+        
+        let fetchedRegimen = data.regimen_fiscal;
+        if (isMoral && !REGIMENES_MORAL.find(r => r.value === fetchedRegimen)) {
+          fetchedRegimen = '601';
+        } else if (isFisica && !REGIMENES_FISICA.find(r => r.value === fetchedRegimen)) {
+          fetchedRegimen = '612';
+        }
+        
+        setRegimenFiscal(fetchedRegimen);
         setUsoCfdi(data.uso_cfdi);
         if(data.email) setEmail(data.email);
       }

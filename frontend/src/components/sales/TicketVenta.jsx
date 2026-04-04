@@ -415,7 +415,8 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         style={{ borderBottom: "1px dashed #000", margin: "5px 0" }}
       />
 
-      {/* SECCIÓN DE FACTURACIÓN PREMIUM CON QR */}
+      {/* SECCIÓN DE FACTURACIÓN PREMIUM CON QR - Solo si está habilitado */}
+      {settings?.enable_billing_system && (
       <div
         className="ticket-billing-section"
         style={{
@@ -479,6 +480,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
           Válido durante el mes de compra.
         </div>
       </div>
+      )}
 
       <div
         className="ticket-footer"

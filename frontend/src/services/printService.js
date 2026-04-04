@@ -168,13 +168,15 @@ export const printService = {
                     ${businessData.ticket_message || '¡Gracias por su preferencia!'}
                 </div>
                 <hr>
+                ${businessData.enable_billing_system ? `
                 <div class="text-center" style="font-size: 10px;">
                     <div class="bold">FACTURACIÓN ELECTRÓNICA</div>
-                    <div>Portal: https://lavanderia-facturacion.vercel.app/</div>
+                    <div>Portal: ${businessData.billing_url || 'https://lavanderia-facturacion.vercel.app/'}</div>
                     <div style="margin-top: 4px;">Ticket: ${orderData.ticket_uuid || 'N/A'}</div>
                     <div class="bold">PIN: ${orderData.pin_facturacion || 'N/A'}</div>
                     <div style="font-size: 8px; margin-top: 4px;">Facture antes del fin de mes en curso</div>
                 </div>
+                ` : ''}
             </body>
             </html>
         `;

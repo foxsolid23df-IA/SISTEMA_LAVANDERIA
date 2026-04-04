@@ -28,33 +28,38 @@ serve(async (req) => {
     const BASE_URL = "https://apisandbox.facturama.mx"; // O "api.facturama.mx" para producción
     
     // Credenciales de la API Facturama Sandbox
-    const FACTURAMA_USER = Deno.env.get("FACTURAMA_USER") || "NexumPos";
-    const FACTURAMA_PASSWORD = Deno.env.get("FACTURAMA_PASSWORD") || "NexumPos";
-    const encodedCredentials = btoa(`${FACTURAMA_USER}:${FACTURAMA_PASSWORD}`);
+    const FACTURAMA_API_KEY = Deno.env.get("FACTURAMA_API_KEY") || "NexumPos:NexumPos";
+    const encodedCredentials = btoa(FACTURAMA_API_KEY);
 
-    // endpoint: POST /Cfdi?CfdiType=issuedLite&CfdiId={CfdiId}&Email={Email}&Subject={Subject}&Comments={Comments}&IssuerEmail={IssuerEmail}
-    const params = new URLSearchParams({
-        CfdiType: "issuedLite",
-        CfdiId: cfdi_id,
-        Email: email,
-        Subject: subject || "",
-        Comments: comments || "",
-        IssuerEmail: issuer_email || ""
-    });
+    // endpoint: POST /cfdi?CfdiType=issuedLite&CfdiId={CfdiId}&Email={Email}&Subject={Subject}&Comments={Comments}&IssuerEmail={IssuerEmail}
+    const params = new URLSearchParams();
+    params.append("CfdiType", "issuedLite");
+    params.append("CfdiId", cfdi_id);
+    params.append("Email", email);
+    if (subject) params.append("Subject", subject);
+    if (comments) params.append("Comments", comments);
+    if (issuer_email) params.append("IssuerEmail", issuer_email);
 
-    const url = `${BASE_URL}/Cfdi?${params.toString()}`;
+    const url = `${BASE_URL}/cfdi?${params.toString()}`;
     console.log("Enviando petición a Facturama:", url);
 
     const facturamaRes = await fetch(url, {
       method: "POST",
       headers: {
         "Authorization": `Basic ${encodedCredentials}`,
-        "Content-Type": "application/json",
-      }
+      } // Not sending content-type or body JSON as they are URL Params
     });
 
-    const responseData = await facturamaRes.json();
-    console.log("Respuesta de Facturama:", responseData);
+    // Facturama API might return success as string or empty JSON, so we handle safely
+    let responseData;
+    try {
+      responseData = await facturamaRes.json();
+    } catch {
+      responseData = { success: facturamaRes.ok, Message: "Respuesta vacía o formato inválido" };
+    }
+    
+    console.log("Respuesta de Facturama HTTP Status:", facturamaRes.status);
+    console.log("Data:", responseData);
 
     if (!facturamaRes.ok) {
        return new Response(JSON.stringify({ success: false, message: responseData.Message || "Error al enviar el correo" }), {

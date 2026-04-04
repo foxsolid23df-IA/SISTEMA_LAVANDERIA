@@ -56,7 +56,28 @@ export const AuthProvider = ({ children }) => {
           const savedStaff = localStorage.getItem("activeStaff");
           if (savedStaff) {
             try {
-              setActiveStaff(JSON.parse(savedStaff));
+              const staffData = JSON.parse(savedStaff);
+              setActiveStaff(staffData);
+              
+              // Refrescar datos desde la BD para asegurar permisos actualizados
+              if (staffData.id && !staffData.isOwner) {
+                supabase
+                  .from('staff')
+                  .select('*')
+                  .eq('id', staffData.id)
+                  .eq('active', true)
+                  .single()
+                  .then(({ data, error }) => {
+                    if (data && !error) {
+                      setActiveStaff(data);
+                      localStorage.setItem("activeStaff", JSON.stringify(data));
+                      console.log("[Auth] Datos de empleado refrescados desde la BD.");
+                    } else if (error || !data) {
+                      console.warn("[Auth] Empleado inactivo o no encontrado. Cerrando sesión local.");
+                      lockScreen();
+                    }
+                  });
+              }
             } catch (e) {
               localStorage.removeItem("activeStaff");
             }
