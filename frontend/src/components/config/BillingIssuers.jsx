@@ -109,50 +109,59 @@ export default function BillingIssuers() {
     try {
       setIsSubmitting(true);
       
-      const response = await supabase.functions.invoke('upload-csd', {
-        body: {
-          rfc: formData.rfc,
-          cer_base64: files.cerBase64,
-          key_base64: files.keyBase64,
-          password: formData.password,
-          razon_social: formData.razonSocial,
-          regimen_fiscal: formData.regimenFiscal,
-          codigo_postal: formData.codigoPostal,
-          sucursal_nombre: formData.branchName
+      if (!token) {
+        throw new Error("No hay una sesión activa. Por favor, cierra sesión y vuelve a entrar.");
+      }
+
+      console.log("[BillingIssuers] Invocando upload-csd... Token (inicio):", token.substring(0, 15) + "...");
+      
+      const payload = {
+        rfc: formData.rfc,
+        cer_base64: files.cerBase64,
+        key_base64: files.keyBase64,
+        password: formData.password,
+        razon_social: formData.razonSocial,
+        regimen_fiscal: formData.regimenFiscal,
+        codigo_postal: formData.codigoPostal,
+        sucursal_nombre: formData.branchName
+      };
+
+      console.log("[BillingIssuers] Payload (resumen):", { 
+        rfc: payload.rfc, 
+        cerLen: payload.cer_base64?.length, 
+        keyLen: payload.key_base64?.length 
+      });
+
+      const { data: responseData, error: invokeError } = await supabase.functions.invoke('upload-csd', {
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${token}`
         }
       });
 
-      console.log("Edge Function response:", { data: response.data, error: response.error });
-
-      // Si hay error del relay o HTTP, intentar leer el body real
-      if (response.error) {
-        // response.data puede tener el JSON del body aunque haya error HTTP
-        const serverMsg = response.data?.error 
-          || response.data?.message 
-          || response.data?.details?.message
-          || null;
+      // El error de supabase.functions.invoke suele ser sobre el transporte (red)
+      // pero si status es non-2xx, invokeError contendrá información.
+      if (invokeError) {
+        console.error("Invoke Error Detallado:", invokeError);
         
-        if (serverMsg) {
-          throw new Error(serverMsg);
+        // Intentar parsear el error si viene como JSON en la respuesta fallida
+        let errorMessage = invokeError.message || "Error en la función Edge";
+        
+        // Si invokeError.context?.json está disponible (algunas versiones de supabase-js)
+        if (invokeError.context?.json?.error) {
+            errorMessage = invokeError.context.json.error;
+        } else if (responseData?.error) {
+            errorMessage = responseData.error;
+        } else if (responseData?.message) {
+            errorMessage = responseData.message;
         }
 
-        // Fallback: intentar leer el contexto del error
-        let contextMsg = response.error.message;
-        if (response.error.context) {
-          try {
-            const ctx = await response.error.context.json();
-            contextMsg = ctx.error || ctx.message || contextMsg;
-          } catch (_) { /* no parseable */ }
-        }
-        throw new Error(contextMsg);
+        throw new Error(errorMessage);
       }
-      
-      const result = response.data;
-      if (result && result.error) {
-        throw new Error(result.error);
-      }
-      if (result && !result.success && result.message) {
-        throw new Error(result.message);
+
+      const result = responseData;
+      if (result && (result.error || result.success === false)) {
+        throw new Error(result.error || result.message || "Error desconocido en el servidor");
       }
 
       alert("Emisor validado y registrado exitosamente a través de Facturama.");
@@ -309,7 +318,7 @@ export default function BillingIssuers() {
                   <input 
                     name="rfc" value={formData.rfc} onChange={handleChange} required
                     placeholder="Ej. EJM951010AAA"
-                    className="w-full px-4 py-3 bg-[#f2f4f7] border border-slate-200/50 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium uppercase"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium uppercase text-slate-900 placeholder:text-slate-400"
                   />
                 </div>
                 <div className="space-y-2">
@@ -317,14 +326,14 @@ export default function BillingIssuers() {
                   <input 
                     name="razonSocial" value={formData.razonSocial} onChange={handleChange} required
                     placeholder="Empresa Emisora S.A. de C.V."
-                    className="w-full px-4 py-3 bg-[#f2f4f7] border border-slate-200/50 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Régimen Fiscal</label>
                   <select 
                     name="regimenFiscal" value={formData.regimenFiscal} onChange={handleChange} required
-                    className="w-full px-4 py-3 bg-[#f2f4f7] border border-slate-200/50 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-700"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900"
                   >
                     {REGIMENES_FISCALES.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
@@ -337,7 +346,7 @@ export default function BillingIssuers() {
                     name="codigoPostal" value={formData.codigoPostal} onChange={handleChange} required
                     maxLength={5} pattern="[0-9]{5}"
                     placeholder="12345"
-                    className="w-full px-4 py-3 bg-[#f2f4f7] border border-slate-200/50 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium"
+                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -395,7 +404,7 @@ export default function BillingIssuers() {
                     <input 
                       type="password" name="password" value={formData.password} onChange={handleChange} required
                       placeholder="••••••••••••••"
-                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                     />
                   </div>
                 </div>

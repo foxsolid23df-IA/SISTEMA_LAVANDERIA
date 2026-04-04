@@ -181,7 +181,7 @@ export default function BillingPortalModal({ issuer, onClose, onSave }) {
                   onChange={(e) => setPortalData(prev => ({ ...prev, nombre_marca: e.target.value }))}
                   required
                   placeholder="Ej. Mi Lavandería Express"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                 />
               </div>
 
@@ -198,7 +198,7 @@ export default function BillingPortalModal({ issuer, onClose, onSave }) {
                     type="text"
                     value={portalData.brand_color}
                     onChange={(e) => setPortalData(prev => ({ ...prev, brand_color: e.target.value }))}
-                    className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm uppercase"
+                    className="flex-1 px-4 py-2 bg-white border border-slate-300 rounded-xl font-mono text-sm uppercase text-slate-900"
                   />
                 </div>
               </div>

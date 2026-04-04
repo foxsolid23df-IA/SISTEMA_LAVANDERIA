@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { formatearDinero, formatearFechaHora } from "../../utils";
 import "./TicketVenta.css";
 
@@ -40,19 +41,20 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
     >
       <div
         className="ticket-header"
-        style={{ fontSize: "inherit", textAlign: "center" }}
+        style={{ fontSize: "inherit", textAlign: "center", marginBottom: "15px" }}
       >
         {/* Logo del negocio */}
         {settings?.logo_url && (
-          <div style={{ marginBottom: "10px" }}>
+          <div style={{ marginBottom: "12px" }}>
             <img
               src={settings.logo_url}
               alt="Logo"
               style={{
                 maxWidth: "100%",
-                maxHeight: "80px",
+                maxHeight: "90px",
                 objectFit: "contain",
                 margin: "0 auto",
+                filter: "grayscale(100%)", // Para impresoras térmicas
               }}
             />
           </div>
@@ -62,9 +64,11 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         {settings?.name && (
           <div
             style={{
-              fontSize: "1.2em",
-              fontWeight: "bold",
-              marginBottom: "5px",
+              fontSize: "1.3em",
+              fontWeight: "900",
+              marginBottom: "4px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px"
             }}
           >
             {settings.name}
@@ -74,34 +78,50 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         {(settings?.address || settings?.phone) && (
           <div
             style={{
-              fontSize: "0.9em",
-              marginBottom: "10px",
-              whiteSpace: "pre-wrap",
+              fontSize: "0.85em",
+              marginBottom: "12px",
+              lineHeight: "1.3",
+              color: "#333"
             }}
           >
             {settings?.address && <div>{settings.address}</div>}
-            {settings?.phone && <div>Tel: {settings.phone}</div>}
+            {settings?.phone && <div style={{ fontWeight: "bold" }}>Tel: {settings.phone}</div>}
           </div>
         )}
 
         <div
           className="ticket-title"
-          style={{ fontWeight: "bold", fontSize: "1.1em", marginTop: "5px" }}
+          style={{ 
+            fontWeight: "bold", 
+            fontSize: "1em", 
+            marginTop: "8px",
+            border: "1.5px solid black",
+            display: "inline-block",
+            padding: "2px 10px",
+            borderRadius: "4px"
+          }}
         >
           COMPROBANTE DE RECEPCIÓN
         </div>
+        
         <div
           className="ticket-orden"
-          style={{ fontWeight: "bold", fontSize: "1.1em" }}
+          style={{ 
+            fontWeight: "900", 
+            fontSize: "1.4em",
+            marginTop: "10px",
+            letterSpacing: "1px"
+          }}
         >
           ORDEN #
           {venta.folio
             ? venta.folio.toString().padStart(6, "0")
-            : venta.id.toString().slice(-6).toUpperCase()}
+            : (venta.ticket_uuid?.slice(0, 8).toUpperCase() || venta.id.toString().slice(-6).toUpperCase())}
         </div>
+
         <div
           className="ticket-fecha"
-          style={{ fontSize: "0.9em", marginTop: "2px" }}
+          style={{ fontSize: "0.85em", marginTop: "4px", opacity: 0.8 }}
         >
           {formatearFechaHora(new Date())}
         </div>
@@ -394,9 +414,75 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         className="ticket-linea"
         style={{ borderBottom: "1px dashed #000", margin: "5px 0" }}
       />
+
+      {/* SECCIÓN DE FACTURACIÓN PREMIUM CON QR */}
+      <div
+        className="ticket-billing-section"
+        style={{
+          border: "1.5px solid black",
+          padding: "10px",
+          marginTop: "15px",
+          textAlign: "center",
+          borderRadius: "8px",
+          backgroundColor: "#f9f9f9"
+        }}
+      >
+        <div style={{ fontWeight: "900", fontSize: "0.95em", marginBottom: "8px" }}>
+          🚀 AUTO-FACTURA EN LÍNEA
+        </div>
+        
+        {/* QR Code Container */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center", 
+          gap: "8px",
+          marginBottom: "10px" 
+        }}>
+          <div style={{ background: "white", padding: "5px", borderRadius: "4px" }}>
+            <QRCodeSVG 
+              value={`${settings?.billing_url || "https://lavanderia-facturacion.vercel.app/"}?folio=${venta.folio || (venta.ticket_uuid?.slice(0, 8).toUpperCase()) || venta.id}&pin=${venta.pin || venta.pin_facturacion || "0000"}&total=${venta.total}`}
+              size={100}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+          <div style={{ fontSize: "0.7em", lineHeight: "1.2" }}>
+            Escanea para facturar instantáneamente<br/>
+            o ingresa a:
+          </div>
+        </div>
+
+        <div style={{ fontSize: "0.8em", fontWeight: "900", margin: "2px 0", wordBreak: "break-all" }}>
+           {settings?.billing_url || "https://lavanderia-facturacion.vercel.app/"}
+        </div>
+        
+        <div style={{ borderTop: "1px dashed #ccc", margin: "8px 0" }}></div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9em", marginBottom: "2px" }}>
+          <span>FOLIO:</span>
+          <span style={{ fontWeight: "900" }}>
+             {venta.folio || (venta.ticket_uuid?.slice(0, 8).toUpperCase()) || venta.id}
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1em" }}>
+          <span>PIN DE SEGURIDAD:</span>
+          <span style={{ fontWeight: "900", fontSize: "1.1em" }}>{venta.pin || venta.pin_facturacion || "N/A"}</span>
+        </div>
+        
+        <div style={{ 
+          fontSize: "0.75em", 
+          marginTop: "8px", 
+          fontStyle: "italic",
+          opacity: 0.8
+        }}>
+          Válido durante el mes de compra.
+        </div>
+      </div>
+
       <div
         className="ticket-footer"
-        style={{ textAlign: "center", fontSize: "0.9em" }}
+        style={{ textAlign: "center", fontSize: "0.9em", marginTop: "10px" }}
       >
         {settings?.ticket_message ? (
           <div style={{ whiteSpace: "pre-wrap" }}>

@@ -40,6 +40,11 @@ export const businessSettingsService = {
             printer_is_bold: settingsData.printer_is_bold || false,
             printer_margin: settingsData.printer_margin || 0,
             ticket_double_print: settingsData.ticket_double_print || false,
+            billing_url: settingsData.billing_url || 'https://lavanderia-facturacion.vercel.app/',
+            rfc: settingsData.rfc,
+            razon_social: settingsData.razon_social,
+            regimen_fiscal: settingsData.regimen_fiscal,
+            codigo_postal: settingsData.codigo_postal,
             updated_at: new Date().toISOString()
         };
 

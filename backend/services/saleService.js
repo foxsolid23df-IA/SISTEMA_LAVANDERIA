@@ -57,10 +57,20 @@ async function crearVenta(datosVenta) {
         has_tax: has_tax || false,
         tax_amount: tax_amount || 0,
         invoice_requested: invoice_requested || false,
+        pin_facturacion: datosVenta.pin_facturacion || null,
+        ticket_uuid: datosVenta.ticket_uuid || null,
         createdAt: now
     });
 
-    return { id: venta.id, folio: venta.folio, total, items, createdAt: now };
+    return { 
+        id: venta.id, 
+        folio: venta.folio, 
+        total, 
+        items, 
+        createdAt: now,
+        pin_facturacion: venta.pin_facturacion,
+        ticket_uuid: venta.ticket_uuid
+    };
 }
 
 // 2. OBTENER TODAS LAS VENTAS (más recientes primero) con paginación

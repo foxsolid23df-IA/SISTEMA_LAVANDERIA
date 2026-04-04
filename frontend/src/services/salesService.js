@@ -23,8 +23,15 @@ export const salesService = {
 
             // Si el navegador reporta offline, vamos directo a local
             if (!navigator.onLine) {
-                return await salesService.saveToLocal(saleData, userData?.user?.id, terminalId);
+                const ticketUuid = crypto.randomUUID();
+                const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
+                return await salesService.saveToLocal({ ...saleData, ticket_uuid: ticketUuid, pin_facturacion: pinFacturacion }, userData?.user?.id, terminalId);
             }
+
+            // 1. Generar PIN y UUID de facturación (si no existen)
+            // Generación de PIN de 4 dígitos numéricos (ej: 4821)
+            const ticketUuid = crypto.randomUUID();
+            const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
 
             // 1. Crear la venta principal en Supabase
             const { data: sale, error: saleError } = await supabase
@@ -39,7 +46,9 @@ export const salesService = {
                     terminal_id: terminalId,
                     has_tax: saleData.has_tax || false,
                     tax_amount: saleData.tax_amount || 0,
-                    invoice_requested: saleData.invoice_requested || false
+                    invoice_requested: saleData.invoice_requested || false,
+                    ticket_uuid: ticketUuid,
+                    pin_facturacion: pinFacturacion
                 }])
                 .select()
                 .single();
@@ -71,10 +80,18 @@ export const salesService = {
             }));
             await supabase.rpc('decrement_stock', { items: itemsForStockUpdate });
 
-            return sale;
+            return { ...sale, pin_facturacion: pinFacturacion, ticket_uuid: ticketUuid };
         } catch (error) {
             console.warn('[SalesService] Fallo en la nube, guardando en cola local...', error.message);
-            return await salesService.saveToLocal(saleData, userData?.user?.id, terminalId);
+            // Si la nube falló, generamos los datos aquí antes de enviar a local
+            const ticketUuid = crypto.randomUUID();
+            const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            return await salesService.saveToLocal({ 
+                ...saleData, 
+                ticket_uuid: ticketUuid, 
+                pin_facturacion: pinFacturacion 
+            }, userData?.user?.id, terminalId);
         }
     },
 
@@ -99,6 +116,8 @@ export const salesService = {
                     has_tax: saleData.has_tax || false,
                     tax_amount: saleData.tax_amount || 0,
                     invoice_requested: saleData.invoice_requested || false,
+                    ticket_uuid: saleData.ticket_uuid,
+                    pin_facturacion: saleData.pin_facturacion,
                     status: 'pending' // Importante para la sincronización
                 })
             });
@@ -142,7 +161,9 @@ export const salesService = {
                         created_at: localSale.createdAt,
                         has_tax: localSale.has_tax || false,
                         tax_amount: localSale.tax_amount || 0,
-                        invoice_requested: localSale.invoice_requested || false
+                        invoice_requested: localSale.invoice_requested || false,
+                        ticket_uuid: localSale.ticket_uuid,
+                        pin_facturacion: localSale.pin_facturacion
                     };
 
                     // Implementar lógica de subida similar a createSale pero forzando nube

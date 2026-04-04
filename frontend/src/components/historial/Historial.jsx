@@ -173,14 +173,18 @@ export const Historial = () => {
 
         return {
           id: t.id,
+          folio: t.folio,
           total: t.total,
           paidAmount: t.paid_amount || t.total,
           createdAt: t.created_at,
           customerName: t.customers?.name || "Público General",
+          customerPhone: t.customers?.phone,
           employeeName: t.staff?.name || "Sistema",
           paymentMethod: t.payment_method || "efectivo",
           status: t.status || "completed",
           isOrder: reportMode === "SERVICES",
+          ticket_uuid: t.ticket_uuid,
+          pin_facturacion: t.pin || t.pin_facturacion,
           items: (t.order_items || t.sale_items || []).map((item) => ({
             id: item.id,
             productId: item.product_id || null,

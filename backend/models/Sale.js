@@ -12,6 +12,9 @@ const Sale = sequelize.define('Sale', {
     has_tax: { type: DataTypes.BOOLEAN, defaultValue: false },
     tax_amount: { type: DataTypes.FLOAT, defaultValue: 0 },
     invoice_requested: { type: DataTypes.BOOLEAN, defaultValue: false },
+    facturado: { type: DataTypes.BOOLEAN, defaultValue: false },
+    pin_facturacion: { type: DataTypes.STRING, allowNull: true },
+    ticket_uuid: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4 },
     supabase_id: { type: DataTypes.BIGINT, unique: true },   // ID en Supabase tras sincronizar
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, {
