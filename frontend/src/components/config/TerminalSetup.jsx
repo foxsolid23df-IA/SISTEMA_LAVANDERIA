@@ -128,6 +128,37 @@ export const TerminalSetup = ({ onTerminalConfigured, isAdmin }) => {
             </p>
           </div>
 
+          {!window.electron && (
+            <button
+              type="button"
+              className="simulate-btn"
+              onClick={async () => {
+                const result = await Swal.fire({
+                  title: 'Modo Simulación',
+                  text: '¿Deseas entrar en modo simulación? Se creará una terminal temporal para que puedas probar los perfiles y permisos rápidamente.',
+                  icon: 'info',
+                  showCancelButton: true,
+                  confirmButtonText: 'Sí, simular',
+                  cancelButtonText: 'Cancelar',
+                  confirmButtonColor: '#3b82f6'
+                });
+
+                if (result.isConfirmed) {
+                  const randomId = Math.floor(100 + Math.random() * 900);
+                  const terminal = await terminalService.registerTerminal(
+                    `SIMULACION-WEB-${randomId}`,
+                    "Navegador de Pruebas",
+                    false
+                  );
+                  onTerminalConfigured(terminal);
+                }
+              }}
+            >
+              <span className="material-symbols-outlined">science</span>
+              Omitir y Usar Modo Simulación
+            </button>
+          )}
+
           {isAdmin && (
             <button
               type="button"
