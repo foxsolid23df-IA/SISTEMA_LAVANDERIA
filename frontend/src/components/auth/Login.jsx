@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { invitationService } from '../../services/invitationService';
+import { config } from '../../config';
 import './Login.css';
 
 export const Login = () => {
@@ -83,6 +84,12 @@ export const Login = () => {
 
     return (
         <div className="login-container">
+            {!config.isElectron && (
+                <div className="admin-portal-badge">
+                    <span className="badge-dot"></span>
+                    Portal Administrador
+                </div>
+            )}
             <div className="login-card">
                 {/* Logo completo - imagen incluye ícono + NEXUM + POS */}
                 <div className="login-logo-area">
