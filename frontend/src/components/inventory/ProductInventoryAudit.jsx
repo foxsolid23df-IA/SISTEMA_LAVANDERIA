@@ -1010,7 +1010,7 @@ export const ProductInventoryAudit = () => {
                       ${criticalProducts.length === 0 ? '<p>TODO EL STOCK ESTÁ BIEN</p>' : ''}
                       ${criticalProducts.map(s => {
                         const falta = s.min_stock - s.stock;
-                        const sugerido = falta > 0 ? (s.min_stock * 2) - s.stock : Math.max(s.min_stock, 1);
+                        const sugerido = Math.max(0, falta);
                         return `
                         <div class="item">
                           <div class="title">${s.name} <span class="small">Min: ${s.min_stock} | Act: ${s.stock.toFixed(2)}</span></div>
@@ -1063,7 +1063,7 @@ export const ProductInventoryAudit = () => {
                       if (!isCritical) return null;
                       
                       const falta = s.min_stock - s.stock;
-                      const sugerido = falta > 0 ? (s.min_stock * 2) - s.stock : Math.max(s.min_stock, 1);
+                      const sugerido = Math.max(0, falta);
                       
                       return (
                         <tr key={s.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors animate-in fade-in slide-in-from-bottom-2" style={{animationDelay: `${250 + (index * 50)}ms`}}>
