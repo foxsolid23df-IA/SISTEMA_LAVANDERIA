@@ -149,9 +149,9 @@ export const CashReportsView = () => {
     <div className="cash-reports">
       {/* Header */}
       <div className="cash-reports__header">
-        <h1 className="cash-reports__title dark:text-white group cursor-default">
-          <span className="material-icons-outlined transition-transform duration-300 group-hover:scale-110">receipt_long</span>
-          <span className="transition-all duration-300 group-hover:translate-x-1">Reportes de Caja</span>
+        <h1 className="cash-reports__title-v2 group cursor-default">
+          <span className="material-icons-outlined">receipt_long</span>
+          <span>Reportes de Caja</span>
         </h1>
         <span className="cash-reports__badge">
           <span className="material-icons-outlined" style={{ fontSize: 14 }}>

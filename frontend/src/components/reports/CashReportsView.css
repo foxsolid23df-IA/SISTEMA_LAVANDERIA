@@ -17,22 +17,24 @@
   gap: 1rem;
 }
 
-.cash-reports__title {
+.cash-reports__title-v2 {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--text-primary, #0f172a);
+  color: var(--report-title-color, #0f172a);
   letter-spacing: -0.02em;
+  transition: all 0.3s ease;
 }
 
-.cash-reports__title .material-icons-outlined {
+.cash-reports__title-v2 .material-icons-outlined {
   font-size: 28px;
-  color: var(--primary, #0f172a);
-  background: var(--bg-subtle, #f1f5f9);
+  color: var(--report-title-color, #0f172a) !important;
+  background: var(--report-icon-bg, #f1f5f9) !important;
   padding: 8px;
   border-radius: 12px;
+  transition: transform 0.3s ease;
 }
 
 .cash-reports__badge {
@@ -745,71 +747,77 @@
    Dark Mode Support for CashReportsView
    ============================================ */
 
-.dark .cash-reports__title {
-  color: #f1f5f9 !important;
+.dark {
+  --report-title-color: #f8fafc;
+  --report-icon-bg: #1e293b;
 }
 
-.dark .cash-reports__title .material-icons-outlined {
-  color: #f1f5f9 !important;
+.dark .cash-reports__title-v2 {
+  color: #f8fafc !important;
+}
+
+.dark .cash-reports__title-v2 .material-icons-outlined {
+  color: #f8fafc !important;
   background: #1e293b !important;
 }
 
-:root.dark .cash-reports__filters {
-  background: #1e293b;
-  border-color: #334155;
+.dark .cash-reports__filters {
+  background: #1e293b !important;
+  border-color: #334155 !important;
 }
 
-:root.dark .cash-reports__filter-group label {
-  color: #94a3b8;
+.dark .cash-reports__filter-group label {
+  color: #94a3b8 !important;
 }
 
-:root.dark .cash-reports__filter-group input,
-:root.dark .cash-reports__filter-group select {
-  background: #0f172a;
-  border-color: #334155;
-  color: #f1f5f9;
+.dark .cash-reports__filter-group input,
+.dark .cash-reports__filter-group select {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
 }
 
-:root.dark .cash-reports__card {
-  background: #1e293b;
-  border-color: #334155;
+.dark .cash-reports__card {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
 }
 
-:root.dark .cash-reports__card-label {
-  color: #94a3b8;
+.dark .cash-reports__card-label {
+  color: #cbd5e1 !important;
 }
 
-:root.dark .cash-reports__card-value {
-  color: #f1f5f9;
+.dark .cash-reports__card-value {
+  color: #f8fafc !important;
 }
 
-:root.dark .cash-reports__table-container {
-  background: #1e293b;
-  border-color: #334155;
+.dark .cash-reports__table-container {
+  background: #1e293b !important;
+  border-color: #334155 !important;
 }
 
-:root.dark .cash-reports__table th {
-  background: #0f172a;
-  color: #94a3b8;
-  border-bottom-color: #334155;
+.dark .cash-reports__table th {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
 }
 
-:root.dark .cash-reports__table td {
-  color: #e2e8f0;
-  border-bottom-color: #334155;
+.dark .cash-reports__table td {
+  color: #e2e8f0 !important;
+  border-bottom-color: #334155 !important;
 }
 
-:root.dark .method-badge--efectivo { background: rgba(22, 101, 52, 0.2); color: #4ade80; }
-:root.dark .method-badge--tarjeta { background: rgba(30, 64, 175, 0.2); color: #60a5fa; }
-:root.dark .method-badge--transferencia { background: rgba(107, 33, 168, 0.2); color: #c084fc; }
+.dark .method-badge--efectivo { background: rgba(34, 197, 94, 0.2) !important; color: #4ade80 !important; }
+.dark .method-badge--tarjeta { background: rgba(59, 130, 246, 0.2) !important; color: #60a5fa !important; }
+.dark .method-badge--transferencia { background: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
 
-:root.dark .modal-content {
-    background: #0f172a;
-    color: #f1f5f9;
+.dark .modal-content {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
 }
 
-:root.dark .report-card {
-    background: #1e293b;
+.dark .report-card {
+    background: #1e293b !important;
 }
 
 @media print {
