@@ -93,7 +93,6 @@ const ROLES = {
             can_lock_terminal: true,
             can_restart_cash: false,
             can_logout: true,
-            can_process_orders: false,
             can_deliver_orders: true,
             can_void_sales: false,
             can_view_supplies: true
@@ -379,7 +378,7 @@ export const UserManager = () => {
                         Administra roles y permisos para el acceso al punto de venta
                     </p>
                 </div>
-                <button className="btn-primary btn-add-user" onClick={() => handleOpenModal()}>
+                <button className="btn-add-employee-premium" onClick={() => handleOpenModal()}>
                     <span className="material-icons-outlined">person_add</span>
                     Nuevo Empleado
                 </button>

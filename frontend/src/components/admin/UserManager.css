@@ -69,27 +69,39 @@
     cursor: pointer;
 }
 
-.btn-add-user {
-    background: linear-gradient(135deg, var(--accent) 0%, #059669 100%);
+.btn-add-employee-premium {
+    background: linear-gradient(135deg, var(--accent) 0%, #059669 100%) !important;
     color: #000 !important;
-    padding: 0.6rem 1.25rem !important;
-    font-size: 0.9rem !important;
+    padding: 0.5rem 1.25rem !important;
+    font-size: 0.85rem !important;
     border-radius: 12px !important;
-    display: flex;
+    display: inline-flex !important;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    width: auto !important;
+    min-width: 140px !important;
+    max-width: 220px !important;
+    margin: 0 !important;
+    flex: none !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: none;
+    outline: none;
 }
 
-.btn-add-user:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
-    filter: brightness(1.05);
+.btn-add-employee-premium:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    filter: brightness(1.1);
 }
 
-.btn-add-user .material-icons-outlined {
-    font-size: 1.2rem;
+.btn-add-employee-premium .material-icons-outlined {
+    font-size: 1.1rem !important;
 }
 
 .btn-delete {
