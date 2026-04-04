@@ -1,9 +1,14 @@
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/**
+ * Gestiona clientes SÓLO en la base de datos local (Supabase).
+ * La API Web/Lite (/2/) de Facturama NO tiene endpoint de clientes — 
+ * el receptor se pasa inline en cada CFDI.
+ * Solo almacenamos localmente para historial y autocompletado.
+ */
 export async function getOrCreateClient(
   supabase: SupabaseClient,
-  client_data: any,
-  apiKey: string
+  client_data: any
 ): Promise<any> {
     
   // Intentar buscar por RFC en nuestra DB
@@ -14,71 +19,32 @@ export async function getOrCreateClient(
     .single();
 
   if (existingClient) {
-    // Si ya tiene facturama_id, retornar
-    if (existingClient.facturama_id) {
-      return existingClient;
-    }
-    // Si no tiene, intentar crearlo en Facturama
-    const facturamaId = await syncClientWithFacturama(existingClient, apiKey);
+    // Actualizar datos fiscales por si cambiaron
     const { data: updatedClient } = await supabase
       .from('clients')
-      .update({ facturama_id: facturamaId })
+      .update({
+        razon_social: client_data.razon_social,
+        regimen_fiscal: client_data.regimen_fiscal,
+        uso_cfdi: client_data.uso_cfdi,
+        codigo_postal: client_data.codigo_postal,
+        email: client_data.email
+      })
       .eq('id', existingClient.id)
       .select()
       .single();
-    return updatedClient;
+
+    return updatedClient || existingClient;
   }
 
-  // Si no existe, crear en Facturama primero
-  const facturamaId = await syncClientWithFacturama(client_data, apiKey);
-  
-  // Insertar en nuestra DB
+  // Si no existe, insertar en nuestra DB
   const { data: newClient, error: insertErr } = await supabase
     .from('clients')
     .insert({
-      ...client_data,
-      facturama_id: facturamaId
+      ...client_data
     })
     .select()
     .single();
 
   if (insertErr) throw insertErr;
   return newClient;
-}
-
-async function syncClientWithFacturama(clientData: any, apiKey: string): Promise<string> {
-  const apiUrl = "https://apisandbox.facturama.mx/2/client";
-  
-  const receiver = {
-    Rfc: clientData.rfc,
-    Name: clientData.razon_social,
-    FiscalRegime: clientData.regimen_fiscal,
-    TaxZipCode: clientData.codigo_postal,
-    Email: clientData.email,
-    CfdiUse: "G03"
-  };
-
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${btoa(apiKey)}`,
-    },
-    body: JSON.stringify(receiver),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.warn("Error al registrar cliente en Facturama (pestaña ya existe?):", errorData);
-    // Si ya existe, podríamos intentar un GET para obtener su ID, 
-    // pero por ahora lanzamos error o intentamos retornar un id ficticio si es error de RFC duplicado
-    if (errorData.Message && errorData.Message.includes("ya existe")) {
-       // Buscar por RFC directamente en Facturama es lo ideal aquí
-       // Pero por simplicidad en Sandbox, retornaremos un ID de error o buscaremos
-    }
-    throw new Error(errorData.Message || "Error al registrar cliente en Facturama");
-  }
-
-  const data = await response.json();
-  return data.Id;
 }

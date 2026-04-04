@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { createFacturamaInvoice } from "./facturama-service.ts";
+import { createFacturamaInvoice, downloadCfdiFile } from "./facturama-service.ts";
 import { getOrCreateClient } from "./client-management.ts";
 
 const corsHeaders = {
@@ -18,8 +18,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Facturama API Key (Sandbox for now)
-    // Se recomienda guardar estas credenciales en variables de entorno (Vault)
+    // Credenciales Facturama (formato "usuario:contraseña")
     const FACTURAMA_API_KEY = Deno.env.get("FACTURAMA_API_KEY") || "NexumPos:NexumPos";
 
     const { 
@@ -45,9 +44,8 @@ serve(async (req) => {
       throw new Error(`No se encontró el registro en la tabla ${table}`);
     }
 
-    // Verificar si ya fue facturado según la tabla
-    const isAlreadyInvoiced = record.facturado;
-    if (isAlreadyInvoiced) {
+    // Verificar si ya fue facturado
+    if (record.facturado) {
       throw new Error("Este registro ya tiene una factura generada o solicitada");
     }
 
@@ -62,21 +60,28 @@ serve(async (req) => {
       throw new Error("No se encontraron items para este registro");
     }
 
-    // 3. Obtener datos del emisor (negocio)
+    // 3. Obtener datos del emisor desde billing_issuers (tabla donde el frontend guarda RFC y CSD)
     const { data: issuer_data, error: issuerError } = await supabase
-      .from('business_settings')
+      .from('billing_issuers')
       .select('*')
       .eq('user_id', record.user_id)
+      .eq('is_csd_loaded', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (issuerError || !issuer_data) {
-      throw new Error("No se encontraron los datos fiscales del emisor (business_settings)");
+      throw new Error("No se encontró un emisor con CSD cargado. Configura tus datos fiscales en Configuración → Datos de Emisión Fiscal.");
     }
 
-    // 4. Gestionar cliente en Facturama y DB local
-    const client_record = await getOrCreateClient(supabase, client_data, FACTURAMA_API_KEY);
+    if (!issuer_data.rfc || !issuer_data.razon_social || !issuer_data.regimen_fiscal) {
+      throw new Error("Los datos fiscales del emisor están incompletos (RFC, Razón Social o Régimen Fiscal faltante).");
+    }
 
-    // 5. Crear factura en Facturama
+    // 4. Gestionar cliente en DB local (API Multiemisor no tiene catálogo de clientes)
+    const client_record = await getOrCreateClient(supabase, client_data);
+
+    // 5. Crear CFDI en Facturama API Multiemisor (/api-lite/3/cfdis)
     const facturamaResponse = await createFacturamaInvoice(
       issuer_data,
       client_record,
@@ -85,46 +90,76 @@ serve(async (req) => {
       FACTURAMA_API_KEY
     );
 
-    // 6. Persistir factura en la tabla 'invoices' de Supabase
+    // 6. Intentar descargar PDF y XML
+    const cfdiId = facturamaResponse.Id;
+    let pdfBase64 = "";
+    let xmlBase64 = "";
+    
+    try {
+      pdfBase64 = await downloadCfdiFile(cfdiId, "pdf", FACTURAMA_API_KEY);
+    } catch (e) {
+      console.warn("No se pudo descargar PDF:", e);
+    }
+    
+    try {
+      xmlBase64 = await downloadCfdiFile(cfdiId, "xml", FACTURAMA_API_KEY);
+    } catch (e) {
+      console.warn("No se pudo descargar XML:", e);
+    }
+
+    // 7. Extraer UUID fiscal del complemento de timbre
+    const folioFiscal = facturamaResponse.Complement?.TaxStamp?.Uuid 
+      || facturamaResponse.Uuid 
+      || "";
+
+    // 8. Persistir factura en la tabla 'invoices'
     const { error: invoiceError } = await supabase
       .from('invoices')
       .insert({
         [table === 'sales' ? 'sale_id' : 'order_id']: record.id,
         client_id: client_record.id,
-        facturama_id: facturamaResponse.Id,
+        facturama_id: cfdiId,
         folio: facturamaResponse.Folio,
-        serie: facturamaResponse.Serie,
-        uuid_fiscal: facturamaResponse.Uuid,
+        serie: facturamaResponse.Serie || null,
+        uuid_fiscal: folioFiscal,
+        xml_url: xmlBase64 || null,
+        pdf_url: pdfBase64 || null,
         total: record.total,
         status: 'ACTIVO'
       });
 
     if (invoiceError) {
-      console.warn("Factura creada en Facturama pero error al guardar en DB:", invoiceError);
+      console.warn("⚠️ CFDI creado en Facturama pero error al guardar en DB:", invoiceError);
     }
 
-    // 7. Marcar como facturado en la tabla original
+    // 9. Marcar como facturado en la tabla original
     const { error: updateError } = await supabase
       .from(table)
       .update({ facturado: true })
       .eq('id', record.id);
 
     if (updateError) {
-      console.warn("Error al actualizar estado de facturación en la tabla origen:", updateError);
+      console.warn("⚠️ Error al actualizar estado de facturación:", updateError);
     }
 
+    // 10. Respuesta exitosa
     return new Response(JSON.stringify({ 
       success: true, 
       message: "Factura generada exitosamente",
-      facturama_id: facturamaResponse.Id,
-      folio: facturamaResponse.Folio,
-      uuid: facturamaResponse.Uuid
+      data: {
+        Id: cfdiId,
+        Uuid: folioFiscal,
+        FolioFiscal: folioFiscal,
+        Folio: facturamaResponse.Folio,
+        Pdf: pdfBase64 || null,
+        Xml: xmlBase64 || null
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (err: any) {
-    console.error("Error en Timbrar:", err);
+    console.error("❌ Error en Timbrar:", err);
     return new Response(JSON.stringify({ 
       success: false, 
       error: err.message 

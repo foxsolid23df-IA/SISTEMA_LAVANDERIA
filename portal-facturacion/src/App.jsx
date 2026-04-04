@@ -25,6 +25,59 @@ export default function App() {
   const [regimenFiscal, setRegimenFiscal] = useState('601'); // 601 General de Ley
   const [usoCfdi, setUsoCfdi] = useState('G03'); // G03 Gastos en General
   const [email, setEmail] = useState('');
+  const [rfcType, setRfcType] = useState(''); // 'moral' o 'fisica'
+
+  // Regímenes válidos por tipo de persona según SAT
+  const REGIMENES_MORAL = [
+    { value: '601', label: '601 General de Ley Personas Morales' },
+    { value: '603', label: '603 Personas Morales con Fines no Lucrativos' },
+    { value: '620', label: '620 Sociedades Cooperativas de Producción' },
+    { value: '622', label: '622 Actividades Agrícolas, Ganaderas' },
+    { value: '623', label: '623 Opcional para Grupos de Sociedades' },
+    { value: '624', label: '624 Coordinados' },
+  ];
+  const REGIMENES_FISICA = [
+    { value: '605', label: '605 Sueldos y Salarios' },
+    { value: '606', label: '606 Arrendamiento' },
+    { value: '608', label: '608 Demás ingresos' },
+    { value: '610', label: '610 Residentes en el Extranjero' },
+    { value: '611', label: '611 Ingresos por Dividendos' },
+    { value: '612', label: '612 Personas Físicas. Actividades Empresariales' },
+    { value: '614', label: '614 Ingresos por intereses' },
+    { value: '616', label: '616 Sin obligaciones fiscales' },
+    { value: '621', label: '621 Incorporación Fiscal' },
+    { value: '625', label: '625 Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas' },
+    { value: '626', label: '626 RESICO' },
+  ];
+
+  // Detectar tipo de RFC y auto-seleccionar régimen
+  const handleRfcChange = (value) => {
+    const cleanRfc = value.toUpperCase().trim();
+    setRfc(cleanRfc);
+
+    if (cleanRfc.length === 12) {
+      setRfcType('moral');
+      // Auto-seleccionar el régimen más común para Persona Moral
+      if (!REGIMENES_MORAL.find(r => r.value === regimenFiscal)) {
+        setRegimenFiscal('601');
+      }
+    } else if (cleanRfc.length === 13) {
+      setRfcType('fisica');
+      // Auto-seleccionar el régimen más común para Persona Física
+      if (!REGIMENES_FISICA.find(r => r.value === regimenFiscal)) {
+        setRegimenFiscal('612');
+      }
+    } else {
+      setRfcType('');
+    }
+  };
+
+  // Obtener regímenes según tipo de RFC detectado
+  const getRegimenesDisponibles = () => {
+    if (rfcType === 'moral') return REGIMENES_MORAL;
+    if (rfcType === 'fisica') return REGIMENES_FISICA;
+    return [...REGIMENES_MORAL, ...REGIMENES_FISICA];
+  };
 
   const [invoiceResult, setInvoiceResult] = useState(null);
 
@@ -108,7 +161,7 @@ export default function App() {
         if (invData) {
           setInvoiceResult({
             id: invData.id,
-            uuid: invData.uuid_cfdi,
+            uuid: invData.uuid_fiscal,
             xml_url: invData.xml_url,
             pdf_url: invData.pdf_url,
           });
@@ -465,7 +518,12 @@ export default function App() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">RFC</label>
-                  <input required type="text" value={rfc} onChange={(e) => setRfc(e.target.value.toUpperCase())} onBlur={handleSearchRfc} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="XAXX010101000" />
+                  <input required type="text" value={rfc} onChange={(e) => handleRfcChange(e.target.value)} onBlur={handleSearchRfc} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="XAXX010101000" />
+                  {rfcType && (
+                    <p className="text-xs mt-1" style={{ color: `hsl(${ACCENT_HUE}, 65%, 50%)` }}>
+                      {rfcType === 'moral' ? '📋 Persona Moral detectada' : '👤 Persona Física detectada'}
+                    </p>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Razón Social o Nombre (Sin el SA de CV en 4.0)</label>
@@ -487,11 +545,9 @@ export default function App() {
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Régimen Fiscal</label>
                   <select value={regimenFiscal} onChange={(e) => setRegimenFiscal(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-opacity-50 transition-all text-sm" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }}>
-                    <option value="601">601 General de Ley Personas Morales</option>
-                    <option value="606">606 Arrendamiento</option>
-                    <option value="612">612 Personas Físicas. Actividades Empresariales</option>
-                    <option value="616">616 Sin obligaciones fiscales</option>
-                    <option value="626">626 RESICO</option>
+                    {getRegimenesDisponibles().map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="col-span-2">
