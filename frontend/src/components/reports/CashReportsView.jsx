@@ -280,6 +280,7 @@ export const CashReportsView = () => {
                 <th>Diferencia</th>
                 <th>Tarjeta</th>
                 <th>Transfer.</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -317,6 +318,18 @@ export const CashReportsView = () => {
                     <td className={diffClass}>{formatCurrency(diff)}</td>
                     <td>{formatCurrency(cut.card_total)}</td>
                     <td>{formatCurrency(cut.transfer_total)}</td>
+                    <td>
+                      <button 
+                        className="cash-reports__details-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowClick(cut);
+                        }}
+                        title="Ver reporte avanzado"
+                      >
+                        <span className="material-icons-outlined">list_alt</span>
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -330,125 +343,148 @@ export const CashReportsView = () => {
         <Modal 
             isOpen={true} 
             onClose={() => setSelectedCut(null)}
-            title={`Detalles de Corte - ${formatDate(selectedCut.created_at)} ${formatTime(selectedCut.created_at)}`}
-            width="900px"
+            title={`Reporte Detallado de Caja — ${formatDate(selectedCut.created_at)}`}
+            className="modal-wide"
         >
             <div className="cut-details">
-                <div className="cut-details__info">
-                    <div className="cut-details__info-item">
-                        <label>Empleado:</label>
-                        <span>{selectedCut.staff_name}</span>
+                <div className="report-card">
+                    <div className="report-header">
+                        <div className="report-header__brand">
+                            <h2>Resumen de Operaciones</h2>
+                            <div className="report-header__meta">
+                                {formatDate(selectedCut.created_at)} {formatTime(selectedCut.created_at)} | ID: #{selectedCut.id.toString().slice(-6)}
+                            </div>
+                        </div>
+                        <div className={`cash-reports__type-badge cash-reports__type-badge--${selectedCut.cut_type}`}>
+                            {TYPE_LABELS[selectedCut.cut_type]}
+                        </div>
                     </div>
-                    <div className="cut-details__info-item">
-                        <label>Tipo:</label>
-                        <span>{TYPE_LABELS[selectedCut.cut_type]}</span>
-                    </div>
-                    <div className="cut-details__info-item">
-                        <label>Inicio:</label>
-                        <span>{formatDate(selectedCut.start_time)} {formatTime(selectedCut.start_time)}</span>
+
+                    <div className="report-body">
+                        <div className="report-summary-grid">
+                            <div className="summary-stat">
+                                <label>Usuario</label>
+                                <span className="value">{selectedCut.staff_name}</span>
+                            </div>
+                            <div className="summary-stat">
+                                <label>Total Ventas</label>
+                                <span className="value">{formatCurrency(selectedCut.sales_total)}</span>
+                            </div>
+                            <div className="summary-stat">
+                                <label>Esperado en Caja</label>
+                                <span className="value">{formatCurrency(selectedCut.expected_cash)}</span>
+                            </div>
+                            <div className="summary-stat">
+                                <label>Entregado Real</label>
+                                <span className="value">{formatCurrency(selectedCut.actual_cash)}</span>
+                            </div>
+                            <div className="summary-stat">
+                                <label>Diferencia</label>
+                                <span className={`value ${parseFloat(selectedCut.difference) >= 0 ? "cash-reports__diff--positive" : "cash-reports__diff--negative"}`}>
+                                    {formatCurrency(selectedCut.difference)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {loadingDetails ? (
+                            <div className="cash-reports__loading">
+                                <span className="material-icons-outlined">sync</span>
+                                Cargando desglose detallado...
+                            </div>
+                        ) : (
+                            <>
+                                <div className="cut-details__tabs" style={{ marginBottom: '1.5rem' }}>
+                                    <button 
+                                        className={`cut-details__tab ${activeTab === 'orders' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('orders')}
+                                    >
+                                        <span className="material-icons-outlined">receipt_long</span>
+                                        Ventas por Orden
+                                    </button>
+                                    <button 
+                                        className={`cut-details__tab ${activeTab === 'clients' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('clients')}
+                                    >
+                                        <span className="material-icons-outlined">people</span>
+                                        Ventas por Clientes
+                                    </button>
+                                </div>
+
+                                <div className="report-table-section">
+                                    {activeTab === 'orders' ? (
+                                        <table className="cut-details__table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Hora</th>
+                                                    <th>Cliente</th>
+                                                    <th>Detalle de Items</th>
+                                                    <th>Método</th>
+                                                    <th className="text-right">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {details?.transactions.map((tx, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{formatTime(tx.created_at)}</td>
+                                                        <td>{tx.customer_name}</td>
+                                                        <td className="cut-details__items-cell">
+                                                            {tx.items_summary || "Sin detalles"}
+                                                        </td>
+                                                        <td>
+                                                            <span className={`method-badge method-badge--${tx.payment_method?.toLowerCase()}`}>
+                                                                {tx.payment_method}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-right font-bold">{formatCurrency(tx.total)}</td>
+                                                    </tr>
+                                                ))}
+                                                {details?.transactions.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="5" className="text-center py-4">Sin transacciones en este corte.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <table className="cut-details__table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Cliente</th>
+                                                    <th>Nº Ventas</th>
+                                                    <th className="text-right">Monto Acumulado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {clientsData.map((client, idx) => (
+                                                    <tr key={idx}>
+                                                        <td>{client.name}</td>
+                                                        <td>{client.count}</td>
+                                                        <td className="text-right font-bold">{formatCurrency(client.total)}</td>
+                                                    </tr>
+                                                ))}
+                                                {clientsData.length === 0 && (
+                                                    <tr>
+                                                        <td colSpan="3" className="text-center py-4">No se encontraron datos de clientes.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                {loadingDetails ? (
-                    <div className="cut-details__loading">
-                        <span className="material-icons-outlined">sync</span>
-                        Cargando desglose de ventas...
-                    </div>
-                ) : (
-                    <>
-                        {/* Resumen de Métodos */}
-                        {paymentSummary && (
-                            <div className="cut-details__payment-summary">
-                                <div className="payment-card payment-card--cash">
-                                    <span className="payment-card__label">Efectivo</span>
-                                    <span className="payment-card__value">{formatCurrency(paymentSummary.efectivo)}</span>
-                                </div>
-                                <div className="payment-card payment-card--card">
-                                    <span className="payment-card__label">Tarjeta</span>
-                                    <span className="payment-card__value">{formatCurrency(paymentSummary.tarjeta)}</span>
-                                </div>
-                                <div className="payment-card payment-card--transfer">
-                                    <span className="payment-card__label">Transferencia</span>
-                                    <span className="payment-card__value">{formatCurrency(paymentSummary.transferencia)}</span>
-                                </div>
-                                {paymentSummary.dolares > 0 && (
-                                    <div className="payment-card payment-card--usd">
-                                        <span className="payment-card__label">Dólares (MXN eq)</span>
-                                        <span className="payment-card__value">{formatCurrency(paymentSummary.dolares)}</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Tabs */}
-                        <div className="cut-details__tabs">
-                            <button 
-                                className={`cut-details__tab ${activeTab === 'orders' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('orders')}
-                            >
-                                <span className="material-icons-outlined">list_alt</span>
-                                Por Orden / Venta
-                            </button>
-                            <button 
-                                className={`cut-details__tab ${activeTab === 'clients' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('clients')}
-                            >
-                                <span className="material-icons-outlined">people</span>
-                                Por Clientes
-                            </button>
-                        </div>
-
-                        <div className="cut-details__content">
-                            {activeTab === 'orders' ? (
-                                <table className="cut-details__table">
-                                    <thead>
-                                        <tr>
-                                            <th>Hora</th>
-                                            <th>Cliente</th>
-                                            <th>Detalle</th>
-                                            <th>Método</th>
-                                            <th className="text-right">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {details?.transactions.map((tx, idx) => (
-                                            <tr key={idx}>
-                                                <td>{formatTime(tx.created_at)}</td>
-                                                <td>{tx.customer_name}</td>
-                                                <td className="cut-details__items-cell">{tx.items_summary || "—"}</td>
-                                                <td>
-                                                    <span className={`method-badge method-badge--${tx.payment_method?.toLowerCase()}`}>
-                                                        {tx.payment_method}
-                                                    </span>
-                                                </td>
-                                                <td className="text-right font-bold">{formatCurrency(tx.total)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <table className="cut-details__table">
-                                    <thead>
-                                        <tr>
-                                            <th>Cliente</th>
-                                            <th>Ctd. Transacciones</th>
-                                            <th className="text-right">Monto Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {clientsData.map((client, idx) => (
-                                            <tr key={idx}>
-                                                <td>{client.name}</td>
-                                                <td>{client.count}</td>
-                                                <td className="text-right font-bold">{formatCurrency(client.total)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    </>
-                )}
+                <div className="modal-actions">
+                    <button className="btn-print" onClick={() => window.print()}>
+                        <span className="material-icons-outlined">print</span>
+                        Imprimir / Descargar PDF
+                    </button>
+                    <button className="cash-reports__filter-btn" onClick={() => setSelectedCut(null)}>
+                        Cerrar Ventana
+                    </button>
+                </div>
             </div>
         </Modal>
       )}

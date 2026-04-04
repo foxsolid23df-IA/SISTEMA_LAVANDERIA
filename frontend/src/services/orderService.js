@@ -174,15 +174,14 @@ export const orderService = {
         customers (name, phone),
         order_items (*)
       `)
-      .eq('user_id', user.id)
       .gte('created_at', startTime)
       .lte('created_at', endTime)
       .order('created_at', { ascending: false });
 
-    // En muchas de nuestras tablas terminal_id existe, filtramos si está disponible
-    if (terminalId) {
-      query = query.eq('terminal_id', terminalId);
-    }
+    // Since orders don't have terminal_id DIRECTLY in this version of the schema, 
+    // we would need a join if we wanted to filter by terminal. 
+    // However, for reports, searching by time range is usually enough.
+    // If sessions are used, we can filter by session_id in the future.
 
     const { data: orders, error } = await query;
     if (error) throw error;

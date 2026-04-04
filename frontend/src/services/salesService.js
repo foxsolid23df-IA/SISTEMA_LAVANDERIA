@@ -261,7 +261,6 @@ export const salesService = {
         const { data, error } = await supabase
             .from('sales')
             .select('*')
-            .eq('user_id', user.id)
             .gte('created_at', today.toISOString())
             .order('created_at', { ascending: false });
 
@@ -280,7 +279,6 @@ export const salesService = {
                 *,
                 sale_items (*)
             `)
-            .eq('user_id', user.id)
             .gte('created_at', startTime)
             .lte('created_at', endTime)
             .order('created_at', { ascending: false });
@@ -308,7 +306,6 @@ export const salesService = {
                 *,
                 sale_items (*)
             `)
-            .eq('user_id', user.id)
             .gte('created_at', startTime)
             .order('created_at', { ascending: false });
 
@@ -336,7 +333,6 @@ export const salesService = {
                 sale_items (*),
                 staff:user_id (name:full_name, email)
             `)
-            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(limit);
 
@@ -369,7 +365,6 @@ export const salesService = {
         let query = supabase
             .from('sales')
             .select('total, created_at')
-            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(2000);
 
@@ -433,8 +428,7 @@ export const salesService = {
 
         let query = supabase
             .from('sale_items')
-            .select('product_name, quantity, price, total')
-            .eq('user_id', user.id);
+            .select('product_name, quantity, price, total');
 
         if (signal) {
             query = query.abortSignal(signal);
@@ -491,7 +485,6 @@ export const salesService = {
         let query = supabase
             .from('sales')
             .select('total, created_at')
-            .eq('user_id', user.id)
             .gte('created_at', inicioSemana.toISOString());
 
         if (signal) {
