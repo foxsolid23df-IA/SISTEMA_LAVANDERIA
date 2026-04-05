@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.42] - 2026-04-05
+
+### Added
+
+- **Fondo Inicial en Cortes de Caja:** Se implementó la persistencia del `opening_fund` (fondo inicial) en la tabla de cortes de caja (`cash_cuts`), permitiendo una auditoría completa del flujo de efectivo (Fondo Inicial + Ventas - Gastos = Esperado).
+- **Enriquecimiento Histórico:** Se ejecutó un proceso de migración de datos para recuperar los fondos iniciales de los cortes históricos vinculándolos con sus respectivas sesiones de caja.
+
+### Fixed
+
+- **Fallback de Fondos:** Se agregó un mecanismo inteligente en el servicio de cortes para obtener dinámicamente el fondo inicial desde la sesión de caja si el registro del corte no lo contiene, asegurando reportes precisos incluso en casos de borde.
+
 ## [1.4.36] - 2026-04-02
 
 ### Added

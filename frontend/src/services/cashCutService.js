@@ -138,7 +138,41 @@ export const cashCutService = {
         const { data, error } = await query.limit(limit);
 
         if (error) throw error;
-        return data || [];
+        
+        const cuts = data || [];
+
+        // Fallback: Para cortes sin opening_fund, buscar en cash_sessions
+        const cutsWithoutFund = cuts.filter(c => !c.opening_fund || parseFloat(c.opening_fund) === 0);
+        if (cutsWithoutFund.length > 0) {
+            try {
+                const terminalIds = [...new Set(cutsWithoutFund.map(c => c.terminal_id).filter(Boolean))];
+                if (terminalIds.length > 0) {
+                    const { data: sessions } = await supabase
+                        .from('cash_sessions')
+                        .select('id, terminal_id, opening_fund, opened_at, closed_at')
+                        .in('terminal_id', terminalIds)
+                        .gt('opening_fund', 0)
+                        .order('opened_at', { ascending: false });
+
+                    if (sessions?.length > 0) {
+                        cutsWithoutFund.forEach(cut => {
+                            const matchingSession = sessions.find(s =>
+                                s.terminal_id === cut.terminal_id &&
+                                new Date(s.opened_at) <= new Date(cut.end_time) &&
+                                (!s.closed_at || new Date(s.closed_at) >= new Date(cut.start_time))
+                            );
+                            if (matchingSession) {
+                                cut.opening_fund = matchingSession.opening_fund;
+                            }
+                        });
+                    }
+                }
+            } catch (fallbackError) {
+                console.warn('[CashCuts] No se pudo enriquecer opening_fund desde sesiones:', fallbackError);
+            }
+        }
+
+        return cuts;
     },
 
     // Obtener detalles de un corte específico (Ventas + Órdenes)
