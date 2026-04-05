@@ -367,7 +367,7 @@ export const CashCut = ({ onClose }) => {
 
   if (loading && !currentSummary) {
     return (
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-1050 p-4">
+      <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-[9999] p-4">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4 animate-pulse">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
           <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">
@@ -381,7 +381,7 @@ export const CashCut = ({ onClose }) => {
   // Modal de Ticket
   if (showTicket && cutResult) {
     return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-1050 p-4">
+      <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-[9999] p-4">
         <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-300">
           <div className="px-8 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3">
@@ -434,7 +434,7 @@ export const CashCut = ({ onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-1050 p-4">
+    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-[9999] p-4">
       <style>{`
                 .material-symbols-rounded { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }

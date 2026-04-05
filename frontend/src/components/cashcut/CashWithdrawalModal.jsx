@@ -91,7 +91,7 @@ export const CashWithdrawalModal = ({
     ];
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-[10000] p-4">
             <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
                 {/* Header */}
                 <div className="px-6 py-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">

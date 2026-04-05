@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.43] - 2026-04-05
+
+### Fixed
+
+- **Aislamiento Visual de Caja:** Optimización del diseño en módulos de Corte de Caja y Retiros, incrementando el desenfoque de fondo y opacidad para una experiencia más profesional e independiente ("apartado solo para ella").
+
 ## [1.4.42] - 2026-04-05
 
 ### Added
