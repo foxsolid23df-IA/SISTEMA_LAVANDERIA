@@ -67,6 +67,7 @@ export const cashCutService = {
                 expected_cash: cutData.expectedCash,
                 actual_cash: cutData.actualCash || null,
                 difference: cutData.difference,
+                opening_fund: cutData.opening_fund || 0,
                 expected_usd: cutData.expectedUSD || 0,
                 actual_usd: cutData.actualUSD || 0,
                 difference_usd: cutData.differenceUSD || 0,

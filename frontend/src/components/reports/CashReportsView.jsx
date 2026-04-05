@@ -275,6 +275,7 @@ export const CashReportsView = () => {
                 <th>Empleado</th>
                 <th>Ventas</th>
                 <th>Total MXN</th>
+                <th>Fondo Inicial</th>
                 <th>Esperado</th>
                 <th>Entregado</th>
                 <th>Diferencia</th>
@@ -313,6 +314,7 @@ export const CashReportsView = () => {
                     <td style={{ fontWeight: 700 }}>
                       {formatCurrency(cut.sales_total)}
                     </td>
+                    <td>{formatCurrency(cut.opening_fund || 0)}</td>
                     <td>{formatCurrency(cut.expected_cash)}</td>
                     <td>{formatCurrency(cut.actual_cash)}</td>
                     <td className={diffClass}>{formatCurrency(diff)}</td>
@@ -369,6 +371,10 @@ export const CashReportsView = () => {
                             <div className="summary-stat">
                                 <label>Total Ventas</label>
                                 <span className="value">{formatCurrency(selectedCut.sales_total)}</span>
+                            </div>
+                            <div className="summary-stat">
+                                <label>Fondo Inicial de Caja</label>
+                                <span className="value">{formatCurrency(selectedCut.opening_fund || 0)}</span>
                             </div>
                             <div className="summary-stat">
                                 <label>Esperado en Caja</label>

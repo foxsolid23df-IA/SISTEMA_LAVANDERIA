@@ -113,6 +113,7 @@ create table public.cash_cuts (
   expected_cash numeric not null default 0, -- Efectivo esperado
   actual_cash numeric, -- Efectivo contado (puede ser null si no se contó)
   difference numeric, -- Diferencia (actual - expected)
+  opening_fund numeric not null default 0, -- Fondo inicial de caja
   notes text, -- Observaciones
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
