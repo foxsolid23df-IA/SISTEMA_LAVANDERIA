@@ -37,8 +37,9 @@ export const CashCut = ({ onClose }) => {
     );
   }
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState(null);
-  const [salesDetails, setSalesDetails] = useState([]);
+  const [shiftSummary, setShiftSummary] = useState(null);
+  const [daySummary, setDaySummary] = useState(null);
+  const [shiftDeclared, setShiftDeclared] = useState(false);
   const [actualCash, setActualCash] = useState("");
   const [actualUSD, setActualUSD] = useState("");
   const [notes, setNotes] = useState("");
@@ -53,66 +54,56 @@ export const CashCut = ({ onClose }) => {
 
   // El resumen se carga mediante el efecto dependiente de cutType definido más abajo
 
+  const processSummaryData = (data) => {
+    const sales = data.sales || [];
+    const usdSales = sales.filter(
+      (s) => s.currency === "USD" || s.payment_method === "dolares"
+    );
+    const totalUSD = usdSales.reduce(
+      (acc, curr) => acc + (parseFloat(curr.amount_usd) || 0),
+      0
+    );
+
+    let expectedMXN = parseFloat(cashSession?.opening_fund) || 0;
+
+    const cashSales = sales.filter((s) => s.payment_method === "efectivo");
+    expectedMXN += cashSales.reduce(
+      (acc, curr) => acc + (parseFloat(curr.total) || 0),
+      0
+    );
+
+    const withdrawalsMXN = data.withdrawals?.totalMXN || 0;
+    expectedMXN -= withdrawalsMXN;
+
+    const usdSalesMixed = sales.filter((s) => s.payment_method === "dolares");
+    expectedMXN += usdSalesMixed.reduce((acc, curr) => {
+      const saleTotal = parseFloat(curr.total) || 0;
+      const usdVal =
+        (parseFloat(curr.amount_usd) || 0) * (parseFloat(curr.exchange_rate) || 0);
+      return acc + (saleTotal - usdVal);
+    }, 0);
+
+    return {
+      ...data,
+      totalUSD,
+      expectedMXN,
+      withdrawals: data.withdrawals || { totalMXN: 0, totalUSD: 0, count: 0 },
+      cardTotal: data.cardTotal || 0,
+      transferTotal: data.transferTotal || 0,
+      cashTotal: data.cashTotal || 0,
+    };
+  };
+
   const loadSummary = async () => {
     try {
       setLoading(true);
-      const data = await cashCutService.getCurrentShiftSummary(cutType);
+      const shiftData = await cashCutService.getCurrentShiftSummary("turno");
+      setShiftSummary(processSummaryData(shiftData));
 
-      // Calculate Expectatives
-      const sales = data.sales || [];
-
-      // 1. Calculate Expected USD
-      const usdSales = sales.filter(
-        (s) => s.currency === "USD" || s.payment_method === "dolares",
-      );
-      const totalUSD = usdSales.reduce(
-        (acc, curr) => acc + (parseFloat(curr.amount_usd) || 0),
-        0,
-      );
-
-      // 2. Calculate Expected MXN
-      // Start with opening fund
-      let expectedMXN = parseFloat(cashSession?.opening_fund) || 0;
-
-      // Add Cash Sales (MXN)
-      const cashSales = sales.filter((s) => s.payment_method === "efectivo");
-      expectedMXN += cashSales.reduce(
-        (acc, curr) => acc + (parseFloat(curr.total) || 0),
-        0,
-      );
-
-      // Subtract Withdrawals (MXN)
-      const withdrawalsMXN = data.withdrawals?.totalMXN || 0;
-      expectedMXN -= withdrawalsMXN;
-
-      // Handle USD Sales (Add Sale Value in MXN, Subtract Change given in MXN)
-      // Effectively: Net Change to MXN Drawer = SaleTotal - (USDAmount * ExchangeRate)
-      // Example: Sale 100, Pay 10USD (200MXN). Change 100. Desk gets +10USD, -100MXN.
-      // 100 - 200 = -100. Correct.
-      const usdSalesMixed = sales.filter((s) => s.payment_method === "dolares");
-      expectedMXN += usdSalesMixed.reduce((acc, curr) => {
-        const saleTotal = parseFloat(curr.total) || 0;
-        const usdVal =
-          (parseFloat(curr.amount_usd) || 0) *
-          (parseFloat(curr.exchange_rate) || 0);
-        return acc + (saleTotal - usdVal);
-      }, 0);
-
-      setSummary({
-        ...data,
-        totalUSD,
-        expectedMXN,
-        withdrawals: data.withdrawals || { totalMXN: 0, totalUSD: 0, count: 0 }, // Store withdrawals info
-        cardTotal: data.cardTotal || 0,
-        transferTotal: data.transferTotal || 0,
-        cashTotal: data.cashTotal || 0,
-      });
-      setSalesDetails(sales);
-
-      // Initialize inputs
-      // We don't autofill actual cash to prevent assumption, or we can defaulting to 0 or expected?
-      // Previous code initialized to salesTotal, which was wrong. Let's start empty or 0.
-      // setActualCash(data.salesTotal.toFixed(2)); // Removing this autocalc to force counting
+      if (cutType === "dia") {
+        const dayData = await cashCutService.getCurrentShiftSummary("dia");
+        setDaySummary(processSummaryData(dayData));
+      }
     } catch (error) {
       console.error("Error cargando resumen:", error);
       Swal.fire(
@@ -149,76 +140,54 @@ export const CashCut = ({ onClose }) => {
   };
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (cutType === "dia") {
+      return executeCut("dia");
+    }
 
-    if (submitting) return;
-
-    // Validaciones para Cierre de Día
-    try {
-      if (cutType === "dia") {
-        /*
-        // Comentado para permitir cierre desde cualquier equipo según requerimiento
-        const isMain = await terminalService.checkIfMainTerminal();
-        if (!isMain) {
-          Swal.fire(
-            "Acceso Denegado",
-            "El Cierre de Día solo puede realizarse desde la Caja Principal.",
-            "warning",
-          );
-          return;
-        }
-        */
-        /*
-        // Comentado para permitir cerrar el día incluso con otras cajas abiertas según requerimiento
-        const blockingSessions = await cashCutService.checkBlockingSessions();
-        if (blockingSessions.length > 0) {
-          const sessionList = blockingSessions
-            .map(
-              (s) =>
-                `<li><strong>${s.terminals?.name || "Terminal desconocida"}</strong>: ${s.staff_name}</li>`,
-            )
-            .join("");
-
-          Swal.fire({
-            title: "No se puede cerrar el día",
-            html: `
-                            <p>Hay cajas con turno abierto. Deben realizar su corte primero:</p>
-                            <ul style="text-align: left; margin-top: 10px;">${sessionList}</ul>
-                        `,
-            icon: "error",
-          });
-          return;
-        }
-        */
-      }
-    } catch (error) {
-      console.error("Error en validaciones de cierre:", error);
-      Swal.fire(
-        "Error",
-        "Ocurrió un error verificando los permisos de cierre. Por favor revisa la conexión.",
-        "error",
-      );
+    if (diffMXN !== 0 && !notes.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Justificación Requerida",
+        text: "Por favor agrega una nota explicando la diferencia en caja",
+        confirmButtonColor: "#10b981",
+      });
       return;
     }
 
-    const diffMXN = (parseFloat(actualCash) || 0) - (summary?.expectedMXN || 0);
-    const diffUSD = (parseFloat(actualUSD) || 0) - (summary?.totalUSD || 0);
+    if (diffUSD !== 0 && !notes.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Justificación Requerida",
+        text: "Por favor agrega una nota explicando la diferencia en dólares",
+        confirmButtonColor: "#10b981",
+      });
+      return;
+    }
+
+    executeCut("turno");
+  };
+
+  const executeCut = async (typeToExecute) => {
+    if (submitting) return;
+
+    let currentSummary = typeToExecute === 'dia' ? daySummary : shiftSummary;
+
+    const diffMXN = typeToExecute === 'turno' ? (parseFloat(actualCash) || 0) - (currentSummary?.expectedMXN || 0) : 0;
+    const diffUSD = typeToExecute === 'turno' ? (parseFloat(actualUSD) || 0) - (currentSummary?.totalUSD || 0) : 0;
 
     const result = await Swal.fire({
-      title: cutType === "dia" ? "¿Cerrar el día?" : "¿Cerrar turno?",
-      html: `
-                <div style="text-align: left; font-size: 0.9em;">
-                    <p><strong>Fondo Inicial:</strong> ${formatMoney(parseFloat(cashSession?.opening_fund) || 0)}</p>
-                    <hr style="margin: 5px 0;">
-                    <p><strong>Esperado MXN:</strong> ${formatMoney(summary.expectedMXN || 0)}</p>
-                    <p><strong>Contado MXN:</strong> ${formatMoney(parseFloat(actualCash) || 0)}</p>
-                    <p style="color: ${diffMXN !== 0 ? "red" : "green"}"><strong>Diferencia MXN:</strong> ${formatMoney(diffMXN)}</p>
-                    <hr style="margin: 5px 0;">
-                    <p><strong>Esperado USD:</strong> ${formatMoney(summary.totalUSD || 0, "USD")}</p>
-                    <p><strong>Contado USD:</strong> ${formatMoney(parseFloat(actualUSD) || 0, "USD")}</p>
-                    <p style="color: ${diffUSD !== 0 ? "red" : "green"}"><strong>Diferencia USD:</strong> ${formatMoney(diffUSD, "USD")}</p>
-                </div>
-            `,
+      title: typeToExecute === "dia" ? "¿Cerrar el día?" : "¿Cerrar turno?",
+      html: `<div style="text-align: left; font-size: 0.9em;">
+        <p><strong>Fondo Inicial:</strong> ${formatMoney(parseFloat(cashSession?.opening_fund) || 0)}</p>
+        <hr style="margin: 5px 0;">
+        <p><strong>Esperado MXN:</strong> ${formatMoney(currentSummary.expectedMXN || 0)}</p>` +
+        (typeToExecute === 'turno' ? `<p><strong>Contado MXN:</strong> ${formatMoney(parseFloat(actualCash) || 0)}</p>
+        <p style="color: ${diffMXN !== 0 ? 'red' : 'green'}"><strong>Diferencia MXN:</strong> ${formatMoney(diffMXN)}</p>` : '') +
+        `<hr style="margin: 5px 0;">
+        <p><strong>Esperado USD:</strong> ${formatMoney(currentSummary.totalUSD || 0, "USD")}</p>` +
+        (typeToExecute === 'turno' ? `<p><strong>Contado USD:</strong> ${formatMoney(parseFloat(actualUSD) || 0, "USD")}</p>
+        <p style="color: ${diffUSD !== 0 ? 'red' : 'green'}"><strong>Diferencia USD:</strong> ${formatMoney(diffUSD, "USD")}</p>` : '') +
+        `</div>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Sí, cerrar",
@@ -233,36 +202,34 @@ export const CashCut = ({ onClose }) => {
       const cutData = {
         staffName: activeStaff?.name || "Desconocido",
         staffRole: activeRole,
-        cutType,
-        startTime: summary.startTime,
-        salesCount: summary.salesCount,
-        salesTotal: summary.salesTotal,
-        cashTotal: summary.cashTotal,
-        expectedCash: summary.expectedMXN,
-        actualCash: parseFloat(actualCash) || 0,
+        cutType: typeToExecute,
+        startTime: currentSummary.startTime,
+        salesCount: currentSummary.salesCount,
+        salesTotal: currentSummary.salesTotal,
+        cashTotal: currentSummary.cashTotal,
+        expectedCash: currentSummary.expectedMXN,
+        actualCash: typeToExecute === 'turno' ? (parseFloat(actualCash) || 0) : currentSummary.expectedMXN,
         difference: diffMXN,
-        expectedUSD: summary.totalUSD,
-        actualUSD: parseFloat(actualUSD) || 0,
+        expectedUSD: currentSummary.totalUSD,
+        actualUSD: typeToExecute === 'turno' ? (parseFloat(actualUSD) || 0) : currentSummary.totalUSD,
         differenceUSD: diffUSD,
-        cardTotal: summary.cardTotal,
-        transferTotal: summary.transferTotal,
+        cardTotal: currentSummary.cardTotal,
+        transferTotal: currentSummary.transferTotal,
         opening_fund: parseFloat(cashSession?.opening_fund) || 0,
         notes,
       };
 
       const savedCut = await cashCutService.createCashCut(cutData);
 
-      // Guardar resultado para el ticket
       setCutResult({
         ...savedCut,
         ...cutData,
-        withdrawals: summary.withdrawals,
+        withdrawals: currentSummary.withdrawals,
         endTime: new Date().toISOString(),
         difference: diffMXN,
         differenceUSD: diffUSD,
       });
 
-      // Mostrar ticket antes de bloquear
       setShowTicket(true);
     } catch (error) {
       console.error("Error al crear corte:", error);
@@ -325,6 +292,12 @@ export const CashCut = ({ onClose }) => {
   };
 
   const handleFinish = async () => {
+    if (cutType === "dia" && cutResult?.cutType === "turno") {
+      setShiftDeclared(true);
+      setShowTicket(false);
+      return;
+    }
+
     Swal.fire({
       title: "¡Corte realizado!",
       text:
@@ -336,9 +309,7 @@ export const CashCut = ({ onClose }) => {
       showConfirmButton: false,
     });
 
-    // Cerrar la sesión de visualización de caja
     await closeCashSession();
-
     lockScreen();
     if (onClose) onClose();
   };
@@ -381,19 +352,20 @@ export const CashCut = ({ onClose }) => {
     }
   };
 
+  const currentSummary = cutType === "dia" ? daySummary : shiftSummary;
+
   // Cálculos en tiempo real para la UI
-  const expectedMXN = summary?.expectedMXN || 0;
-  const diffMXN = (parseFloat(actualCash) || 0) - expectedMXN;
+  const expectedMXN = currentSummary?.expectedMXN || 0;
+  const diffMXN = cutType === "turno" ? (parseFloat(actualCash) || 0) - expectedMXN : 0;
 
-  const expectedUSD = summary?.totalUSD || 0;
-  const diffUSD = (parseFloat(actualUSD) || 0) - expectedUSD;
+  const expectedUSD = currentSummary?.totalUSD || 0;
+  const diffUSD = cutType === "turno" ? (parseFloat(actualUSD) || 0) - expectedUSD : 0;
 
-  // Efecto para recargar el resumen si cambia el tipo (proactivo por si el servicio se expande)
   useEffect(() => {
     loadSummary();
   }, [cutType]);
 
-  if (loading && !summary) {
+  if (loading && !currentSummary) {
     return (
       <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[1050] p-4">
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4 animate-pulse">
@@ -471,78 +443,318 @@ export const CashCut = ({ onClose }) => {
                 .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
             `}</style>
 
-      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl flex flex-col max-h-[95vh] lg:max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+      <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col max-h-[95vh] lg:max-h-[90vh] overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="px-8 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-4">
-            <div className="bg-amber-100 dark:bg-amber-900/30 p-3 rounded-2xl shadow-inner shadow-amber-200/50 dark:shadow-none">
-              <span className="material-symbols-rounded text-amber-600 dark:text-amber-400 text-3xl">
+        <div className="px-6 py-3.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-xl shadow-inner shadow-amber-200/50 dark:shadow-none">
+              <span className="material-symbols-rounded text-amber-600 dark:text-amber-400 text-2xl">
                 savings
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
+              <h1 className="text-xl font-black text-slate-800 dark:text-white tracking-tight leading-none">
                 CAJA
               </h1>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                 Control de Efectivo
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors bg-slate-100 dark:bg-slate-800 p-2 rounded-xl"
+            className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors bg-slate-100 dark:bg-slate-800 p-1.5 rounded-lg"
           >
-            <span className="material-symbols-rounded">close</span>
+            <span className="material-symbols-rounded text-xl">close</span>
           </button>
         </div>
 
-        <div className="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
+        <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4">
           {/* Botones de Acción Rápida (Retiros y Exportar) */}
-          <div className="flex gap-3 mb-2">
+          <div className="flex gap-2 mb-1">
             <button
               onClick={() => setShowWithdrawalModal(true)}
-              className="flex-1 py-3 px-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-lg text-rose-600 dark:text-rose-400 font-bold text-[10px] uppercase tracking-wider hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors flex items-center justify-center gap-1.5"
             >
-              <span className="material-symbols-rounded">money_off</span>
-              Registrar Retiro / Gasto
+              <span className="material-symbols-rounded text-base">money_off</span>
+              Retiro / Gasto
             </button>
             <button
               onClick={handleExportWithdrawals}
-              className="flex-1 py-3 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5"
             >
-              <span className="material-symbols-rounded">file_download</span>
-              Historial Retiros (Excel)
+              <span className="material-symbols-rounded text-base">file_download</span>
+              Historial Retiros
             </button>
           </div>
 
           {/* Selector de Tipo de Corte */}
-          <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl gap-1">
+          <div className="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl gap-1">
             <button
               onClick={() => setCutType("turno")}
-              className={`flex-1 flex items-center justify-center gap-3 py-3 px-4 rounded-xl transition-all font-bold text-sm ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all font-bold text-xs ${
                 cutType === "turno"
                   ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800"
               }`}
             >
-              <span className="material-symbols-rounded">person</span>
+              <span className="material-symbols-rounded text-base">person</span>
               Cierre de Turno
             </button>
             <button
               onClick={() => setCutType("dia")}
-              className={`flex-1 flex items-center justify-center gap-3 py-3 px-4 rounded-xl transition-all font-bold text-sm ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all font-bold text-xs ${
                 cutType === "dia"
                   ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800"
               }`}
             >
-              <span className="material-symbols-rounded">dark_mode</span>
+              <span className="material-symbols-rounded text-base">dark_mode</span>
               Cierre del Día
             </button>
           </div>
 
-          {/* Resumen Section */}
+          {/* ===== VISTA CIERRE DEL DÍA (dos tarjetas) ===== */}
+          {cutType === "dia" && (
+            <div className="space-y-4">
+              {/* ── TARJETA 1: CORTE DEL TURNO ── */}
+              <div className={`relative rounded-2xl border-2 transition-all duration-500 overflow-hidden ${
+                shiftDeclared
+                  ? "border-slate-200 dark:border-slate-700 opacity-50 pointer-events-none"
+                  : "border-amber-300 dark:border-amber-500/40 shadow-lg shadow-amber-100/50 dark:shadow-none"
+              }`}>
+                {shiftDeclared && (
+                  <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 z-10 flex items-center justify-center">
+                    <div className="bg-emerald-100 dark:bg-emerald-900/50 px-4 py-2 rounded-xl flex items-center gap-2">
+                      <span className="material-symbols-rounded text-emerald-600 dark:text-emerald-400 text-lg">check_circle</span>
+                      <span className="text-emerald-700 dark:text-emerald-300 font-black uppercase tracking-widest text-[10px]">Turno Declarado</span>
+                    </div>
+                  </div>
+                )}
+                <div className="px-4 py-2.5 bg-amber-50 dark:bg-amber-900/10 border-b border-amber-200 dark:border-amber-800/30 flex items-center gap-2">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 p-1.5 rounded-lg">
+                    <span className="material-symbols-rounded text-amber-600 dark:text-amber-400 text-lg">person</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Corte del Turno</h3>
+                    <p className="text-[9px] text-slate-500 font-bold">Inicio: {formatTime(shiftSummary?.startTime)}</p>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                  {/* Stats del turno */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <div className="text-base font-black text-slate-900 dark:text-white leading-none">{shiftSummary?.salesCount || 0}</div>
+                      <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Ventas</div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <div className="text-base font-black text-slate-900 dark:text-white leading-none">{formatMoney(shiftSummary?.salesTotal || 0)}</div>
+                      <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Monto Ventas</div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                      <div className="text-base font-black text-slate-900 dark:text-white leading-none">{formatMoney(parseFloat(cashSession?.opening_fund) || 0)}</div>
+                      <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Fondo Caja</div>
+                    </div>
+                    <div className="bg-emerald-500 p-2.5 rounded-lg shadow-md shadow-emerald-500/20">
+                      <div className="text-base font-black text-white leading-none">{formatMoney(shiftSummary?.expectedMXN || 0)}</div>
+                      <div className="text-[8px] uppercase font-bold text-emerald-50 tracking-widest mt-0.5">Esperado MXN</div>
+                    </div>
+                  </div>
+                  {/* Secundarios del turno */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {shiftSummary?.cardTotal > 0 && (
+                      <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/10 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                        <span className="material-symbols-rounded text-indigo-500 text-base">credit_card</span>
+                        <div>
+                          <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Tarjeta</p>
+                          <p className="text-xs font-black text-slate-900 dark:text-white">{formatMoney(shiftSummary.cardTotal)}</p>
+                        </div>
+                      </div>
+                    )}
+                    {shiftSummary?.transferTotal > 0 && (
+                      <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/10 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                        <span className="material-symbols-rounded text-indigo-500 text-base">account_balance</span>
+                        <div>
+                          <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Transferencia</p>
+                          <p className="text-xs font-black text-slate-900 dark:text-white">{formatMoney(shiftSummary.transferTotal)}</p>
+                        </div>
+                      </div>
+                    )}
+                    {shiftSummary?.withdrawals?.count > 0 && (
+                      <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-900/10 p-2 rounded-lg border border-rose-100 dark:border-rose-900/30">
+                        <span className="material-symbols-rounded text-rose-500 text-base">money_off</span>
+                        <div>
+                          <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Retiros ({shiftSummary.withdrawals.count})</p>
+                          <p className="text-xs font-black text-rose-600 dark:text-rose-400">-{formatMoney(shiftSummary.withdrawals.totalMXN)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Inputs de efectivo dentro de la tarjeta del turno */}
+                  {!shiftDeclared && (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        <div>
+                          <label className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-bold text-[10px] mb-1.5">
+                            <span className="material-symbols-rounded text-emerald-500 text-sm">payments</span>
+                            Efectivo Físico (MXN)
+                          </label>
+                          <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-lg font-black text-emerald-500">$</span>
+                            </div>
+                            <input
+                              className="block w-full pl-9 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xl font-black text-slate-900 dark:text-white focus:ring-0 focus:border-amber-500 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                              placeholder="0.00"
+                              type="number"
+                              step="0.01"
+                              value={actualCash}
+                              onChange={(e) => setActualCash(e.target.value)}
+                            />
+                            <div className="absolute top-1 right-2.5 text-[8px] font-bold text-slate-400">
+                              ESPERADO: {formatMoney(shiftSummary?.expectedMXN || 0)}
+                            </div>
+                          </div>
+                        </div>
+                        {(shiftSummary?.totalUSD > 0 || actualUSD > 0) && (
+                          <div>
+                            <label className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-bold text-[10px] mb-1.5">
+                              <span className="material-symbols-rounded text-emerald-500 text-sm">currency_exchange</span>
+                              Efectivo Físico (USD)
+                            </label>
+                            <div className="relative group">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span className="text-base font-black text-emerald-500">US$</span>
+                              </div>
+                              <input
+                                className="block w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xl font-black text-slate-900 dark:text-white focus:ring-0 focus:border-amber-500 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                                placeholder="0.00"
+                                type="number"
+                                step="0.01"
+                                value={actualUSD}
+                                onChange={(e) => setActualUSD(e.target.value)}
+                              />
+                              <div className="absolute top-1 right-2.5 text-[8px] font-bold text-slate-400">
+                                ESPERADO: {formatMoney(shiftSummary?.totalUSD || 0, "USD")}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Botón declarar turno */}
+                      <button
+                        onClick={() => executeCut("turno")}
+                        disabled={submitting}
+                        className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-[0.12em] text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                      >
+                        {submitting ? "Procesando..." : "Declarar Corte del Turno"}
+                        {!submitting && <span className="material-symbols-rounded text-base">chevron_right</span>}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── TARJETA 2: CIERRE DEL DÍA ── */}
+              <div className={`rounded-2xl border-2 transition-all duration-500 overflow-hidden ${
+                shiftDeclared
+                  ? "border-emerald-300 dark:border-emerald-500/40 shadow-lg shadow-emerald-100/50 dark:shadow-none"
+                  : "border-slate-200 dark:border-slate-700 opacity-60"
+              }`}>
+                <div className={`px-4 py-2.5 border-b flex items-center gap-2 ${
+                  shiftDeclared
+                    ? "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/30"
+                    : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                }`}>
+                  <div className={`p-1.5 rounded-lg ${
+                    shiftDeclared ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-slate-200 dark:bg-slate-700"
+                  }`}>
+                    <span className={`material-symbols-rounded text-lg ${
+                      shiftDeclared ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"
+                    }`}>dark_mode</span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Cierre del Día</h3>
+                    <p className="text-[9px] text-slate-500 font-bold">
+                      {shiftDeclared ? `Período completo — Inicio: ${formatTime(daySummary?.startTime)}` : "Declara el turno primero"}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                  {shiftDeclared && daySummary ? (
+                    <>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                        <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <div className="text-base font-black text-slate-900 dark:text-white leading-none">{daySummary.salesCount || 0}</div>
+                          <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Ventas del Día</div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <div className="text-base font-black text-slate-900 dark:text-white leading-none">{formatMoney(daySummary.salesTotal || 0)}</div>
+                          <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Monto Total</div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <div className="text-base font-black text-slate-900 dark:text-white leading-none">{formatMoney(daySummary.cashTotal || 0)}</div>
+                          <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">Efectivo Total</div>
+                        </div>
+                        <div className="bg-emerald-500 p-2.5 rounded-lg shadow-md shadow-emerald-500/20">
+                          <div className="text-base font-black text-white leading-none">{formatMoney(daySummary.expectedMXN || 0)}</div>
+                          <div className="text-[8px] uppercase font-bold text-emerald-50 tracking-widest mt-0.5">Esperado Día</div>
+                        </div>
+                      </div>
+                      {/* Secundarios del día */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {daySummary.cardTotal > 0 && (
+                          <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/10 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                            <span className="material-symbols-rounded text-indigo-500 text-base">credit_card</span>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Tarjeta</p>
+                              <p className="text-xs font-black text-slate-900 dark:text-white">{formatMoney(daySummary.cardTotal)}</p>
+                            </div>
+                          </div>
+                        )}
+                        {daySummary.transferTotal > 0 && (
+                          <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/10 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
+                            <span className="material-symbols-rounded text-indigo-500 text-base">account_balance</span>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Transferencia</p>
+                              <p className="text-xs font-black text-slate-900 dark:text-white">{formatMoney(daySummary.transferTotal)}</p>
+                            </div>
+                          </div>
+                        )}
+                        {daySummary.totalUSD > 0 && (
+                          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/10 p-2 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                            <span className="material-symbols-rounded text-emerald-500 text-base">currency_exchange</span>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Dólares</p>
+                              <p className="text-xs font-black text-slate-900 dark:text-white">{formatMoney(daySummary.totalUSD, "USD")}</p>
+                            </div>
+                          </div>
+                        )}
+                        {daySummary.withdrawals?.count > 0 && (
+                          <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-900/10 p-2 rounded-lg border border-rose-100 dark:border-rose-900/30">
+                            <span className="material-symbols-rounded text-rose-500 text-base">money_off</span>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">Retiros ({daySummary.withdrawals.count})</p>
+                              <p className="text-xs font-black text-rose-600 dark:text-rose-400">-{formatMoney(daySummary.withdrawals.totalMXN)}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-4 text-slate-400">
+                      <span className="material-symbols-rounded text-3xl mb-1">lock</span>
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Primero declara el corte del turno</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== VISTA CORTE DE TURNO (original) ===== */}
+          {cutType === "turno" && (
+            <>
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-black uppercase tracking-widest text-xs">
@@ -552,13 +764,13 @@ export const CashCut = ({ onClose }) => {
                 Resumen del Período
               </div>
               <span className="text-[10px] text-slate-500 font-bold uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                Inicio: {formatTime(summary?.startTime)}
+                Inicio: {formatTime(currentSummary?.startTime)}
               </span>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <div className="text-2xl font-black text-slate-900 dark:text-white mb-1 leading-none">
-                  {summary?.salesCount || 0}
+                  {currentSummary?.salesCount || 0}
                 </div>
                 <div className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
                   Ventas Realizadas
@@ -566,7 +778,7 @@ export const CashCut = ({ onClose }) => {
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <div className="text-2xl font-black text-slate-900 dark:text-white mb-1 leading-none">
-                  {formatMoney(summary?.salesTotal || 0)}
+                  {formatMoney(currentSummary?.salesTotal || 0)}
                 </div>
                 <div className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
                   Monto en Ventas
@@ -592,7 +804,7 @@ export const CashCut = ({ onClose }) => {
 
             {/* Totales Secundarios (Tarjeta, Transferencia, USD) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {summary?.cardTotal > 0 && (
+              {currentSummary?.cardTotal > 0 && (
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-xl">
@@ -605,18 +817,18 @@ export const CashCut = ({ onClose }) => {
                         Tarjeta
                       </p>
                       <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                        {formatMoney(summary.cardTotal)}
+                        {formatMoney(currentSummary.cardTotal)}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {summary?.transferTotal > 0 && (
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-purple-100 dark:border-purple-900/30 flex items-center justify-between">
+              {currentSummary?.transferTotal > 0 && (
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-xl">
-                      <span className="material-symbols-rounded text-purple-600 dark:text-purple-400 text-lg">
+                    <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-xl">
+                      <span className="material-symbols-rounded text-indigo-600 dark:text-indigo-400 text-lg">
                         account_balance
                       </span>
                     </div>
@@ -625,14 +837,14 @@ export const CashCut = ({ onClose }) => {
                         Transferencia
                       </p>
                       <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                        {formatMoney(summary.transferTotal)}
+                        {formatMoney(currentSummary.transferTotal)}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {summary?.totalUSD > 0 && (
+              {currentSummary?.totalUSD > 0 && (
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-xl">
@@ -645,14 +857,14 @@ export const CashCut = ({ onClose }) => {
                         Dólares
                       </p>
                       <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                        {formatMoney(summary.totalUSD, "USD")}
+                        {formatMoney(currentSummary.totalUSD, "USD")}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {summary?.withdrawals?.count > 0 && (
+              {currentSummary?.withdrawals?.count > 0 && (
                 <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-rose-100 dark:border-rose-900/30 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-rose-100 dark:bg-rose-900/30 p-2 rounded-xl">
@@ -662,10 +874,10 @@ export const CashCut = ({ onClose }) => {
                     </div>
                     <div>
                       <p className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
-                        Retiros ({summary.withdrawals.count})
+                        Retiros ({currentSummary.withdrawals.count})
                       </p>
                       <p className="text-lg font-black text-rose-600 dark:text-rose-400 leading-tight">
-                        -{formatMoney(summary.withdrawals.totalMXN)}
+                        -{formatMoney(currentSummary.withdrawals.totalMXN)}
                       </p>
                     </div>
                   </div>
@@ -675,7 +887,7 @@ export const CashCut = ({ onClose }) => {
           </section>
 
           {/* Efectivo en Caja Inputs */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section>
               <label className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-black uppercase tracking-widest text-xs mb-4">
                 <span className="material-symbols-rounded text-emerald-500">
@@ -704,7 +916,7 @@ export const CashCut = ({ onClose }) => {
             </section>
 
             {/* USD Input Section */}
-            {(summary?.totalUSD > 0 || actualUSD > 0) && (
+            {(currentSummary?.totalUSD > 0 || actualUSD > 0) && (
               <section>
                 <label className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-black uppercase tracking-widest text-xs mb-4">
                   <span className="material-symbols-rounded text-emerald-500">
@@ -786,7 +998,7 @@ export const CashCut = ({ onClose }) => {
               </span>
             </div>
 
-            {(summary?.totalUSD > 0 || actualUSD > 0) && (
+            {(currentSummary?.totalUSD > 0 || actualUSD > 0) && (
               <div
                 className={`p-6 rounded-2xl border-2 flex items-center justify-between transition-all duration-500 ${
                   diffUSD === 0
@@ -838,19 +1050,21 @@ export const CashCut = ({ onClose }) => {
               </div>
             )}
           </div>
+          </>
+          )}
 
           {/* Observaciones */}
           <section>
-            <label className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-black uppercase tracking-widest text-xs mb-4">
-              <span className="material-symbols-rounded text-slate-400">
+            <label className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-black uppercase tracking-widest text-[10px] mb-2">
+              <span className="material-symbols-rounded text-slate-400 text-base">
                 notes
               </span>
               Observaciones (Opcional)
             </label>
             <textarea
-              className="block w-full p-6 bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-slate-700 dark:text-slate-300 focus:ring-0 focus:border-emerald-500 transition-all resize-none shadow-inner"
+              className="block w-full p-3 bg-slate-50 dark:bg-slate-800/80 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 focus:ring-0 focus:border-emerald-500 transition-all resize-none shadow-inner"
               placeholder="Anota cualquier detalle relevante del corte..."
-              rows="3"
+              rows="2"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             ></textarea>
@@ -858,26 +1072,33 @@ export const CashCut = ({ onClose }) => {
         </div>
 
         {/* Footer and Actions */}
-        <div className="p-8 border-t border-slate-100 dark:border-slate-800 space-y-4 bg-slate-50/30 dark:bg-slate-900/40">
-          <div className="flex gap-4">
+        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 space-y-2 bg-slate-50/30 dark:bg-slate-900/40">
+          <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 py-5 px-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-xs hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95"
+              className="flex-1 py-3 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] hover:bg-white dark:hover:bg-slate-800 transition-all active:scale-95"
             >
               Cancelar
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex-[2.5] py-5 px-6 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-[0.2em] text-sm hover:translate-y-[-2px] hover:shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 disabled:translate-y-0"
-            >
-              {submitting
-                ? "Procesando Corte..."
-                : `Ejecutar ${cutType === "dia" ? "Cierre de Día" : "Cierre de Turno"}`}
-              {!submitting && (
-                <span className="material-symbols-rounded">chevron_right</span>
-              )}
-            </button>
+            {cutType === "dia" ? (
+              <button
+                onClick={() => executeCut("dia")}
+                disabled={submitting || !shiftDeclared}
+                className="flex-[2.5] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-[0.15em] text-xs hover:translate-y-[-1px] hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 disabled:translate-y-0 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Procesando..." : "Ejecutar Cierre del Día"}
+                {!submitting && <span className="material-symbols-rounded text-base">chevron_right</span>}
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-[2.5] py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-[0.15em] text-xs hover:translate-y-[-1px] hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:translate-y-0"
+              >
+                {submitting ? "Procesando Corte..." : "Ejecutar Cierre de Turno"}
+                {!submitting && <span className="material-symbols-rounded text-base">chevron_right</span>}
+              </button>
+            )}
           </div>
           <div className="flex items-center justify-center gap-2">
             <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
@@ -907,3 +1128,4 @@ export const CashCut = ({ onClose }) => {
     </div>
   );
 };
+

@@ -333,84 +333,121 @@
 }
 
 /* ===== Dark mode ===== */
-:root.dark .cash-reports__title-v2 {
+html.dark .cash-reports {
+  background-color: #0f172a;
+}
+
+html.dark .cash-reports__title-v2 {
   color: #f1f5f9;
 }
 
-:root.dark .cash-reports__title-v2 .material-icons-outlined {
+html.dark .cash-reports__title-v2 .material-icons-outlined {
   background: rgba(255, 255, 255, 0.05);
   color: #e2e8f0;
 }
 
-:root.dark .cash-reports__badge {
+html.dark .cash-reports__badge {
   background: rgba(124, 58, 237, 0.15);
   color: #a78bfa;
 }
 
-:root.dark .cash-reports__filters {
+html.dark .cash-reports__filters {
   background: #1e293b;
   border-color: #334155;
 }
 
-:root.dark .cash-reports__filter-group label {
+html.dark .cash-reports__filter-group label {
   color: #64748b;
 }
 
-:root.dark .cash-reports__filter-group input,
-:root.dark .cash-reports__filter-group select {
+html.dark .cash-reports__filter-group input,
+html.dark .cash-reports__filter-group select {
   background: #0f172a;
   border-color: #334155;
   color: #e2e8f0;
 }
 
-:root.dark .cash-reports__card {
+html.dark .cash-reports__card {
   background: #1e293b;
   border-color: #334155;
 }
 
-:root.dark .cash-reports__card-value {
+html.dark .cash-reports__card-value {
   color: #f1f5f9;
 }
 
-:root.dark .cash-reports__table-wrapper {
+html.dark .cash-reports__table-wrapper {
   background: #1e293b;
   border-color: #334155;
 }
 
-:root.dark .cash-reports__table thead {
+html.dark .cash-reports__table thead {
   background: #0f172a;
   border-color: #334155;
 }
 
-:root.dark .cash-reports__table td {
+html.dark .cash-reports__table td {
   border-color: #334155;
   color: #e2e8f0;
 }
 
-:root.dark .cash-reports__table tbody tr:hover {
+html.dark .cash-reports__table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
-:root.dark .cash-reports__type-badge--turno {
+html.dark .cash-reports__type-badge--turno {
   background: rgba(37, 99, 235, 0.15);
   color: #60a5fa;
 }
 
-:root.dark .cash-reports__type-badge--dia {
+html.dark .cash-reports__type-badge--dia {
   background: rgba(190, 24, 93, 0.15);
-  color: #f472b6;
+  color: #fb7185;
 }
 
-:root.dark .cash-reports__type-badge--parcial {
-  background: rgba(146, 64, 14, 0.15);
-  color: #fbbf24;
+html.dark .cash-reports__status--abierto {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
 }
 
-:root.dark .cash-reports__empty .material-icons-outlined {
+html.dark .cash-reports__status--cerrado {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+}
+
+html.dark .cash-reports__action-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+html.dark .cash-reports__action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+html.dark .cash-reports__modal-content {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .cash-reports__modal-header h2 {
+  color: #f1f5f9;
+}
+
+html.dark .cash-reports__detail-item .label {
+  color: #94a3b8;
+}
+
+html.dark .cash-reports__detail-item .value {
+  color: #f1f5f9;
+}
+
+html.dark .cash-reports__empty .material-icons-outlined {
   color: #334155;
 }
 
-:root.dark .cash-reports__empty h3 {
+html.dark .cash-reports__empty h3 {
   color: #e2e8f0;
 }
 
@@ -744,80 +781,21 @@
 }
 
 /* ============================================
-   Dark Mode Support for CashReportsView
+   Dark Mode Support for Modals & Badges (CashReportsView)
    ============================================ */
 
-.dark {
-  --report-title-color: #f8fafc;
-  --report-icon-bg: #1e293b;
+html.dark .method-badge--efectivo { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+html.dark .method-badge--tarjeta { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+html.dark .method-badge--transferencia { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+html.dark .method-badge--dolares { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+html.dark .modal-content {
+    background: #0f172a;
+    color: #f1f5f9;
 }
 
-.dark .cash-reports__title-v2 {
-  color: #f8fafc !important;
-}
-
-.dark .cash-reports__title-v2 .material-icons-outlined {
-  color: #f8fafc !important;
-  background: #1e293b !important;
-}
-
-.dark .cash-reports__filters {
-  background: #1e293b !important;
-  border-color: #334155 !important;
-}
-
-.dark .cash-reports__filter-group label {
-  color: #94a3b8 !important;
-}
-
-.dark .cash-reports__filter-group input,
-.dark .cash-reports__filter-group select {
-  background: #0f172a !important;
-  border-color: #334155 !important;
-  color: #f1f5f9 !important;
-}
-
-.dark .cash-reports__card {
-  background: #1e293b !important;
-  border-color: #475569 !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-}
-
-.dark .cash-reports__card-label {
-  color: #cbd5e1 !important;
-}
-
-.dark .cash-reports__card-value {
-  color: #f8fafc !important;
-}
-
-.dark .cash-reports__table-container {
-  background: #1e293b !important;
-  border-color: #334155 !important;
-}
-
-.dark .cash-reports__table th {
-  background: #0f172a !important;
-  color: #94a3b8 !important;
-  border-bottom-color: #334155 !important;
-}
-
-.dark .cash-reports__table td {
-  color: #e2e8f0 !important;
-  border-bottom-color: #334155 !important;
-}
-
-.dark .method-badge--efectivo { background: rgba(34, 197, 94, 0.2) !important; color: #4ade80 !important; }
-.dark .method-badge--tarjeta { background: rgba(59, 130, 246, 0.2) !important; color: #60a5fa !important; }
-.dark .method-badge--transferencia { background: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
-
-.dark .modal-content {
-    background: #0f172a !important;
-    color: #f1f5f9 !important;
-}
-
-.dark .report-card {
-    background: #1e293b !important;
+html.dark .report-card {
+    background: #1e293b;
 }
 
 @media print {

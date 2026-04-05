@@ -2,8 +2,8 @@
 
 Sistema de Punto de Venta (POS) profesional desarrollado con React y Supabase, diseñado para pequeños y medianos negocios.
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
-![License](https://img.shields.io/badge/license-Private-red)
+![Version](https://img.shields.io/badge/version-1.3.7-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)
 
@@ -26,6 +26,7 @@ Sistema de Punto de Venta (POS) profesional desarrollado con React y Supabase, d
 - [API de Servicios](#-api-de-servicios)
 - [Despliegue](#-despliegue)
 - [Esquema de Base de Datos](#-esquema-de-base-de-datos)
+- [Documentación Adicional](#-documentación-adicional)
 
 ---
 
@@ -514,9 +515,31 @@ Configura en el dashboard de Vercel:
 
 ---
 
+---
+
+## 📚 Documentación Adicional
+
+Para una comprensión profunda del sistema, consulta los siguientes manuales y guías:
+
+### Guías Técnicas y de Despliegue
+- [Guía de Despliegue en Vercel](GUIA_DESPLIEGUE_VERCEL.md)
+- [Documentación de la API de Servicios](DOCUMENTACION_API.md)
+- [Manual de API Administrativa 2026](MANUAL_API_ADMINISTRATIVA_2026.md)
+- [Manual de Despliegue Local](MANUAL_DESPLEGUE_LOCAL.md)
+- [Manual de Mantenimiento de DB](MANTENIMIENTO_DB_GUIA.md)
+
+### Guías de Operación y Soporte
+- [Manual Integral FoxSolid 2026](MANUAL_INTEGRAL_FOXSOLID_2026.md)
+- [Guía de Operación Offline 2026](GUIA_OPERACION_OFFLINE_2026.md)
+- [Manual de Seguridad 2026](MANUAL_SEGURIDAD_2026.md)
+- [Guía para Habilitar Nuevos Clientes](Habilitar_Nuevo_Cliente.md)
+- [Guía de Actualización de Clientes](GUIA_ACTUALIZACION_CLIENTES.md)
+
+---
+
 ## 📄 Licencia
 
-Este proyecto es **privado** y de uso exclusivo del propietario.
+Este proyecto está bajo la licencia [MIT](LICENSE).
 
 ---
 
