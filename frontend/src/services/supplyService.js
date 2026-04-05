@@ -92,6 +92,7 @@ export const supplyService = {
             .from('supplies')
             .select('current_stock, content_per_presentation')
             .eq('id', entryData.supply_id)
+            .eq('user_id', user.id)
             .single();
 
         if (getError) throw getError;
@@ -108,13 +109,14 @@ export const supplyService = {
             .from('supplies')
             .update({ current_stock: newStock })
             .eq('id', entryData.supply_id)
+            .eq('user_id', user.id)
             .select()
             .single();
 
         if (error) throw error;
 
         // 4. REGISTRAR MOVIMIENTO con ambos datos
-        await supabase
+        const { error: moveError } = await supabase
             .from('supply_movements')
             .insert([{
                 user_id: user.id,
@@ -127,6 +129,12 @@ export const supplyService = {
                 staff_name: 'Administrador',
                 usage_date: new Date().toISOString().split('T')[0]
             }]);
+
+        if (moveError) {
+            console.error("Error al registrar movimiento:", moveError);
+            // No lanzamos error fatal para no revertir el stock si ya se actualizó, 
+            // pero informamos en consola.
+        }
 
         return data;
     },
