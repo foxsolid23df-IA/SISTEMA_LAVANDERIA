@@ -268,20 +268,19 @@ export const cashCutService = {
                         sales = await salesService.getSalesSince(startTime, terminalId);
 
                         // Normalizar órdenes al formato de "venta" para el resumen
-                        const normalizedOrders = sessionOrders.map(order => ({
+                        const normalizedOrders = (sessionOrders || []).map(order => ({
                             ...order,
-                            total: parseFloat(order.total),
+                            total: parseFloat(order.total || 0),
                             // Mapeo de métodos de pago de órdenes a formato de ventas/corte
                             payment_method: order.payment_method === 'cash' ? 'efectivo' :
                                 order.payment_method === 'card' ? 'tarjeta' :
                                     order.payment_method === 'usd_cash' ? 'dolares' :
                                         order.payment_method,
+                            currency: order.payment_method === 'usd_cash' ? 'USD' : 'MXN',
                             is_order: true,
-                            // Si es USD, intentamos proveer el monto en USD para que aparezca en el resumen
-                            // Aunque la tabla orders no lo tiene, si el método es usd_cash, el total es en MXN
-                            // pero el pago fue en USD. Como no tenemos la tasa guardada en la orden, 
-                            // dejamos amount_usd como null o 0, a menos que el sistema se actualice para guardarlo.
-                            amount_usd: order.payment_method === 'usd_cash' ? 0 : 0
+                            // Si es usd_cash, el total en pesos es lo que el sistema guardó como total de la orden
+                            // Intentamos recuperar el valor en USD si existiera, o calculamos un estimado usando el tipo de cambio de la sesión
+                            amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / (parseFloat(session.exchange_rate) || 20)) : 0
                         }));
 
                         sales = [...sales, ...normalizedOrders];
@@ -294,16 +293,20 @@ export const cashCutService = {
                         sales = await salesService.getSalesSince(startTime, terminalId);
 
                         const ordersSince = await orderService.getOrdersSince(startTime);
-                        const normalizedOrders = ordersSince.map(order => ({
-                            ...order,
-                            total: parseFloat(order.total),
-                            payment_method: order.payment_method === 'cash' ? 'efectivo' :
-                                order.payment_method === 'card' ? 'tarjeta' :
-                                    order.payment_method === 'usd_cash' ? 'dolares' :
-                                        order.payment_method,
-                            is_order: true
-                        }));
-                        sales = [...sales, ...normalizedOrders];
+                        if (ordersSince && ordersSince.length > 0) {
+                            const normalizedOrders = ordersSince.map(order => ({
+                                ...order,
+                                total: parseFloat(order.total || 0),
+                                payment_method: order.payment_method === 'cash' ? 'efectivo' :
+                                    order.payment_method === 'card' ? 'tarjeta' :
+                                        order.payment_method === 'usd_cash' ? 'dolares' :
+                                            order.payment_method,
+                                currency: order.payment_method === 'usd_cash' ? 'USD' : 'MXN',
+                                is_order: true,
+                                amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / 20) : 0
+                            }));
+                            sales = [...sales, ...normalizedOrders];
+                        }
                     }
                 } else {
                     console.warn("Terminal ID not found in localStorage");

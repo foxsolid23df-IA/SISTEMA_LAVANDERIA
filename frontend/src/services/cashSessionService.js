@@ -31,6 +31,28 @@ export const cashSessionService = {
     },
 
     /**
+     * Busca SI HAY ALGUNA SESIÓN ABIERTA en cualquier terminal de este comercio.
+     * Útil para detectar si el usuario olvidó cerrar sesión en otro equipo 
+     * o si hubo un cambio de terminal_id accidental.
+     */
+    async getGlobalActiveSession() {
+        const { data, error } = await supabase
+            .from('cash_sessions')
+            .select('*, terminals(name)')
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+             console.error('Error obteniendo sesión global activa:', error);
+             return null;
+        }
+
+        return data;
+    },
+
+    /**
      * Abre una nueva sesión de caja con el fondo inicial
      */
     async openSession(staffName, openingFund, staffId = null) {

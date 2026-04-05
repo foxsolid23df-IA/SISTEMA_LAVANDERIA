@@ -4,7 +4,18 @@ const TERMINAL_ID_KEY = 'pos_terminal_id';
 const TERMINAL_NAME_KEY = 'pos_terminal_name';
 
 export const terminalService = {
-    getTerminalId: () => localStorage.getItem(TERMINAL_ID_KEY),
+    getTerminalId() {
+        return localStorage.getItem(TERMINAL_ID_KEY);
+    },
+
+    setTerminalId(id) {
+        if (id) {
+            localStorage.setItem(TERMINAL_ID_KEY, id);
+        } else {
+            localStorage.removeItem(TERMINAL_ID_KEY);
+        }
+    },
+
     getTerminalName: () => localStorage.getItem(TERMINAL_NAME_KEY),
 
     async registerTerminal(name, location = '', isMain = false) {
@@ -42,10 +53,14 @@ export const terminalService = {
         const { data, error } = await supabase
             .from('terminals')
             .select('*')
-            .eq('is_active', true) // Solo terminales activas
-            .order('name');
-        if (error) throw error;
-        return data;
+            .order('name', { ascending: true });
+
+        if (error) {
+            console.error('Error obteniendo terminales:', error);
+            throw error;
+        }
+
+        return data || [];
     },
 
     async deleteTerminal(id) {
@@ -65,7 +80,6 @@ export const terminalService = {
         return true;
     },
 
-    // Función para resetear la terminal local (útil para pruebas o reconfiguración)
     resetLocalTerminal() {
         localStorage.removeItem(TERMINAL_ID_KEY);
         localStorage.removeItem(TERMINAL_NAME_KEY);
@@ -141,6 +155,12 @@ export const terminalService = {
                 console.warn(`[TerminalService] La terminal ${terminalId} pertenece a otro usuario. Reseteando configuración local.`);
                 this.resetLocalTerminal();
                 return false;
+            }
+
+            // Si existe en la BD pero no localmente (por ejemplo, después de un resetLocalTerminal)
+            // se vuelve a guardar para asegurar persistencia
+            if (!this.getTerminalId()) {
+                this.setTerminalId(data.id);
             }
 
             console.log(`[TerminalService] Terminal validada correctamente:`, data);

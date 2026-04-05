@@ -191,6 +191,9 @@ export const orderService = {
   // Obtener órdenes desde una fecha
   async getOrdersSince(startTime, terminalId = null) {
     if (!startTime) return [];
+    
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
 
     let query = supabase
       .from('orders')
@@ -202,6 +205,10 @@ export const orderService = {
       .gte('created_at', startTime)
       .order('created_at', { ascending: false });
 
+    if (user) {
+      query = query.eq('user_id', user.id);
+    }
+
     const { data: orders, error } = await query;
 
     if (error) throw error;
@@ -212,16 +219,23 @@ export const orderService = {
   async getOrdersBySession(sessionId) {
     if (!sessionId) return [];
 
-    const { data, error } = await supabase
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+
+    let query = supabase
       .from('orders')
       .select(`
         *,
         customers (name, phone),
         order_items (*)
       `)
-      .eq('cash_session_id', sessionId)
-      .order('created_at', { ascending: false });
+      .eq('cash_session_id', sessionId);
 
+    if (user) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   },

@@ -308,11 +308,24 @@ export const AuthProvider = ({ children }) => {
       if (session) {
         setCashSession(session);
         setNeedsCashFund(false);
+        return session;
+      }
+
+      // Si no hay sesión en ESTA terminal, buscar si hay una abierta en OTRA
+      const globalSession = await cashSessionService.getGlobalActiveSession();
+      if (globalSession) {
+        // Encontró una sesión en otra terminal
+        console.log("[Auth] Sesión abierta encontrada en otra terminal:", globalSession.terminals?.name);
+        
+        // Aquí podríamos disparar un aviso al usuario
+        // Por ahora, solo informamos que necesita fondo (o cerrar la otra)
+        setCashSession(null);
+        setNeedsCashFund(true);
       } else {
         setCashSession(null);
         setNeedsCashFund(true);
       }
-      return session;
+      return null;
     } catch (error) {
       if (!isAbortError(error)) {
         console.error("Error verificando sesión de caja:", error);
