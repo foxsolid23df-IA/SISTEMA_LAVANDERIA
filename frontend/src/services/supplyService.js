@@ -104,7 +104,7 @@ export const supplyService = {
         const realQuantity = qtyPresentations * factor;
 
         // 3. Actualizar stock (sumando en unidad base)
-        const newStock = parseFloat(supply.current_stock || 0) + realQuantity;
+        const newStock = Math.round((parseFloat(supply.current_stock || 0) + realQuantity) * 10000) / 10000;
         const { data, error } = await supabase
             .from('supplies')
             .update({ current_stock: newStock })
@@ -170,7 +170,7 @@ export const supplyService = {
         }
 
         // 3. Calcular nuevo stock
-        const newStock = parseFloat(supply.current_stock || 0) - realQuantity;
+        const newStock = Math.round((parseFloat(supply.current_stock || 0) - realQuantity) * 10000) / 10000;
 
         // 4. Actualizar stock
         const { data, error } = await supabase
@@ -225,7 +225,7 @@ export const supplyService = {
                 .single();
 
             if (!error) {
-                const diff = parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0);
+                const diff = Math.round((parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0)) * 10000) / 10000;
                 
                 // Si viene el último conteo en los datos, calcular el gasto real
                 const lastCount = item.last_count !== undefined && item.last_count !== null 

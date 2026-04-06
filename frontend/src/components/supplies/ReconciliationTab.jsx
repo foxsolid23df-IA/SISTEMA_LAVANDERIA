@@ -403,9 +403,9 @@ export default function ReconciliationTab({ supplies, onCancel, onSuccess }) {
                 </tr>
               )}
               {periodData.map((item) => {
-                const theoric = parseFloat(item.theoretical_stock || 0);
+                const theoric = Math.round(parseFloat(item.theoretical_stock || 0) * 10000) / 10000;
                 const phys = physicalStocks[item.supply_id] !== undefined ? physicalStocks[item.supply_id] : theoric;
-                const diff = phys - theoric;
+                const diff = Math.round((parseFloat(phys || 0) - theoric) * 10000) / 10000;
                 
                 const diffColor = diff < 0 
                   ? "text-rose-600 bg-rose-50" 
