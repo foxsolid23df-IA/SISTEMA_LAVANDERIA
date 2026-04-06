@@ -313,10 +313,10 @@ export const CashReportsView = () => {
                     <td>
                       <div className="status-indicator">
                         <span 
-                          className={`status-dot status-dot--${!cut.fecha_cierre ? 'open' : 'closed'}`}
+                          className={`status-dot status-dot--${cut.cut_type === 'parcial' ? 'open' : 'closed'}`}
                         ></span>
-                        <span className={`status-text--${!cut.fecha_cierre ? 'open' : 'closed'}`}>
-                          {!cut.fecha_cierre ? 'Abierta' : 'Cerrada'}
+                        <span className={`status-text--${cut.cut_type === 'parcial' ? 'open' : 'closed'}`}>
+                          {cut.cut_type === 'parcial' ? 'Abierta' : 'Cerrada'}
                         </span>
                       </div>
                     </td>
