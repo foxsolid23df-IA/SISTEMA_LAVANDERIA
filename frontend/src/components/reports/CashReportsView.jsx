@@ -272,6 +272,7 @@ export const CashReportsView = () => {
                 <th>Fecha</th>
                 <th>Hora</th>
                 <th>Tipo</th>
+                <th>Estatus</th>
                 <th>Empleado</th>
                 <th>Ventas</th>
                 <th>Total MXN</th>
@@ -308,6 +309,16 @@ export const CashReportsView = () => {
                       >
                         {TYPE_LABELS[cut.cut_type] || cut.cut_type}
                       </span>
+                    </td>
+                    <td>
+                      <div className="status-indicator">
+                        <span 
+                          className={`status-dot status-dot--${!cut.fecha_cierre ? 'open' : 'closed'}`}
+                        ></span>
+                        <span className={`status-text--${!cut.fecha_cierre ? 'open' : 'closed'}`}>
+                          {!cut.fecha_cierre ? 'Abierta' : 'Cerrada'}
+                        </span>
+                      </div>
                     </td>
                     <td>{cut.staff_name || "—"}</td>
                     <td>{cut.sales_count || 0}</td>
