@@ -92,6 +92,7 @@ export const supplyService = {
             .from('supplies')
             .select('current_stock, content_per_presentation')
             .eq('id', entryData.supply_id)
+            .eq('user_id', user.id)
             .single();
 
         if (getError) throw getError;
@@ -103,18 +104,19 @@ export const supplyService = {
         const realQuantity = qtyPresentations * factor;
 
         // 3. Actualizar stock (sumando en unidad base)
-        const newStock = parseFloat(supply.current_stock || 0) + realQuantity;
+        const newStock = Math.round((parseFloat(supply.current_stock || 0) + realQuantity) * 10000) / 10000;
         const { data, error } = await supabase
             .from('supplies')
             .update({ current_stock: newStock })
             .eq('id', entryData.supply_id)
+            .eq('user_id', user.id)
             .select()
             .single();
 
         if (error) throw error;
 
         // 4. REGISTRAR MOVIMIENTO con ambos datos
-        await supabase
+        const { error: moveError } = await supabase
             .from('supply_movements')
             .insert([{
                 user_id: user.id,
@@ -127,6 +129,12 @@ export const supplyService = {
                 staff_name: 'Administrador',
                 usage_date: new Date().toISOString().split('T')[0]
             }]);
+
+        if (moveError) {
+            console.error("Error al registrar movimiento:", moveError);
+            // No lanzamos error fatal para no revertir el stock si ya se actualizó, 
+            // pero informamos en consola.
+        }
 
         return data;
     },
@@ -162,7 +170,7 @@ export const supplyService = {
         }
 
         // 3. Calcular nuevo stock
-        const newStock = parseFloat(supply.current_stock || 0) - realQuantity;
+        const newStock = Math.round((parseFloat(supply.current_stock || 0) - realQuantity) * 10000) / 10000;
 
         // 4. Actualizar stock
         const { data, error } = await supabase
@@ -217,7 +225,7 @@ export const supplyService = {
                 .single();
 
             if (!error) {
-                const diff = parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0);
+                const diff = Math.round((parseFloat(item.previous_stock || 0) - parseFloat(item.physical_stock || 0)) * 10000) / 10000;
                 
                 // Si viene el último conteo en los datos, calcular el gasto real
                 const lastCount = item.last_count !== undefined && item.last_count !== null 

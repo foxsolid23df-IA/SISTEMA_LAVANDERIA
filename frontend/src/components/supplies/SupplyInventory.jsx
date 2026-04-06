@@ -915,7 +915,7 @@ export const SupplyInventory = () => {
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   {(() => {
                     const entrySupply = supplies.find(s => s.id === selectedEntrySupplyId);
-                    return entrySupply?.is_fractional ? 'Cantidad (# Rollos)' : 'Cantidad (en Presentaciones)';
+                    return entrySupply?.is_fractional ? 'Cantidad (# Rollos)' : 'Cantidad (Presentaciones)';
                   })()}
                 </label>
                 <input
@@ -938,7 +938,18 @@ export const SupplyInventory = () => {
                   return null;
                 })()}
               </div>
-              <div className="flex items-end">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Notas de Entrega (Opcional)
+                </label>
+                <input
+                  name="notes"
+                  type="text"
+                  placeholder="Ej. Compra semanal Walmart"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                />
+              </div>
+              <div className="flex items-end lg:col-span-3">
                 <button
                   type="submit"
                   className="w-full bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:bg-black dark:hover:bg-slate-200"
