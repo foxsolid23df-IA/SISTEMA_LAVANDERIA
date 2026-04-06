@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { cashCutService } from "../../services/cashCutService";
+import { supabase } from "../../supabase";
 import Modal from "../common/Modal"; // Importación por defecto corregida
 import "./CashReportsView.css";
 
@@ -54,15 +55,45 @@ export const CashReportsView = () => {
   const fetchCuts = useCallback(async () => {
     setLoading(true);
     try {
-      const options = { limit: 100 };
-      if (filters.startDate) options.startDate = filters.startDate;
-      if (filters.endDate) options.endDate = filters.endDate;
-      if (filters.cutType && filters.cutType !== "all")
-        options.cutType = filters.cutType;
-      if (filters.staffName) options.staffName = filters.staffName;
+      // Cargar cortes históricos
+      const historyCuts = await cashCutService.getCashCuts({
+        cutType: filters.cutType !== "all" ? filters.cutType : undefined,
+        staffName: filters.staffName || undefined,
+        startDate: filters.startDate || undefined,
+        endDate: filters.endDate || undefined,
+      });
 
-      const data = await cashCutService.getCashCuts(options);
-      setCuts(data);
+      // Cargar sesiones abiertas para mostrar "Abierta" en tiempo real
+      let openSessions = [];
+      if (filters.cutType === 'all' || filters.cutType === 'turno') {
+        const { data: sessions } = await supabase
+          .from('cash_sessions')
+          .select('*, terminals(name)')
+          .eq('status', 'open')
+          .order('opened_at', { ascending: false });
+        
+        openSessions = (sessions || []).map(session => ({
+          id: `active-${session.id}`,
+          staff_name: session.staff_name,
+          cut_type: 'turno',
+          status: 'Abierta',
+          is_active_session: true,
+          created_at: new Date().toISOString(), // Actualizado para que siempre aparezca al inicio y cubra hasta "ahora"
+          start_time: session.opened_at,
+          end_time: null,
+          sales_total: 0,
+          opening_fund: session.opening_fund,
+          terminal_name: session.terminals?.name,
+          terminal_id: session.terminal_id
+        }));
+      }
+
+      // Combinar y ordenar por fecha
+      const combinedResults = [...openSessions, ...historyCuts].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setCuts(combinedResults);
     } catch (err) {
       console.error("[CashReportsView] Error cargando cortes:", err);
     } finally {
@@ -70,9 +101,34 @@ export const CashReportsView = () => {
     }
   }, [filters]);
 
+  // Suscripción en tiempo real
+  useEffect(() => {
+    const cutsChannel = supabase
+      .channel('cash_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'cash_cuts' 
+      }, () => {
+        fetchCuts();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'cash_sessions' 
+      }, () => {
+        fetchCuts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(cutsChannel);
+    };
+  }, [fetchCuts]);
+
   useEffect(() => {
     fetchCuts();
-  }, []);
+  }, [fetchCuts]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -296,30 +352,30 @@ export const CashReportsView = () => {
                       : "cash-reports__diff--zero";
 
                 return (
-                  <tr 
-                    key={cut.id} 
-                    onClick={() => handleRowClick(cut)}
-                    className="cash-reports__row-clickable"
-                  >
-                    <td>{formatDate(cut.created_at)}</td>
-                    <td>{formatTime(cut.created_at)}</td>
-                    <td>
-                      <span
-                        className={`cash-reports__type-badge cash-reports__type-badge--${cut.cut_type}`}
-                      >
-                        {TYPE_LABELS[cut.cut_type] || cut.cut_type}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="status-indicator">
-                        <span 
-                          className={`status-dot status-dot--${cut.cut_type === 'parcial' ? 'open' : 'closed'}`}
-                        ></span>
-                        <span className={`status-text--${cut.cut_type === 'parcial' ? 'open' : 'closed'}`}>
-                          {cut.cut_type === 'parcial' ? 'Abierta' : 'Cerrada'}
+                    <tr 
+                      key={cut.id} 
+                      onClick={() => handleRowClick(cut)}
+                      className="cash-reports__row-clickable"
+                    >
+                      <td>{formatDate(cut.created_at)}</td>
+                      <td>{formatTime(cut.created_at)}</td>
+                      <td>
+                        <span
+                          className={`cash-reports__type-badge cash-reports__type-badge--${cut.cut_type}`}
+                        >
+                          {TYPE_LABELS[cut.cut_type] || cut.cut_type}
                         </span>
-                      </div>
-                    </td>
+                      </td>
+                      <td>
+                        <div className="status-indicator">
+                          <span 
+                            className={`status-dot status-dot--${(cut.cut_type === 'parcial' || cut.status === 'Abierta') ? 'open' : 'closed'}`}
+                          ></span>
+                          <span className={`status-text--${(cut.cut_type === 'parcial' || cut.status === 'Abierta') ? 'open' : 'closed'}`}>
+                            {(cut.cut_type === 'parcial' || cut.status === 'Abierta') ? 'Abierta' : 'Cerrada'}
+                          </span>
+                        </div>
+                      </td>
                     <td>{cut.staff_name || "—"}</td>
                     <td>{cut.sales_count || 0}</td>
                     <td style={{ fontWeight: 700 }}>
