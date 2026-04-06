@@ -443,53 +443,110 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300 flex flex-col items-center justify-center p-4 font-sans">
-      <div className="w-full max-w-lg bg-slate-50 dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 transition-colors">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[120px]"></div>
+
+      <div className="w-full max-w-lg glass-card p-10 rounded-[2.5rem] relative z-10 transition-all duration-500">
         
-        {/* CABECERA GENERAL - Branding dinámico */}
-        <div className="flex justify-center mb-6">
-          <div className="h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `hsl(${ACCENT_HUE}, 65%, 50%)`, boxShadow: `0 10px 15px -3px hsl(${ACCENT_HUE}, 65%, 50%, 0.3)` }}>
-            {step === 4 ? <CheckCircle size={32} className="text-white" /> : <FileText size={32} className="text-white" />}
+        {/* CABECERA NEXUM POS */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="mb-6 transform hover:scale-105 transition-transform duration-300">
+            <img 
+              src="/src/assets/hero.png" 
+              alt="Nexum POS Logo" 
+              className="h-20 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div class="h-16 w-16 bg-blue-500/20 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center shadow-lg"><span class="text-2xl font-bold text-white">N</span></div>';
+              }}
+            />
           </div>
+          <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2">
+            Auto-Facturación
+          </h1>
+          <p className="text-slate-400 text-center text-sm leading-relaxed max-w-[280px]">
+            Ingresa los datos impresos en tu recibo para comenzar el proceso de facturación.
+          </p>
         </div>
-        
-        {step < 4 && (
-          <>
-            <h1 className="text-2xl font-bold text-center mb-1 text-slate-900 dark:text-white">{APP_TITLE}</h1>
-            <p className="text-center font-medium mb-0" style={{ color: `hsl(${ACCENT_HUE}, 65%, 50%)`, fontSize: '0.65rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{APP_NAME}</p>
-          </>
-        )}
 
         {/* ========================================================= */}
         {/* PASO 1: Buscar Ticket                                     */}
         {/* ========================================================= */}
         {step === 1 && (
-          <div className="animate-in fade-in duration-300">
-            <p className="text-slate-400 text-center mb-8 text-sm">
-              Ingresa los datos impresos en tu recibo de compra.
-            </p>
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+            <form onSubmit={handleSearch} className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Folio (Ticket)</label>
-                  <input required type="text" value={folioValue} onChange={(e) => setFolioValue(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all font-mono" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="Ej. 1254" />
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Folio del Ticket</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={folioValue} 
+                    onChange={(e) => setFolioValue(e.target.value)} 
+                    className="w-full nexum-input text-lg font-mono placeholder:text-slate-600" 
+                    placeholder="Ej. 1254" 
+                  />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">PIN</label>
-                  <input required type="text" value={pinValue} onChange={(e) => setPinValue(e.target.value.toUpperCase())} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all font-mono" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="Ej. F7D1" />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">PIN</label>
+                    <input 
+                      required 
+                      type="text" 
+                      value={pinValue} 
+                      onChange={(e) => setPinValue(e.target.value.toUpperCase())} 
+                      className="w-full nexum-input text-lg font-mono placeholder:text-slate-600 uppercase" 
+                      placeholder="Ej. F7D1" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Total Compra</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                      <input 
+                        required 
+                        type="number" 
+                        step="0.01" 
+                        value={totalValue} 
+                        onChange={(e) => setTotalValue(e.target.value)} 
+                        className="w-full nexum-input pl-10 text-lg font-mono placeholder:text-slate-600" 
+                        placeholder="0.00" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Total de la Compra</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-3 text-slate-500 font-medium">$</span>
-                  <input required type="number" step="0.01" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all font-mono" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="0.00" />
+
+              {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-400 text-center animate-shake">
+                  {errorMsg}
                 </div>
-              </div>
-              {errorMsg && <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-3 text-sm text-red-200 text-center">{errorMsg}</div>}
-              <button type="submit" disabled={loading} className="w-full text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 mt-6 transition-colors" style={{ backgroundColor: `hsl(${ACCENT_HUE}, 65%, 50%)` }} onMouseEnter={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 58%)`} onMouseLeave={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 50%)`}>
-                {loading ? <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div> : <><Search size={20} /> Buscar Ticket</>}
+              )}
+
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="w-full nexum-button text-white py-4 flex items-center justify-center gap-3 shadow-[0_10px_20px_-10px_rgba(59,130,246,0.5)] active:scale-95"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/30 border-t-white"></div>
+                ) : (
+                  <>
+                    <Search size={22} strokeWidth={2.5} />
+                    <span className="text-lg">Buscar Fichaje</span>
+                  </>
+                )}
               </button>
+
+              <div className="pt-6 flex justify-center items-center gap-2 text-slate-500 text-xs font-medium">
+                <div className="h-5 w-5 bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"></path></svg>
+                </div>
+                Transacción Segura
+              </div>
             </form>
           </div>
         )}
@@ -498,21 +555,32 @@ export default function App() {
         {/* PASO 2: Confirmar Ticket                                  */}
         {/* ========================================================= */}
         {step === 2 && (
-          <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4 bg-slate-100 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center shadow-inner">
-              <h3 className="text-emerald-400 font-medium flex items-center justify-center gap-2 mb-2">
-                <div className="h-2 w-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                ¡Recibo Encontrado!
-              </h3>
-              <p className="text-slate-900 dark:text-slate-200 text-3xl font-mono mb-1">${Number(ticketData.total).toFixed(2)}</p>
-              <p className="text-slate-500 text-sm">Folio: {ticketData.id} • Fecha: {new Date(ticketData.created_at).toLocaleDateString()}</p>
+          <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
+            <div className="space-y-4 bg-white/5 p-8 rounded-3xl border border-white/10 text-center shadow-inner group transition-all hover:bg-white/10">
+              <div className="flex justify-center mb-4">
+                <div className="h-12 w-12 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/30">
+                  <div className="h-3 w-3 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
+                </div>
+              </div>
+              <h3 className="text-emerald-400 font-bold tracking-tight">¡Recibo Encontrado!</h3>
+              <p className="text-white text-5xl font-mono tracking-tighter mb-1">${Number(ticketData.total).toFixed(2)}</p>
+              <div className="flex flex-col gap-1">
+                <p className="text-slate-400 text-sm font-medium">Folio: <span className="text-slate-200">{ticketData.id}</span></p>
+                <p className="text-slate-500 text-xs">Fecha: {new Date(ticketData.created_at).toLocaleDateString()}</p>
+              </div>
             </div>
             
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setStep(1)} className="flex-1 bg-transparent border border-slate-700 text-slate-400 hover:text-white py-3 rounded-lg flex justify-center items-center gap-2">
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setStep(1)} 
+                className="flex-1 bg-white/5 border border-white/10 text-slate-400 hover:text-white py-4 rounded-2xl flex justify-center items-center gap-2 transition-all hover:bg-white/10 active:scale-95"
+              >
                 <ArrowLeft size={18}/> Atrás
               </button>
-              <button onClick={() => setStep(3)} className="flex-1 text-white font-semibold py-3 rounded-lg flex justify-center items-center gap-2 transition-colors" style={{ backgroundColor: `hsl(${ACCENT_HUE}, 65%, 50%)` }} onMouseEnter={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 58%)`} onMouseLeave={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 50%)`}>
+              <button 
+                onClick={() => setStep(3)} 
+                className="flex-[2] nexum-button text-white py-4 rounded-2xl flex justify-center items-center gap-2 shadow-[0_10px_20px_-10px_rgba(59,130,246,0.3)] active:scale-95"
+              >
                 Continuar <ArrowRight size={18}/>
               </button>
             </div>
@@ -523,31 +591,61 @@ export default function App() {
         {/* PASO 3: Datos Fiscales                                    */}
         {/* ========================================================= */}
         {step === 3 && (
-          <div className="animate-in slide-in-from-right-4 duration-300">
-            <p className="text-slate-400 text-center mb-6 text-sm">Ingresa los datos para emitir tu CFDI 4.0.</p>
+          <div className="animate-in slide-in-from-right-8 duration-500">
+            <p className="text-slate-400 text-center mb-8 text-sm px-4">Ingresa los datos fiscales vigentes para emitir tu CFDI 4.0.</p>
             
-            <form onSubmit={handleFacturar} className="space-y-4">
+            <form onSubmit={handleFacturar} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">RFC</label>
-                  <input required type="text" value={rfc} onChange={(e) => handleRfcChange(e.target.value)} onBlur={handleSearchRfc} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="XAXX010101000" />
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">RFC</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={rfc} 
+                    onChange={(e) => handleRfcChange(e.target.value)} 
+                    onBlur={handleSearchRfc} 
+                    className="w-full nexum-input text-lg font-mono uppercase tracking-widest" 
+                    placeholder="XAXX010101000" 
+                  />
                   {rfcType && (
-                    <p className="text-xs mt-1" style={{ color: `hsl(${ACCENT_HUE}, 65%, 50%)` }}>
-                      {rfcType === 'moral' ? '📋 Persona Moral detectada' : '👤 Persona Física detectada'}
-                    </p>
+                    <div className="flex items-center gap-2 mt-2 ml-1">
+                      <div className={`h-1.5 w-1.5 rounded-full ${rfcType === 'moral' ? 'bg-blue-400' : 'bg-emerald-400'}`}></div>
+                      <p className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+                        {rfcType === 'moral' ? 'Persona Moral' : 'Persona Física'}
+                      </p>
+                    </div>
                   )}
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Razón Social o Nombre (Sin el SA de CV en 4.0)</label>
-                  <input required type="text" value={razonSocial} onChange={(e) => setRazonSocial(e.target.value.toUpperCase())} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white uppercase focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} />
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Razón Social</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={razonSocial} 
+                    onChange={(e) => setRazonSocial(e.target.value.toUpperCase())} 
+                    className="w-full nexum-input text-sm" 
+                    placeholder="NOMBRE O EMPRESA"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">C.P. Fiscal</label>
-                  <input required type="text" maxLength={5} value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-mono focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} />
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">CP Fiscal</label>
+                  <input 
+                    required 
+                    type="text" 
+                    maxLength={5} 
+                    value={codigoPostal} 
+                    onChange={(e) => setCodigoPostal(e.target.value)} 
+                    className="w-full nexum-input text-lg font-mono" 
+                    placeholder="00000"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Uso CFDI</label>
-                  <select value={usoCfdi} onChange={(e) => setUsoCfdi(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }}>
+                <div className="col-span-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Uso CFDI</label>
+                  <select 
+                    value={usoCfdi} 
+                    onChange={(e) => setUsoCfdi(e.target.value)} 
+                    className="w-full nexum-input text-xs appearance-none cursor-pointer"
+                  >
                     <option value="G01">G01 Adquisición mercancías</option>
                     <option value="G03">G03 Gastos en general</option>
                     <option value="S01">S01 Sin efectos fiscales</option>
@@ -555,27 +653,54 @@ export default function App() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Régimen Fiscal</label>
-                  <select value={regimenFiscal} onChange={(e) => setRegimenFiscal(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-opacity-50 transition-all text-sm" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }}>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Régimen Fiscal</label>
+                  <select 
+                    value={regimenFiscal} 
+                    onChange={(e) => setRegimenFiscal(e.target.value)} 
+                    className="w-full nexum-input text-xs appearance-none cursor-pointer"
+                  >
                     {getRegimenesDisponibles().map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Correo Electrónico (Opcional)</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-opacity-50 transition-all" style={{ '--tw-ring-color': `hsl(${ACCENT_HUE}, 65%, 55%)` }} placeholder="correo@ejemplo.com" />
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Correo Electrónico</label>
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    className="w-full nexum-input text-sm" 
+                    placeholder="ejemplo@correo.com" 
+                  />
                 </div>
               </div>
 
-              {errorMsg && <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-3 text-sm text-red-200 text-center mt-2">{errorMsg}</div>}
+              {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-400 text-center">
+                  {errorMsg}
+                </div>
+              )}
 
-              <div className="flex gap-3 mt-6 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <button type="button" disabled={loading} onClick={() => setStep(2)} className="flex-1 bg-transparent border border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-700 dark:hover:text-white py-3 rounded-lg flex justify-center items-center gap-2 transition-colors">
+              <div className="flex gap-4 pt-6">
+                <button 
+                  type="button" 
+                  disabled={loading} 
+                  onClick={() => setStep(2)} 
+                  className="flex-1 bg-white/5 border border-white/10 text-slate-400 hover:text-white py-4 rounded-2xl transition-all hover:bg-white/10 active:scale-95"
+                >
                   Atrás
                 </button>
-                <button type="submit" disabled={loading} className="flex-2 text-white font-semibold py-3 rounded-lg flex justify-center items-center gap-2 transition-colors relative overflow-hidden" style={{ backgroundColor: `hsl(${ACCENT_HUE}, 65%, 50%)` }} onMouseEnter={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 58%)`} onMouseLeave={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 50%)`}>
-                  {loading ? <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div> : 'Generar Factura SAT'}
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="flex-[2] nexum-button text-white py-4 rounded-2xl flex justify-center items-center gap-2 shadow-[0_10px_20px_-10px_rgba(59,130,246,0.3)] active:scale-95"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/30 border-t-white"></div>
+                  ) : (
+                    'Generar Factura SAT'
+                  )}
                 </button>
               </div>
             </form>
@@ -587,55 +712,65 @@ export default function App() {
         {/* ========================================================= */}
         {step === 4 && invoiceResult && (
           <div className="text-center animate-in zoom-in-95 duration-500">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">¡Factura Generada!</h2>
-            <p className="text-emerald-600 dark:text-emerald-400 text-sm mb-6 bg-emerald-100 dark:bg-emerald-900/30 py-2 rounded max-w-[80%] mx-auto shadow-inner border border-emerald-500/20">
-              Timbrado exitosamente por el SAT
-            </p>
-
-            <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl shadow-inner border border-slate-200 dark:border-slate-700 mb-8 space-y-3">
-              <div className="flex justify-between items-center px-2 mb-4">
-                <span className="text-slate-500">Total</span>
-                <span className="text-xl font-bold text-slate-900 dark:text-white">${parseFloat(ticketData.total).toFixed(2)}</span>
+            <div className="flex justify-center mb-6">
+              <div className="h-20 w-20 bg-emerald-500/20 rounded-[2rem] flex items-center justify-center border-2 border-emerald-500/30 relative">
+                <div className="absolute inset-0 bg-emerald-400/20 blur-xl rounded-full animate-pulse"></div>
+                <CheckCircle size={40} className="text-emerald-400 relative z-10" />
               </div>
-              <button 
-                onClick={() => handleDownload(invoiceResult.pdf_url, 'Factura.pdf', 'application/pdf')}
-                className="w-full flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-all border border-slate-200 dark:border-transparent hover:border-blue-500/30 group"
-              >
-                <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                  <FileText className="text-red-500" size={24} />
-                  <span className="font-medium">Descargar Formato PDF</span>
-                </div>
-                <Download size={20} className="text-blue-500 group-hover:scale-110 transition-transform" />
-              </button>
-              
-              <button 
-                onClick={() => handleDownload(invoiceResult.xml_url, 'Factura.xml', 'text/xml')}
-                className="w-full flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-750 transition-all border border-slate-200 dark:border-transparent hover:border-blue-500/30 group mb-3"
-              >
-                <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                  <FileText className="text-blue-500" size={24} />
-                  <span className="font-medium">Descargar Código XML</span>
-                </div>
-                <Download size={20} className="text-blue-500 group-hover:scale-110 transition-transform" />
-              </button>
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">¡Operación Exitosa!</h2>
+            <div className="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-8">
+              Certificado por el SAT
+            </div>
 
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-3">
+            <div className="bg-white/5 rounded-3xl border border-white/10 p-6 mb-8 space-y-4">
+              <div className="flex justify-between items-center px-2 pb-4 border-b border-white/5">
+                <span className="text-slate-500 font-medium">Total Facturado</span>
+                <span className="text-3xl font-extrabold text-white tracking-tighter">${parseFloat(ticketData.total).toFixed(2)}</span>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <button 
+                  onClick={() => handleDownload(invoiceResult.pdf_url, 'Factura.pdf', 'application/pdf')}
+                  className="w-full flex items-center justify-between bg-white/5 p-4 rounded-2xl hover:bg-white/10 transition-all border border-transparent hover:border-white/10 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-red-500/20 rounded-xl flex items-center justify-center">
+                      <FileText className="text-red-400" size={20} />
+                    </div>
+                    <span className="text-white font-semibold text-sm">Descargar PDF</span>
+                  </div>
+                  <Download size={18} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-y-1 transition-all" />
+                </button>
+                
+                <button 
+                  onClick={() => handleDownload(invoiceResult.xml_url, 'Factura.xml', 'text/xml')}
+                  className="w-full flex items-center justify-between bg-white/5 p-4 rounded-2xl hover:bg-white/10 transition-all border border-transparent hover:border-white/10 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                      <FileText className="text-blue-400" size={20} />
+                    </div>
+                    <span className="text-white font-semibold text-sm">Descargar XML</span>
+                  </div>
+                  <Download size={18} className="text-slate-500 group-hover:text-blue-400 group-hover:translate-y-1 transition-all" />
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-white/5 space-y-3">
                 {invoiceResult.status !== 'CANCELADO' ? (
                   <>
                     <button 
                       disabled={loading}
                       onClick={handleSendEmail}
-                      className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                      style={{ backgroundColor: `hsl(${ACCENT_HUE}, 65%, 50%)` }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 58%)`}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = `hsl(${ACCENT_HUE}, 65%, 50%)`}
+                      className="w-full bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-all"
                     >
                       {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-400/30 border-t-blue-400"></div>
                       ) : (
                         <>
-                          <FileText size={20} />
-                          Enviar por Correo a {email || '...'}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                          Enviar a {email || 'Correo'}
                         </>
                       )}
                     </button>
@@ -644,20 +779,19 @@ export default function App() {
                       <button 
                         disabled={loading}
                         onClick={handleCancel}
-                        className="w-full text-red-500 hover:text-red-400 text-sm font-medium py-2 transition-colors border border-red-500/20 rounded-lg hover:bg-red-500/10"
+                        className="w-full text-red-500/60 hover:text-red-400 text-xs font-bold py-2 transition-all"
                       >
-                        Solicitar Cancelación de Factura
+                        SOLICITAR CANCELACIÓN
                       </button>
                     ) : (
-                      <div className="text-slate-500 text-xs mt-2 italic px-4">
-                        El periodo de cancelación por portal ha expirado (24h). 
-                        Contacte al establecimiento para cambios.
-                      </div>
+                      <p className="text-slate-600 text-[10px] italic px-4">
+                        Periodo de cancelación en portal expirado.
+                      </p>
                     )}
                   </>
                 ) : (
-                  <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-3 text-sm text-red-200 text-center">
-                    Esta factura se encuentra CANCELADA.
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-xs text-red-400 font-bold uppercase tracking-wider">
+                    Factura Cancelada
                   </div>
                 )}
               </div>
@@ -667,7 +801,7 @@ export default function App() {
               onClick={() => {
                 setStep(1); setTicketData(null); setFolioValue(''); setPinValue(''); setTotalValue(''); setRfc('');
               }}
-              className="text-slate-400 hover:text-white text-sm"
+              className="text-slate-500 hover:text-white text-xs font-bold tracking-widest uppercase transition-colors"
             >
               ← Facturar otro ticket
             </button>
