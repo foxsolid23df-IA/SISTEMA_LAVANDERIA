@@ -454,13 +454,9 @@ export default function App() {
         <div className="flex flex-col items-center mb-10">
           <div className="mb-6 transform hover:scale-105 transition-transform duration-300">
             <img 
-              src="/src/assets/hero.png" 
+              src="/src/assets/nexum-logo.png" 
               alt="Nexum POS Logo" 
-              className="h-20 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<div class="h-16 w-16 bg-blue-500/20 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center shadow-lg"><span class="text-2xl font-bold text-white">N</span></div>';
-              }}
+              className="h-20 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all duration-300"
             />
           </div>
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2">
