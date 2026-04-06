@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, FileText, Download, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { supabase } from './supabase';
 import Swal from 'sweetalert2';
+import nexumLogo from './assets/nexum-logo.png';
 
 // ── Configuración Multi-Negocio vía Variables de Entorno ──
 const APP_NAME = import.meta.env.VITE_APP_NAME || 'Mi Negocio';
@@ -454,7 +455,7 @@ export default function App() {
         <div className="flex flex-col items-center mb-10">
           <div className="mb-6 transform hover:scale-105 transition-transform duration-300">
             <img 
-              src="/src/assets/nexum-logo.png" 
+              src={nexumLogo} 
               alt="Nexum POS Logo" 
               className="h-20 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all duration-300"
             />
