@@ -176,6 +176,7 @@ export const productService = {
             unit_type: product.unit_type || (product.pricing_type === 'kg' ? 'kg' : 'PZA'),
             pricing_type: product.pricing_type || (product.unit_type === 'kg' ? 'kg' : 'unit'),
             type: product.type || 'PRODUCT',
+            merma: parseInt(product.merma || 0),
             user_id: userData.user.id
         };
 
@@ -200,25 +201,23 @@ export const productService = {
 
     // Actualizar un producto existente
     updateProduct: async (id, updates) => {
-        // Mapear 'image' del formulario a 'image_url' de la base de datos
-        const dbUpdates = {
-            name: updates.name,
-            price: parseFloat(updates.price),
-            cost_price: parseFloat(updates.cost_price || 0),
-            wholesale_price: parseFloat(updates.wholesale_price || 0),
-            stock: parseInt(updates.stock),
-            min_stock: parseInt(updates.min_stock || 0),
-            barcode: updates.barcode || null,
-            image_url: updates.image || null,
-            unit_type: updates.unit_type || (updates.pricing_type === 'kg' ? 'kg' : 'PZA'),
-            pricing_type: updates.pricing_type || (updates.unit_type === 'kg' ? 'kg' : 'unit'),
-            type: updates.type || 'PRODUCT'
-        };
-
-        // Agregar categoría si existe
-        if (updates.category) {
-            dbUpdates.category = updates.category;
-        }
+        const dbUpdates = {};
+        
+        // Solo agregar al objeto de actualización los campos que vienen en 'updates'
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.price !== undefined) dbUpdates.price = parseFloat(updates.price);
+        if (updates.cost_price !== undefined) dbUpdates.cost_price = parseFloat(updates.cost_price);
+        if (updates.wholesale_price !== undefined) dbUpdates.wholesale_price = parseFloat(updates.wholesale_price);
+        if (updates.stock !== undefined) dbUpdates.stock = parseInt(updates.stock);
+        if (updates.min_stock !== undefined) dbUpdates.min_stock = parseInt(updates.min_stock);
+        if (updates.barcode !== undefined) dbUpdates.barcode = updates.barcode;
+        if (updates.image !== undefined) dbUpdates.image_url = updates.image;
+        if (updates.image_url !== undefined) dbUpdates.image_url = updates.image_url;
+        if (updates.category !== undefined) dbUpdates.category = updates.category;
+        if (updates.unit_type !== undefined) dbUpdates.unit_type = updates.unit_type;
+        if (updates.pricing_type !== undefined) dbUpdates.pricing_type = updates.pricing_type;
+        if (updates.type !== undefined) dbUpdates.type = updates.type;
+        if (updates.merma !== undefined) dbUpdates.merma = parseInt(updates.merma);
 
         const { data, error } = await supabase
             .from('products')
