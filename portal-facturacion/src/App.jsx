@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, FileText, Download, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, FileText, Download, CheckCircle, ArrowRight, ArrowLeft, ChevronDown } from 'lucide-react';
 import { supabase } from './supabase';
 import Swal from 'sweetalert2';
 import nexumLogo from './assets/nexum-logo.png';
@@ -36,19 +36,22 @@ export default function App() {
     { value: '622', label: '622 Actividades Agrícolas, Ganaderas' },
     { value: '623', label: '623 Opcional para Grupos de Sociedades' },
     { value: '624', label: '624 Coordinados' },
+    { value: '626', label: '626 RESICO (Moral)' },
   ];
   const REGIMENES_FISICA = [
     { value: '605', label: '605 Sueldos y Salarios' },
     { value: '606', label: '606 Arrendamiento' },
+    { value: '607', label: '607 Enajenación o Adquisición de Bienes' },
     { value: '608', label: '608 Demás ingresos' },
     { value: '610', label: '610 Residentes en el Extranjero' },
     { value: '611', label: '611 Ingresos por Dividendos' },
     { value: '612', label: '612 Personas Físicas. Actividades Empresariales' },
     { value: '614', label: '614 Ingresos por intereses' },
+    { value: '615', label: '615 Obtención de premios' },
     { value: '616', label: '616 Sin obligaciones fiscales' },
     { value: '621', label: '621 Incorporación Fiscal' },
-    { value: '625', label: '625 Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas' },
-    { value: '626', label: '626 RESICO' },
+    { value: '625', label: '625 Plataformas Tecnológicas' },
+    { value: '626', label: '626 RESICO (Física)' },
   ];
 
   // Detectar tipo de RFC y auto-seleccionar régimen
@@ -74,6 +77,21 @@ export default function App() {
   };
 
   // Obtener regímenes según tipo de RFC detectado
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showRegimenDropdown, setShowRegimenDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowRegimenDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const getRegimenesDisponibles = () => {
     if (rfcType === 'moral') return REGIMENES_MORAL;
     if (rfcType === 'fisica') return REGIMENES_FISICA;
@@ -650,16 +668,62 @@ export default function App() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Régimen Fiscal</label>
-                  <select 
-                    value={regimenFiscal} 
-                    onChange={(e) => setRegimenFiscal(e.target.value)} 
-                    className="w-full nexum-input text-xs appearance-none cursor-pointer"
-                  >
-                    {getRegimenesDisponibles().map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-blue-200 mb-2">Régimen Fiscal</label>
+                  <div className="relative" ref={dropdownRef}>
+                    <div 
+                      onClick={() => setShowRegimenDropdown(!showRegimenDropdown)}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer flex justify-between items-center"
+                    >
+                      <span>
+                        {regimenFiscal 
+                          ? [...REGIMENES_MORAL, ...REGIMENES_FISICA].find(r => r.value === regimenFiscal)?.label 
+                          : "Selecciona tu régimen"
+                        }
+                      </span>
+                      <ChevronDown className={`w-5 h-5 transition-transform ${showRegimenDropdown ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {showRegimenDropdown && (
+                      <div className="absolute z-50 w-full mt-2 bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-2 border-bottom border-white/10">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-300" />
+                            <input
+                              type="text"
+                              placeholder="Buscar régimen..."
+                              className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                          {getRegimenesDisponibles()
+                            .filter(r => r.label.toLowerCase().includes(searchQuery.toLowerCase()) || r.value.includes(searchQuery))
+                            .map((regimen) => (
+                              <div
+                                key={regimen.value}
+                                onClick={() => {
+                                  setRegimenFiscal(regimen.value);
+                                  setShowRegimenDropdown(false);
+                                  setSearchQuery('');
+                                }}
+                                className="px-4 py-3 text-sm text-blue-100 hover:bg-blue-600/30 cursor-pointer transition-colors border-b border-white/5 last:border-0"
+                              >
+                                {regimen.label}
+                              </div>
+                            ))}
+                          {getRegimenesDisponibles().filter(r => r.label.toLowerCase().includes(searchQuery.toLowerCase()) || r.value.includes(searchQuery)).length === 0 && (
+                            <div className="px-4 py-8 text-center text-blue-300 text-sm">
+                              No se encontraron regímenes
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Correo Electrónico</label>
