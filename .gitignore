@@ -50,3 +50,8 @@ backend/data/
 release/
 
 .vercel
+
+# Worktrees
+.worktrees/
+worktrees/
+
