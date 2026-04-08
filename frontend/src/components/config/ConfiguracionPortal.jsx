@@ -83,6 +83,16 @@ export const ConfiguracionPortal = () => {
                         <p className="text-slate-500 dark:text-slate-400 text-sm">Configuración de RFC, CSD y datos de facturación</p>
                     </NavLink>
                 )}
+
+                {isAdmin && (
+                    <NavLink to="/cancelar-factura" className="flex flex-col p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 flex items-center justify-center mb-5">
+                            <span className="material-icons-outlined">block</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Cancelación de Facturas</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Gestionar la cancelación de folios fiscales (CFDI 4.0)</p>
+                    </NavLink>
+                )}
             </div>
         </div>
     );
