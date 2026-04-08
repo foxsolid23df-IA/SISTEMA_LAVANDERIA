@@ -79,6 +79,53 @@ export const InvoiceCancellation = () => {
     }
   };
 
+  const handleViewPdf = (pdfBase64) => {
+    if (!pdfBase64) return alert("No hay PDF disponible para esta factura.");
+    
+    try {
+      // Normalizar base64 (quitar prefijos si existen)
+      const cleanBase64 = pdfBase64.includes(',') ? pdfBase64.split(',')[1] : pdfBase64;
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(blob);
+      window.open(fileURL, '_blank');
+    } catch (error) {
+      console.error("Error al procesar PDF:", error);
+      alert("Error al abrir el PDF. El contenido podría no ser válido.");
+    }
+  };
+
+  const handleDownloadXml = (xmlBase64, folio) => {
+    if (!xmlBase64) return alert("No hay archivo XML disponible.");
+
+    try {
+      const cleanBase64 = xmlBase64.includes(',') ? xmlBase64.split(',')[1] : xmlBase64;
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/xml' });
+      const fileURL = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = fileURL;
+      link.download = `factura_${folio || 'CFDI'}.xml`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error al descargar XML:", error);
+      alert("Error al descargar el XML.");
+    }
+  };
+
   const filteredInvoices = invoices.filter(inv => 
     inv.folio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     inv.uuid_fiscal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,22 +214,32 @@ export const InvoiceCancellation = () => {
                         </span>
                       </td>
                       <td className="p-5 text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <a 
-                            href={inv.pdf_url} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
+                        <div className="flex items-center justify-end gap-3">
+                          <button 
+                            onClick={() => handleViewPdf(inv.pdf_url)}
+                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
                             title="Ver PDF"
                           >
-                            <span className="material-icons-outlined text-[20px]">picture_as_pdf</span>
-                          </a>
+                            <span className="material-icons-outlined text-[22px]">picture_as_pdf</span>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleDownloadXml(inv.xml_url, inv.folio)}
+                            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Descargar XML"
+                          >
+                            <span className="material-icons-outlined text-[22px]">code</span>
+                          </button>
+
+                          <div className="w-[1px] h-6 bg-slate-100 mx-1" />
+
                           {inv.status === 'VIGENTE' && (
                             <button 
                               onClick={() => handleCancelClick(inv)}
-                              className="px-3 py-1.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-100 rounded-lg transition-all font-bold text-xs flex items-center gap-1.5"
+                              className="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-100 rounded-xl transition-all font-bold text-xs flex items-center gap-2"
+                              title="Cancelar Factura"
                             >
-                              <span className="material-icons-outlined text-[16px]">cancel</span>
+                              <span className="material-icons-outlined text-[18px]">cancel</span>
                               Cancelar
                             </button>
                           )}
@@ -196,6 +253,7 @@ export const InvoiceCancellation = () => {
           )}
         </div>
       </div>
+
 
       {/* Cancellation Modal */}
       {showCancelModal && selectedInvoice && (
