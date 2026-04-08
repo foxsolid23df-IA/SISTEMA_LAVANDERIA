@@ -125,7 +125,7 @@ serve(async (req) => {
         xml_url: xmlBase64 || null,
         pdf_url: pdfBase64 || null,
         total: record.total,
-        status: 'ACTIVO'
+        status: 'VIGENTE'
       });
 
     if (invoiceError) {

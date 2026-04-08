@@ -206,7 +206,7 @@ export const InvoiceCancellation = () => {
                       </td>
                       <td className="p-5">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          inv.status === 'VIGENTE' 
+                          (inv.status === 'VIGENTE' || inv.status === 'ACTIVO')
                             ? 'bg-emerald-100 text-emerald-700' 
                             : 'bg-rose-100 text-rose-700'
                         }`}>
@@ -233,7 +233,7 @@ export const InvoiceCancellation = () => {
 
                           <div className="w-[1px] h-6 bg-slate-100 mx-1" />
 
-                          {inv.status === 'VIGENTE' && (
+                          {(inv.status === 'VIGENTE' || inv.status === 'ACTIVO') && (
                             <button 
                               onClick={() => handleCancelClick(inv)}
                               className="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-100 rounded-xl transition-all font-bold text-xs flex items-center gap-2"
