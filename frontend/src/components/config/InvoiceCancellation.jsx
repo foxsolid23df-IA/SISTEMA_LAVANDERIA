@@ -139,7 +139,7 @@ export const InvoiceCancellation = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 font-['Manrope'] tracking-tight">
-              Cancelación de Facturas
+              Facturas
             </h1>
             <p className="text-slate-500 mt-2 font-['Inter']">
               Listado de facturas timbradas y herramientas de cancelación (SAT CFDI 4.0)

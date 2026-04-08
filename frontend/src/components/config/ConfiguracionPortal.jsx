@@ -89,7 +89,7 @@ export const ConfiguracionPortal = () => {
                         <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 flex items-center justify-center mb-5">
                             <span className="material-icons-outlined">block</span>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Cancelación de Facturas</h3>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Facturas</h3>
                         <p className="text-slate-500 dark:text-slate-400 text-sm">Gestionar la cancelación de folios fiscales (CFDI 4.0)</p>
                     </NavLink>
                 )}
