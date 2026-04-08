@@ -3,13 +3,30 @@ import { supabase } from "../../supabase";
 import { useAuth } from "../../hooks/useAuth";
 import BillingPortalModal from "./BillingPortalModal";
 
-const REGIMENES_FISCALES = [
-  { value: "601", label: "601 - General de Ley Personas Morales" },
-  { value: "603", label: "603 - Personas Morales con Fines no Lucrativos" },
-  { value: "606", label: "606 - Arrendamiento" },
-  { value: "612", label: "612 - Personas Físicas con Actividades Empresariales y Profesionales" },
-  { value: "621", label: "621 - Incorporación Fiscal" },
-  { value: "626", label: "626 - Régimen Simplificado de Confianza" }
+const REGIMENES_MORAL = [
+  { value: '601', label: '601 - General de Ley Personas Morales' },
+  { value: '603', label: '603 - Personas Morales con Fines no Lucrativos' },
+  { value: '620', label: '620 - Sociedades Cooperativas de Producción' },
+  { value: '622', label: '622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras' },
+  { value: '623', label: '623 - Opcional para Grupos de Sociedades' },
+  { value: '624', label: '624 - Coordinados' },
+  { value: '626', label: '626 - Régimen Simplificado de Confianza (Moral)' },
+];
+
+const REGIMENES_FISICA = [
+  { value: '605', label: '605 - Sueldos y Salarios' },
+  { value: '606', label: '606 - Arrendamiento' },
+  { value: '607', label: '607 - Enajenación o Adquisición de Bienes' },
+  { value: '608', label: '608 - Demás ingresos' },
+  { value: '610', label: '610 - Residentes en el Extranjero' },
+  { value: '611', label: '611 - Ingresos por Dividendos' },
+  { value: '612', label: '612 - Personas Físicas con Actividades Empresariales y Profesionales' },
+  { value: '614', label: '614 - Ingresos por intereses' },
+  { value: '615', label: '615 - Obtención de premios' },
+  { value: '616', label: '616 - Sin obligaciones fiscales' },
+  { value: '621', label: '621 - Incorporación Fiscal' },
+  { value: '625', label: '625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas' },
+  { value: '626', label: '626 - Régimen Simplificado de Confianza (Física)' },
 ];
 
 export default function BillingIssuers() {
@@ -18,8 +35,12 @@ export default function BillingIssuers() {
   const [loading, setLoading] = useState(true);
    const [showModal, setShowModal] = useState(false);
    const [showPortalModal, setShowPortalModal] = useState(false);
-   const [selectedIssuer, setSelectedIssuer] = useState(null);
-   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIssuer, setSelectedIssuer] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showRegimenDropdown, setShowRegimenDropdown] = useState(false);
+  const [rfcType, setRfcType] = useState(""); // 'moral' o 'fisica'
+  const regimenDropdownRef = useRef(null);
   
   const [formData, setFormData] = useState({
     rfc: "",
@@ -43,6 +64,24 @@ export default function BillingIssuers() {
   useEffect(() => {
     fetchIssuers();
   }, []);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (regimenDropdownRef.current && !regimenDropdownRef.current.contains(event.target)) {
+        setShowRegimenDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Utilidad para obtener regímenes disponibles según el RFC
+  const getRegimenesDisponibles = () => {
+    if (rfcType === 'moral') return REGIMENES_MORAL;
+    if (rfcType === 'fisica') return REGIMENES_FISICA;
+    return [...REGIMENES_MORAL, ...REGIMENES_FISICA];
+  };
 
   const fetchIssuers = async () => {
     try {
@@ -81,7 +120,29 @@ export default function BillingIssuers() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
+    const upperValue = value.toUpperCase();
+    
+    setFormData(prev => ({ ...prev, [name]: upperValue }));
+
+    // Auto-detectar tipo de RFC y sugerir régimen
+    if (name === 'rfc') {
+      const cleanRfc = upperValue.trim();
+      if (cleanRfc.length === 12) {
+        setRfcType('moral');
+        // Si el régimen actual no es de morales, sugerir el más común
+        if (!REGIMENES_MORAL.find(r => r.value === formData.regimenFiscal)) {
+          setFormData(prev => ({ ...prev, regimenFiscal: '601' }));
+        }
+      } else if (cleanRfc.length === 13) {
+        setRfcType('fisica');
+        // Si el régimen actual no es de físicas, sugerir el más común
+        if (!REGIMENES_FISICA.find(r => r.value === formData.regimenFiscal)) {
+          setFormData(prev => ({ ...prev, regimenFiscal: '612' }));
+        }
+      } else {
+        setRfcType('');
+      }
+    }
   };
 
   const handleDelete = async (id) => {
@@ -239,7 +300,7 @@ export default function BillingIssuers() {
                       </td>
                       <td className="p-5 text-slate-700 font-medium">{issuer.razon_social}</td>
                       <td className="p-5 text-slate-500">
-                        {REGIMENES_FISCALES.find(r => r.value === issuer.regimen_fiscal)?.label || issuer.regimen_fiscal}
+                        {[...REGIMENES_MORAL, ...REGIMENES_FISICA].find(r => r.value === issuer.regimen_fiscal)?.label || issuer.regimen_fiscal}
                       </td>
                       <td className="p-5 text-slate-500">
                         <div className="flex flex-col">
@@ -331,14 +392,70 @@ export default function BillingIssuers() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Régimen Fiscal</label>
-                  <select 
-                    name="regimenFiscal" value={formData.regimenFiscal} onChange={handleChange} required
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900"
-                  >
-                    {REGIMENES_FISCALES.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={regimenDropdownRef}>
+                    <div 
+                      onClick={() => !isSubmitting && setShowRegimenDropdown(!showRegimenDropdown)}
+                      className={`w-full px-4 py-3 bg-white border ${showRegimenDropdown ? 'border-[#003f87] ring-4 ring-[#d7e2ff]' : 'border-slate-300'} rounded-xl transition-all flex justify-between items-center cursor-pointer font-medium text-slate-900 group`}
+                    >
+                      <span className={formData.regimenFiscal ? 'text-slate-900' : 'text-slate-400'}>
+                        {formData.regimenFiscal 
+                          ? [...REGIMENES_MORAL, ...REGIMENES_FISICA].find(r => r.value === formData.regimenFiscal)?.label 
+                          : "Selecciona un régimen"
+                        }
+                      </span>
+                      <span className={`material-icons-outlined text-slate-400 transition-transform ${showRegimenDropdown ? 'rotate-180' : ''}`}>
+                        expand_more
+                      </span>
+                    </div>
+
+                    {showRegimenDropdown && (
+                      <div className="absolute z-[60] w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-2 border-b border-slate-100">
+                          <div className="relative">
+                            <span className="material-icons-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                            <input
+                              type="text"
+                              placeholder="Buscar régimen..."
+                              autoFocus
+                              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#003f87]"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {getRegimenesDisponibles()
+                            .filter(r => 
+                              r.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              r.value.includes(searchQuery)
+                            )
+                            .map((regimen) => (
+                              <div
+                                key={regimen.value}
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, regimenFiscal: regimen.value }));
+                                  setShowRegimenDropdown(false);
+                                  setSearchQuery("");
+                                }}
+                                className={`px-4 py-3 text-sm cursor-pointer transition-colors border-b border-slate-50 last:border-0 hover:bg-slate-50
+                                  ${formData.regimenFiscal === regimen.value ? 'bg-indigo-50 text-[#003f87] font-semibold' : 'text-slate-700'}`}
+                              >
+                                {regimen.label}
+                              </div>
+                            ))}
+                          {getRegimenesDisponibles().filter(r => 
+                            r.label.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            r.value.includes(searchQuery)
+                          ).length === 0 && (
+                            <div className="px-4 py-6 text-center text-slate-400 text-sm italic">
+                              No se encontraron resultados
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Código Postal</label>
