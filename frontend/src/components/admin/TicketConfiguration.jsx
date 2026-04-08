@@ -14,7 +14,7 @@ export const TicketConfiguration = () => {
     phone: "",
     logo_url: "",
     ticket_message: "",
-    billing_url: "https://lavanderia-facturacion.vercel.app/",
+    billing_url: "https://pos-autofactura.vercel.app/",
     rfc: "",
     razon_social: "",
     regimen_fiscal: "",
@@ -39,7 +39,7 @@ export const TicketConfiguration = () => {
         phone: settings.phone || "",
         logo_url: settings.logo_url || "",
         ticket_message: settings.ticket_message || "",
-        billing_url: settings.billing_url || "https://lavanderia-facturacion.vercel.app/",
+        billing_url: settings.billing_url || "https://pos-autofactura.vercel.app/",
         rfc: settings.rfc || "",
         razon_social: settings.razon_social || "",
         regimen_fiscal: settings.regimen_fiscal || "",
@@ -283,6 +283,19 @@ export const TicketConfiguration = () => {
                     placeholder="00000"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">URL de Facturación (Código QR)</label>
+                <input
+                  type="text"
+                  name="billing_url"
+                  value={formData.billing_url}
+                  onChange={handleChange}
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-800 dark:text-white font-medium"
+                  placeholder="https://pos-autofactura.vercel.app/"
+                />
+                <p className="text-[10px] text-slate-500 ml-1">Esta URL se usará para generar el código QR en los tickets.</p>
               </div>
 
               {/* TOGGLE: ACTIVAR FACTURACIÓN ELECTRÓNICA EN TICKETS */}

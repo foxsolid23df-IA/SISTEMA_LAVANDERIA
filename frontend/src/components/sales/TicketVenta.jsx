@@ -442,7 +442,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         }}>
           <div style={{ background: "white", padding: "5px", borderRadius: "4px" }}>
             <QRCodeSVG 
-              value={`${settings?.billing_url || "https://lavanderia-facturacion.vercel.app/"}?folio=${venta.folio || (venta.ticket_uuid?.slice(0, 8).toUpperCase()) || venta.id}&pin=${venta.pin || venta.pin_facturacion || "0000"}&total=${venta.total}`}
+              value={`${settings?.billing_url || "https://pos-autofactura.vercel.app/"}?folio=${venta.folio || (venta.ticket_uuid?.slice(0, 8).toUpperCase()) || venta.id}&pin=${venta.pin || venta.pin_facturacion || "0000"}&total=${venta.total}`}
               size={100}
               level="M"
               includeMargin={false}
@@ -455,7 +455,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         </div>
 
         <div style={{ fontSize: "0.8em", fontWeight: "900", margin: "2px 0", wordBreak: "break-all" }}>
-           {settings?.billing_url || "https://lavanderia-facturacion.vercel.app/"}
+           {settings?.billing_url || "https://pos-autofactura.vercel.app/"}
         </div>
         
         <div style={{ borderTop: "1px dashed #ccc", margin: "8px 0" }}></div>
