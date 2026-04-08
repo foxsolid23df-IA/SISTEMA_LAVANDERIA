@@ -31,6 +31,8 @@ import { TicketConfiguration } from "../components/admin/TicketConfiguration";
 import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
 import BillingIssuers from "../components/config/BillingIssuers";
+import { InvoiceCancellation } from "../components/config/InvoiceCancellation";
+
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { ProductProvider } from "../contexts/ProductContext";
@@ -389,6 +391,18 @@ export const Routing = () => {
                         <PrivateLayout>
                           <AdminRoute>
                             <BillingIssuers />
+                          </AdminRoute>
+                        </PrivateLayout>
+                      }
+                    />
+
+                    {/* Cancelación de Facturas — Solo Admin */}
+                    <Route
+                      path="/cancelar-factura"
+                      element={
+                        <PrivateLayout>
+                          <AdminRoute>
+                            <InvoiceCancellation />
                           </AdminRoute>
                         </PrivateLayout>
                       }

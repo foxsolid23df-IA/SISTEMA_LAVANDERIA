@@ -89,7 +89,7 @@ export async function createFacturamaInvoice(
   const folio = String(record.folio || record.id).substring(0, 40);
 
   // Estructura CFDI 4.0 para API Multiemisor
-  const cfdiRequest = {
+  const cfdiRequest: any = {
     CfdiType: "I",                // Ingreso
     PaymentForm: record.payment_method === "cash" ? "01" : "03",
     PaymentMethod: "PUE",         // Pago en Una sola Exhibición
@@ -116,6 +116,12 @@ export async function createFacturamaInvoice(
 
     Items: facturamaItems,
   };
+
+  // Agregar Logo si existe en la configuración del portal
+  const logoUrl = issuer.billing_portals?.[0]?.logo_url;
+  if (logoUrl) {
+    cfdiRequest.LogoUrl = logoUrl;
+  }
 
   console.log("➡️ Enviando CFDI a Facturama Multiemisor:", JSON.stringify(cfdiRequest, null, 2));
 

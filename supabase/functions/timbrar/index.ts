@@ -63,7 +63,7 @@ serve(async (req) => {
     // 3. Obtener datos del emisor desde billing_issuers (tabla donde el frontend guarda RFC y CSD)
     const { data: issuer_data, error: issuerError } = await supabase
       .from('billing_issuers')
-      .select('*')
+      .select('*, billing_portals(logo_url)')
       .eq('user_id', record.user_id)
       .eq('is_csd_loaded', true)
       .order('created_at', { ascending: false })
@@ -125,7 +125,7 @@ serve(async (req) => {
         xml_url: xmlBase64 || null,
         pdf_url: pdfBase64 || null,
         total: record.total,
-        status: 'ACTIVO'
+        status: 'VIGENTE'
       });
 
     if (invoiceError) {
