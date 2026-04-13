@@ -4,30 +4,32 @@ import { isAbortError } from '../utils/supabaseErrorHandler';
 
 export const cashSessionService = {
     /**
-     * Obtiene la sesión de caja activa del usuario actual en ESTA terminal
+     * Obtiene la sesión de caja activa del usuario actual
      */
     async getActiveSession() {
-        const terminalId = terminalService.getTerminalId();
-        if (!terminalId) return null;
+        try {
+            const { data: userData } = await supabase.auth.getUser();
+            if (!userData?.user) return null;
 
-        const { data, error } = await supabase
-            .from('cash_sessions')
-            .select('*')
-            .eq('status', 'open')
-            .eq('terminal_id', terminalId)
-            .order('opened_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            const { data, error } = await supabase
+                .from('cash_sessions')
+                .select(`
+                    *,
+                    terminals (name)
+                `)
+                .eq('user_id', userData.user.id)
+                .eq('status', 'open')
+                .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-             if (!isAbortError(error)) {
-                console.error('Error obteniendo sesión activa:', error);
-             }
-             if (isAbortError(error)) return null;
-             throw error;
+            if (error) {
+                console.error('Error en getActiveSession:', error);
+                return null;
+            }
+            return data;
+        } catch (error) {
+            console.error('Excepción en getActiveSession:', error);
+            return null;
         }
-
-        return data;
     },
 
     /**
@@ -56,18 +58,29 @@ export const cashSessionService = {
      * Abre una nueva sesión de caja con el fondo inicial
      */
     async openSession(staffName, openingFund, staffId = null) {
+        // Verificar si ya existe una sesión activa global
+        const active = await this.getActiveSession();
+        if (active) {
+            console.warn('[Session] Ya existe una sesión activa:', active.id);
+            return active;
+        }
+
         const terminalId = terminalService.getTerminalId();
-        if (!terminalId) throw new Error("Terminal no configurada");
+        if (!terminalId) throw new Error('Terminal no configurada');
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuario no autenticado');
 
         const { data, error } = await supabase
             .from('cash_sessions')
             .insert([{
+                user_id: user.id,
+                terminal_id: terminalId,
                 staff_name: staffName,
                 staff_id: staffId,
                 opening_fund: openingFund,
                 status: 'open',
-                opened_at: new Date().toISOString(),
-                terminal_id: terminalId
+                opened_at: new Date().toISOString()
             }])
             .select()
             .single();

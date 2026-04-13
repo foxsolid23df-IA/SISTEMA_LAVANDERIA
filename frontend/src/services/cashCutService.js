@@ -235,93 +235,55 @@ export const cashCutService = {
 
         try {
             if (cutType === 'turno') {
-                const terminalId = terminalService.getTerminalId();
+                // Buscamos la sesión activa global (independiente de en qué terminal estemos)
+                const session = await cashSessionService.getActiveSession();
 
-                if (terminalId) {
-                    // Validar si es un UUID válido para evitar errores de Postgres
-                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                    if (!uuidRegex.test(terminalId)) {
-                        console.error('ID de terminal inválido:', terminalId);
-                        throw new Error(`ID de terminal inválido: ${terminalId}`);
-                    }
+                if (session && session.opened_at) {
+                    startTime = session.opened_at;
+                    // Fetch withdrawals for this session
+                    withdrawals = await cashWithdrawalService.getTotalWithdrawalsBySession(session.id);
 
-                    const { data: session, error: sessionError } = await supabase
-                        .from('cash_sessions')
-                        .select('id, opened_at')
-                        .eq('terminal_id', terminalId)
-                        .eq('status', 'open')
-                        .order('opened_at', { ascending: false })
-                        .limit(1)
-                        .single();
+                    // Buscamos órdenes y ventas globales para el negocio desde que se abrió esta sesión
+                    const sessionOrders = await orderService.getOrdersBySession(session.id);
+                    sales = await salesService.getSalesSince(startTime, null); // null = todas las terminales
 
-                    if (sessionError && sessionError.code !== 'PGRST116') {
-                        console.error('Error buscando sesión:', sessionError);
-                    }
+                    // Normalizar órdenes al formato de "venta" para el resumen
+                    const normalizedOrders = (sessionOrders || []).map(order => ({
+                        ...order,
+                        total: parseFloat(order.total || 0),
+                        payment_method: order.payment_method === 'cash' ? 'efectivo' :
+                            order.payment_method === 'card' ? 'tarjeta' :
+                                order.payment_method === 'usd_cash' ? 'dolares' :
+                                    order.payment_method,
+                        currency: order.payment_method === 'usd_cash' ? 'USD' : 'MXN',
+                        is_order: true,
+                        amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / (parseFloat(session.exchange_rate) || 20)) : 0
+                    }));
 
-                    if (session && session.opened_at) {
-                        startTime = session.opened_at;
-                        // Fetch withdrawals for this session
-                        withdrawals = await cashWithdrawalService.getTotalWithdrawalsBySession(session.id);
+                    sales = [...sales, ...normalizedOrders];
+                } else {
+                    const lastCut = await cashCutService.getLastCut();
+                    startTime = lastCut?.end_time || new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
-                        // Si tenemos la sesión, podemos buscar órdenes por ID de sesión para mayor precisión
-                        const sessionOrders = await orderService.getOrdersBySession(session.id);
-                        sales = await salesService.getSalesSince(startTime, terminalId);
+                    console.log(`[CashCut] No session found, falling back to last cut or today. StartTime: ${startTime}`);
 
-                        // Normalizar órdenes al formato de "venta" para el resumen
-                        const normalizedOrders = (sessionOrders || []).map(order => ({
+                    sales = await salesService.getSalesSince(startTime, null); // Global
+
+                    const ordersSince = await orderService.getOrdersSince(startTime);
+                    if (ordersSince && ordersSince.length > 0) {
+                        const normalizedOrders = ordersSince.map(order => ({
                             ...order,
                             total: parseFloat(order.total || 0),
-                            // Mapeo de métodos de pago de órdenes a formato de ventas/corte
                             payment_method: order.payment_method === 'cash' ? 'efectivo' :
                                 order.payment_method === 'card' ? 'tarjeta' :
                                     order.payment_method === 'usd_cash' ? 'dolares' :
                                         order.payment_method,
                             currency: order.payment_method === 'usd_cash' ? 'USD' : 'MXN',
                             is_order: true,
-                            // Si es usd_cash, el total en pesos es lo que el sistema guardó como total de la orden
-                            // Intentamos recuperar el valor en USD si existiera, o calculamos un estimado usando el tipo de cambio de la sesión
-                            amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / (parseFloat(session.exchange_rate) || 20)) : 0
+                            amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / 20) : 0
                         }));
-
                         sales = [...sales, ...normalizedOrders];
-                    } else {
-                        const lastCut = await cashCutService.getLastCut();
-                        startTime = lastCut?.end_time || new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
-
-                        console.log(`[CashCut] No session found, falling back to last cut or today. StartTime: ${startTime}`);
-
-                        sales = await salesService.getSalesSince(startTime, terminalId);
-
-                        const ordersSince = await orderService.getOrdersSince(startTime);
-                        if (ordersSince && ordersSince.length > 0) {
-                            const normalizedOrders = ordersSince.map(order => ({
-                                ...order,
-                                total: parseFloat(order.total || 0),
-                                payment_method: order.payment_method === 'cash' ? 'efectivo' :
-                                    order.payment_method === 'card' ? 'tarjeta' :
-                                        order.payment_method === 'usd_cash' ? 'dolares' :
-                                            order.payment_method,
-                                currency: order.payment_method === 'usd_cash' ? 'USD' : 'MXN',
-                                is_order: true,
-                                amount_usd: order.payment_method === 'usd_cash' ? (parseFloat(order.total) / 20) : 0
-                            }));
-                            sales = [...sales, ...normalizedOrders];
-                        }
                     }
-                } else {
-                    console.warn("Terminal ID not found in localStorage");
-                    startTime = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
-                    sales = await salesService.getSalesSince(startTime, null);
-                    const ordersSince = await orderService.getOrdersSince(startTime);
-                    sales = [...sales, ...ordersSince.map(o => ({
-                        ...o,
-                        total: parseFloat(o.total),
-                        payment_method: o.payment_method === 'cash' ? 'efectivo' :
-                            o.payment_method === 'card' ? 'tarjeta' :
-                                o.payment_method === 'usd_cash' ? 'dolares' :
-                                    o.payment_method,
-                        is_order: true
-                    }))];
                 }
             } else {
                 const lastDayCut = await cashCutService.getLastDayCut();
