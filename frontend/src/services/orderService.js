@@ -48,6 +48,18 @@ export const orderService = {
 
     if (itemsError) throw itemsError;
 
+    // 3. Actualizar stock para productos
+    const itemsForStockUpdate = items
+      .filter(item => item.product_id)
+      .map(item => ({
+        id: item.product_id,
+        quantity: item.quantity
+      }));
+    
+    if (itemsForStockUpdate.length > 0) {
+      await supabase.rpc('decrement_stock', { items: itemsForStockUpdate });
+    }
+
     return order;
   },
 
@@ -92,6 +104,30 @@ export const orderService = {
 
   // Actualizar estado de una orden
   async updateOrderStatus(orderId, newStatus) {
+    if (newStatus === 'cancelled') {
+        const { data: orderDetails, error: fetchError } = await supabase
+            .from('orders')
+            .select(`status, order_items(product_id, quantity)`)
+            .eq('id', orderId)
+            .single();
+            
+        if (fetchError) throw fetchError;
+        
+        // Solo restaurar stock si no estaba ya cancelada
+        if (orderDetails.status !== 'cancelled') {
+            const itemsForStockUpdate = orderDetails.order_items
+                .filter(item => item.product_id)
+                .map(item => ({
+                    id: item.product_id,
+                    quantity: item.quantity
+                }));
+                
+            if (itemsForStockUpdate.length > 0) {
+                await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
+            }
+        }
+    }
+
     const { error } = await supabase
       .from('orders')
       .update({ status: newStatus })
@@ -103,7 +139,27 @@ export const orderService = {
 
   // Eliminar una orden (requiere permisos administrativos)
   async deleteOrder(orderId) {
-    // Primero eliminar items
+    // Primero buscar items para restaurar el stock si la orden no estaba cancelada
+    const { data: orderDetails, error: fetchError } = await supabase
+      .from('orders')
+      .select('status, order_items(product_id, quantity)')
+      .eq('id', orderId)
+      .single();
+
+    if (!fetchError && orderDetails && orderDetails.status !== 'cancelled') {
+      const itemsForStockUpdate = orderDetails.order_items
+        .filter(item => item.product_id)
+        .map(item => ({
+          id: item.product_id,
+          quantity: item.quantity
+        }));
+        
+      if (itemsForStockUpdate.length > 0) {
+        await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
+      }
+    }
+
+    // Luego eliminar items
     const { error: itemsError } = await supabase
       .from('order_items')
       .delete()
@@ -111,7 +167,7 @@ export const orderService = {
 
     if (itemsError) throw itemsError;
 
-    // Luego eliminar orden
+    // Finalmente eliminar orden
     const { error: orderError } = await supabase
       .from('orders')
       .delete()
@@ -238,28 +294,6 @@ export const orderService = {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  },
-
-  // --- MÉTODOS PARA ESTADÍSTICAS Y AUDITORÍA ---
-
-  // Eliminar una orden (requiere permisos administrativos)
-  async deleteOrder(orderId) {
-    // Primero eliminar los items de la orden
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (itemsError) throw itemsError;
-
-    // Luego eliminar la orden
-    const { error: orderError } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', orderId);
-
-    if (orderError) throw orderError;
-    return true;
   },
 
   // Obtener estadísticas generales de órdenes

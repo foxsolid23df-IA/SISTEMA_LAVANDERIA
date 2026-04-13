@@ -66,11 +66,21 @@ export const CashReportsView = () => {
       // Cargar sesiones abiertas para mostrar "Abierta" en tiempo real
       let openSessions = [];
       if (filters.cutType === 'all' || filters.cutType === 'turno') {
-        const { data: sessions } = await supabase
+        let query = supabase
           .from('cash_sessions')
           .select('*, terminals(name)')
-          .eq('status', 'open')
-          .order('opened_at', { ascending: false });
+          .eq('status', 'open');
+
+        if (filters.startDate) {
+          query = query.gte('opened_at', new Date(filters.startDate).toISOString());
+        }
+        if (filters.endDate) {
+          const endDate = new Date(filters.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          query = query.lte('opened_at', endDate.toISOString());
+        }
+
+        const { data: sessions } = await query.order('opened_at', { ascending: false });
         
         openSessions = (sessions || []).map(session => ({
           id: `active-${session.id}`,

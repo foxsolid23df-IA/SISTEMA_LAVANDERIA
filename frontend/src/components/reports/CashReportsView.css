@@ -4,7 +4,7 @@
 
 .cash-reports {
   padding: 1.5rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -195,7 +195,7 @@
   background: white;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .cash-reports__table {
@@ -218,7 +218,12 @@
   letter-spacing: 0.06em;
   color: var(--text-muted, #94a3b8);
   white-space: nowrap;
+  min-width: 100px;
 }
+
+.cash-reports__table th:nth-child(2) { min-width: 80px; } /* Hora */
+.cash-reports__table th:nth-child(4) { min-width: 120px; } /* Estatus */
+.cash-reports__table th:last-child { min-width: 80px; text-align: center; } /* Acciones */
 
 .cash-reports__table td {
   padding: 0.85rem 1rem;
