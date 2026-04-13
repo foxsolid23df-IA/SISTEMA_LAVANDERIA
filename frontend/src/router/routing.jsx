@@ -41,6 +41,7 @@ import { LicenseGuard } from "../components/common/LicenseGuard";
 import MobileCapture from "../components/ai/MobileCapture";
 import { AdminPanel } from "../components/admin/AdminPanel";
 import { CashReportsView } from "../components/reports/CashReportsView";
+import CancellationsReport from "../components/reports/CancellationsReport";
 import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
 import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
 import { LatencyIndicator } from "../components/common/LatencyIndicator";
@@ -186,7 +187,7 @@ const CashReportsRoute = ({ children }) => {
 
 const InventoryRoute = ({ children }) => {
   const { canManageInventory, canViewSupplies } = useAuth();
-  return (canManageInventory || canViewSupplies) ? children : <Navigate to="/" />;
+  return canManageInventory || canViewSupplies ? children : <Navigate to="/" />;
 };
 
 export const Routing = () => {
@@ -316,7 +317,6 @@ export const Routing = () => {
                       }
                     />
 
-
                     {/* Reportes de Caja — Solo Admin/Web */}
                     <Route
                       path="/reportes-caja"
@@ -325,6 +325,16 @@ export const Routing = () => {
                           <CashReportsRoute>
                             <CashReportsView />
                           </CashReportsRoute>
+                        </PrivateLayout>
+                      }
+                    />
+
+                    {/* Reporte de Cancelaciones */}
+                    <Route
+                      path="/reporte-cancelaciones"
+                      element={
+                        <PrivateLayout>
+                          <CancellationsReport />
                         </PrivateLayout>
                       }
                     />
@@ -354,21 +364,21 @@ export const Routing = () => {
                     />
 
                     <Route
-                        path="/configuracion-dolares"
-                        element={
-                            <PrivateLayout>
-                                <ExchangeRateSettings />
-                            </PrivateLayout>
-                        }
+                      path="/configuracion-dolares"
+                      element={
+                        <PrivateLayout>
+                          <ExchangeRateSettings />
+                        </PrivateLayout>
+                      }
                     />
 
                     <Route
-                        path="/configuracion-impuestos"
-                        element={
-                            <PrivateLayout>
-                                <TaxSettings />
-                            </PrivateLayout>
-                        }
+                      path="/configuracion-impuestos"
+                      element={
+                        <PrivateLayout>
+                          <TaxSettings />
+                        </PrivateLayout>
+                      }
                     />
 
                     <Route

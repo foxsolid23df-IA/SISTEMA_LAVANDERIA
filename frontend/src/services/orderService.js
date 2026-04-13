@@ -55,7 +55,7 @@ export const orderService = {
         id: item.product_id,
         quantity: item.quantity
       }));
-    
+
     if (itemsForStockUpdate.length > 0) {
       await supabase.rpc('decrement_stock', { items: itemsForStockUpdate });
     }
@@ -105,27 +105,27 @@ export const orderService = {
   // Actualizar estado de una orden
   async updateOrderStatus(orderId, newStatus) {
     if (newStatus === 'cancelled') {
-        const { data: orderDetails, error: fetchError } = await supabase
-            .from('orders')
-            .select(`status, order_items(product_id, quantity)`)
-            .eq('id', orderId)
-            .single();
-            
-        if (fetchError) throw fetchError;
-        
-        // Solo restaurar stock si no estaba ya cancelada
-        if (orderDetails.status !== 'cancelled') {
-            const itemsForStockUpdate = orderDetails.order_items
-                .filter(item => item.product_id)
-                .map(item => ({
-                    id: item.product_id,
-                    quantity: item.quantity
-                }));
-                
-            if (itemsForStockUpdate.length > 0) {
-                await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
-            }
+      const { data: orderDetails, error: fetchError } = await supabase
+        .from('orders')
+        .select(`status, order_items(product_id, quantity)`)
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Solo restaurar stock si no estaba ya cancelada
+      if (orderDetails.status !== 'cancelled') {
+        const itemsForStockUpdate = orderDetails.order_items
+          .filter(item => item.product_id)
+          .map(item => ({
+            id: item.product_id,
+            quantity: item.quantity
+          }));
+
+        if (itemsForStockUpdate.length > 0) {
+          await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
         }
+      }
     }
 
     const { error } = await supabase
@@ -153,7 +153,7 @@ export const orderService = {
           id: item.product_id,
           quantity: item.quantity
         }));
-        
+
       if (itemsForStockUpdate.length > 0) {
         await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
       }
@@ -247,7 +247,7 @@ export const orderService = {
   // Obtener órdenes desde una fecha
   async getOrdersSince(startTime, terminalId = null) {
     if (!startTime) return [];
-    
+
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
 
@@ -434,6 +434,57 @@ export const orderService = {
       recaudadoEnRango: data.reduce((sum, o) => sum + (parseFloat(o.paid_amount) || 0), 0),
       fechaInicio: fechaInicio || 'Inicio',
       fechaFin: fechaFin || 'Fin'
+    };
+  },
+
+  // Obtener estadísticas de cancelaciones
+  async getCancellationStatistics(signal) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { count: 0, total: 0, byMethod: {} };
+
+    const ahora = new Date();
+    const inicioDelDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0, 0).toISOString();
+    const inicioSemana = new Date(ahora);
+    const diaActual = ahora.getDay();
+    const diferencia = diaActual === 0 ? 6 : diaActual - 1;
+    inicioSemana.setDate(ahora.getDate() - diferencia);
+    inicioSemana.setHours(0, 0, 0, 0);
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+
+    let query = supabase
+      .from('orders')
+      .select('total, payment_method, created_at, status')
+      .eq('user_id', user.id)
+      .eq('status', 'cancelled')
+      .order('created_at', { ascending: false });
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data: cancelledOrders, error } = await query;
+    if (error) throw error;
+
+    const allCancelled = cancelledOrders || [];
+
+    // Calcular estadísticas
+    const todayCancelled = allCancelled.filter(o => new Date(o.created_at) >= new Date(inicioDelDia));
+    const weekCancelled = allCancelled.filter(o => new Date(o.created_at) >= inicioSemana);
+    const monthCancelled = allCancelled.filter(o => new Date(o.created_at) >= new Date(inicioMes));
+
+    const calculateStats = (orders) => ({
+      count: orders.length,
+      total: orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0),
+      byMethod: orders.reduce((acc, order) => {
+        const method = order.payment_method || 'unknown';
+        acc[method] = (acc[method] || 0) + (parseFloat(order.total) || 0);
+        return acc;
+      }, {})
+    });
+
+    return {
+      all: calculateStats(allCancelled),
+      today: calculateStats(todayCancelled),
+      week: calculateStats(weekCancelled),
+      month: calculateStats(monthCancelled)
     };
   }
 };

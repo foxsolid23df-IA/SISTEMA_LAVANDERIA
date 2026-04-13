@@ -72,7 +72,10 @@ export const Sidebar = () => {
     const checkLowStock = async () => {
       try {
         const supplies = await supplyService.getAll();
-        const count = supplies.filter(s => parseFloat(s.current_stock || 0) <= parseFloat(s.min_stock || 0)).length;
+        const count = supplies.filter(
+          (s) =>
+            parseFloat(s.current_stock || 0) <= parseFloat(s.min_stock || 0),
+        ).length;
         setLowStockCount(count);
       } catch (err) {
         console.error("[Sidebar] Error checkLowStock", err);
@@ -329,7 +332,6 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-
           {canAccessServices && (
             <NavLink
               to="/servicios"
@@ -386,7 +388,9 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 inventory_2
               </span>
-              <span className="text-sm font-bold flex-1">Insumos (Interno)</span>
+              <span className="text-sm font-bold flex-1">
+                Insumos (Interno)
+              </span>
               {(isAdmin || activeRole === "GERENTE") && lowStockCount > 0 && (
                 <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-rose-500/30">
                   {lowStockCount}
@@ -394,7 +398,6 @@ export const Sidebar = () => {
               )}
             </NavLink>
           )}
-
 
           {canManageClients && (
             <NavLink
@@ -427,7 +430,9 @@ export const Sidebar = () => {
                           `}
               onClick={() => setIsOpen(false)}
             >
-              <span className="material-icons-outlined text-[20px]">history</span>
+              <span className="material-icons-outlined text-[20px]">
+                history
+              </span>
               <span className="text-sm font-bold">Auditoría</span>
             </NavLink>
           )}
@@ -480,6 +485,25 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
+          {canViewAudit && (
+            <NavLink
+              to="/reporte-cancelaciones"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                cancel
+              </span>
+              <span className="text-sm font-bold">Cancelaciones</span>
+            </NavLink>
+          )}
 
           {canAccessSettings && (
             <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
@@ -503,7 +527,6 @@ export const Sidebar = () => {
             </div>
           )}
 
-
           {canUseIAVision && (
             <button
               onClick={() => {
@@ -523,7 +546,6 @@ export const Sidebar = () => {
               </span>
             </button>
           )}
-
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
             {(canManageCash || isAdmin) && (
@@ -560,7 +582,9 @@ export const Sidebar = () => {
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
               >
-                <span className="material-icons-outlined text-[20px]">lock</span>
+                <span className="material-icons-outlined text-[20px]">
+                  lock
+                </span>
                 <span className="text-sm font-bold">Bloquear</span>
               </button>
             )}
@@ -622,7 +646,6 @@ export const Sidebar = () => {
                 </button>
               )}
             </div>
-
           </div>
         </nav>
 
