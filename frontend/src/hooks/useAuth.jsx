@@ -435,6 +435,7 @@ export const AuthProvider = ({ children }) => {
       canProcessOrders,
       canDeliverOrders,
       canVoidSales,
+      canViewCashReports,
       activeRole, 
 
 
