@@ -63,7 +63,7 @@ export const CashReportsView = () => {
         endDate: filters.endDate || undefined,
       });
 
-      // Cargar sesiones abiertas para mostrar "Abierta" en tiempo real
+      // Cargar sesiones abiertas para mostrar "Abierta" en tiempo real CON ventas reales
       let openSessions = [];
       if (filters.cutType === 'all' || filters.cutType === 'turno') {
         let query = supabase
@@ -82,20 +82,70 @@ export const CashReportsView = () => {
 
         const { data: sessions } = await query.order('opened_at', { ascending: false });
         
-        openSessions = (sessions || []).map(session => ({
-          id: `active-${session.id}`,
-          staff_name: session.staff_name,
-          cut_type: 'turno',
-          status: 'Abierta',
-          is_active_session: true,
-          created_at: new Date().toISOString(), // Actualizado para que siempre aparezca al inicio y cubra hasta "ahora"
-          start_time: session.opened_at,
-          end_time: null,
-          sales_total: 0,
-          opening_fund: session.opening_fund,
-          terminal_name: session.terminals?.name,
-          terminal_id: session.terminal_id
-        }));
+        // Para cada sesión abierta, calcular ventas reales en tiempo real
+        const sessionPromises = (sessions || []).map(async (session) => {
+          // Consultar órdenes pagadas vinculadas a esta sesión de caja
+          const { data: sessionOrders } = await supabase
+            .from('orders')
+            .select('total, payment_method, payment_status')
+            .eq('cash_session_id', session.id)
+            .in('payment_status', ['paid', 'partial']);
+
+          // Consultar ventas directas (mostrador) desde la apertura de sesión
+          const { data: sessionSales } = await supabase
+            .from('sales')
+            .select('total, payment_method')
+            .gte('created_at', session.opened_at)
+            .eq('terminal_id', session.terminal_id);
+
+          const allTransactions = [
+            ...(sessionOrders || []).map(o => ({
+              total: parseFloat(o.total) || 0,
+              method: o.payment_method === 'cash' ? 'efectivo' :
+                      o.payment_method === 'card' ? 'tarjeta' :
+                      o.payment_method === 'transfer' ? 'transferencia' :
+                      o.payment_method?.toLowerCase() || 'efectivo'
+            })),
+            ...(sessionSales || []).map(s => ({
+              total: parseFloat(s.total) || 0,
+              method: s.payment_method === 'cash' ? 'efectivo' :
+                      s.payment_method === 'card' ? 'tarjeta' :
+                      s.payment_method === 'transfer' ? 'transferencia' :
+                      s.payment_method?.toLowerCase() || 'efectivo'
+            }))
+          ];
+
+          const salesCount = allTransactions.length;
+          const salesTotal = allTransactions.reduce((sum, t) => sum + t.total, 0);
+          const cashTotal = allTransactions.filter(t => t.method === 'efectivo').reduce((sum, t) => sum + t.total, 0);
+          const cardTotal = allTransactions.filter(t => t.method === 'tarjeta').reduce((sum, t) => sum + t.total, 0);
+          const transferTotal = allTransactions.filter(t => t.method === 'transferencia').reduce((sum, t) => sum + t.total, 0);
+          const openingFund = parseFloat(session.opening_fund) || 0;
+
+          return {
+            id: `active-${session.id}`,
+            session_id: session.id,
+            staff_name: session.staff_name,
+            cut_type: 'turno',
+            status: 'Abierta',
+            is_active_session: true,
+            created_at: new Date().toISOString(),
+            start_time: session.opened_at,
+            end_time: null,
+            sales_count: salesCount,
+            sales_total: salesTotal,
+            opening_fund: openingFund,
+            expected_cash: openingFund + cashTotal,
+            actual_cash: 0,
+            difference: 0,
+            card_total: cardTotal,
+            transfer_total: transferTotal,
+            terminal_name: session.terminals?.name,
+            terminal_id: session.terminal_id
+          };
+        });
+
+        openSessions = await Promise.all(sessionPromises);
       }
 
       // Combinar y ordenar por fecha
@@ -126,6 +176,20 @@ export const CashReportsView = () => {
         event: '*', 
         schema: 'public', 
         table: 'cash_sessions' 
+      }, () => {
+        fetchCuts();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'orders' 
+      }, () => {
+        fetchCuts();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'sales' 
       }, () => {
         fetchCuts();
       })

@@ -622,6 +622,19 @@ export const Sales = () => {
                 <button
                   key={p.id}
                   onClick={() => {
+                    // Restricción: No permitir agregar más de una vez desde el grid si ya existe en el carrito
+                    const itemExistente = carrito.find(item => item.id === p.id);
+                    if (itemExistente) {
+                      Swal.fire({
+                        icon: 'info',
+                        title: 'Ya en la comanda',
+                        text: `El producto/servicio "${p.name}" ya ha sido agregado. Use los botones (+) y (-) del carrito para ajustar la cantidad.`,
+                        confirmButtonColor: '#4f46e5',
+                        timer: 4000
+                      });
+                      return;
+                    }
+
                     // Si es servicio KG, abrir modal de cantidad
                     if (p.pricing_type === "kg") {
                       setKgModalProduct(p);
