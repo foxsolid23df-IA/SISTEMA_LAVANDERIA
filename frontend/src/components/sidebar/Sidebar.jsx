@@ -7,6 +7,7 @@ import { productService } from "../../services/productService";
 import { salesService } from "../../services/salesService";
 import { supplyService } from "../../services/supplyService";
 import { CashCut } from "../cashcut/CashCut";
+import { cashSessionService } from "../../services/cashSessionService";
 import Swal from "sweetalert2";
 import { config } from "../../config";
 import "./Sidebar.css";
@@ -46,6 +47,7 @@ export const Sidebar = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [openSessionsCount, setOpenSessionsCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [updaterMessage, setUpdaterMessage] = useState("");
@@ -80,6 +82,21 @@ export const Sidebar = () => {
     const interval = setInterval(checkLowStock, 120000); // Check every 2 minutes
     return () => clearInterval(interval);
   }, [isAdmin, activeRole, canViewSupplies]);
+
+  useEffect(() => {
+    const checkOpenSessions = async () => {
+      try {
+        const count = await cashSessionService.getOpenSessionsCount();
+        setOpenSessionsCount(count);
+      } catch (err) {
+        console.error("[Sidebar] Error checkOpenSessions", err);
+      }
+    };
+
+    checkOpenSessions();
+    const interval = setInterval(checkOpenSessions, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCheckUpdates = async () => {
     if (!window.electron?.checkForUpdates) return;
@@ -451,6 +468,11 @@ export const Sidebar = () => {
                 receipt_long
               </span>
               <span className="text-sm font-bold">Reportes de Caja</span>
+              {openSessionsCount > 0 && (
+                <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-emerald-500/30 ml-2 animate-pulse">
+                  {openSessionsCount}
+                </span>
+              )}
               <span className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
                 WEB
               </span>
@@ -521,6 +543,11 @@ export const Sidebar = () => {
                 <span className="text-sm font-bold">
                   {cashSession ? "CAJA" : "ABRIR CAJA"}
                 </span>
+                {openSessionsCount > 0 && !cashSession && (
+                  <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto animate-pulse">
+                    {openSessionsCount} Abiertas
+                  </span>
+                )}
               </button>
             )}
 

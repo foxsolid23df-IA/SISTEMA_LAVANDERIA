@@ -118,5 +118,22 @@ export const cashSessionService = {
         }
 
         return data || [];
+    },
+
+    /**
+     * Cuenta cuántas sesiones de caja hay abiertas globalmente
+     */
+    async getOpenSessionsCount() {
+        const { count, error } = await supabase
+            .from('cash_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'open');
+
+        if (error) {
+            console.error('Error contando sesiones abiertas:', error);
+            return 0;
+        }
+
+        return count || 0;
     }
 };
