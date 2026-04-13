@@ -19,6 +19,7 @@ const ROLES = {
             can_access_products: true,
             can_manage_supplies: true,
             can_see_reports: true,
+            can_view_cash_reports: true,
             can_view_dashboard: true,
             can_manage_inventory: true,
             can_view_supplies: true,
@@ -50,6 +51,7 @@ const ROLES = {
             can_access_products: true,
             can_manage_supplies: true,
             can_see_reports: true,
+            can_view_cash_reports: true,
             can_view_dashboard: true,
             can_manage_inventory: true,
             can_view_supplies: true,
@@ -171,7 +173,9 @@ const PERMISSION_LABELS = {
     can_view_supplies: { label: 'Insumos: Libreta Digital', desc: 'Solo registrar uso de detergentes y ver existencias' },
     can_manage_clients: { label: 'Clientes', desc: 'Gestionar base de datos de clientes' },
     can_view_audit: { label: 'Auditoría', desc: 'Acceso al historial de movimientos' },
-    can_view_dashboard: { label: 'Dashboard', desc: 'Ver estadísticas y reportes' },
+    can_see_reports: { label: 'Reportes', desc: 'Acceso a reportes generales del sistema' },
+    can_view_cash_reports: { label: 'Reportes de Caja', desc: 'Ver reportes y cortes de caja' },
+    can_view_dashboard: { label: 'Dashboard', desc: 'Ver estadísticas dinámicas' },
     can_access_settings: { label: 'Configuración', desc: 'Acceso ajustes generales del sistema' },
     can_use_ia_vision: { label: 'IA Vision', desc: 'Uso de reconocimiento de prendas por IA' },
     can_manage_cash: { label: 'Caja', desc: 'Aperturas, retiros y cortes de caja' },
@@ -521,7 +525,7 @@ export const UserManager = () => {
                                     { 
                                         title: 'Administración y Reportes', 
                                         icon: 'analytics',
-                                        keys: ['can_view_dashboard', 'can_view_audit', 'can_manage_staff', 'can_see_reports'] 
+                                        keys: ['can_view_dashboard', 'can_view_audit', 'can_manage_staff', 'can_see_reports', 'can_view_cash_reports'] 
                                     },
                                     { 
                                         title: 'Sistema y Terminal', 

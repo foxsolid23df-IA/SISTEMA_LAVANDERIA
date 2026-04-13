@@ -39,6 +39,7 @@ export const Sidebar = () => {
     canRestartCash,
     canLogout,
     // Compatibilidad
+    canViewCashReports,
     canViewSupplies,
     canManageInventory,
   } = useAuth();
@@ -451,7 +452,7 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          {adminMode && isAdmin && (
+          {canViewCashReports && (
             <NavLink
               to="/reportes-caja"
               className={({ isActive }) => `

@@ -76,7 +76,13 @@ export const cashCutService = {
                 transfer_total: cutData.transferTotal || 0,
                 notes: cutData.notes || null,
                 user_id: userData.user.id,
-                terminal_id: terminalService.getTerminalId()
+                terminal_id: terminalService.getTerminalId(),
+                // Datos de cancelaciones
+                cancelled_count: cutData.cancelledCount || 0,
+                cancelled_total: cutData.cancelledTotal || 0,
+                cancelled_cash: cutData.cancelledCash || 0,
+                cancelled_card: cutData.cancelledCard || 0,
+                cancelled_transfer: cutData.cancelledTransfer || 0
             }])
             .select()
             .single();
@@ -139,7 +145,7 @@ export const cashCutService = {
         const { data, error } = await query.limit(limit);
 
         if (error) throw error;
-        
+
         const cuts = data || [];
 
         // Fallback: Para cortes sin opening_fund, buscar en cash_sessions
@@ -189,12 +195,12 @@ export const cashCutService = {
             const normalizedOrders = orders.map(order => ({
                 ...order,
                 total: parseFloat(order.total),
-                payment_method: 
+                payment_method:
                     order.payment_method === 'cash' ? 'efectivo' :
-                    order.payment_method === 'card' ? 'tarjeta' :
-                    order.payment_method === 'transfer' ? 'transferencia' :
-                    order.payment_method === 'usd_cash' ? 'dolares' :
-                    order.payment_method?.toLowerCase() || 'efectivo',
+                        order.payment_method === 'card' ? 'tarjeta' :
+                            order.payment_method === 'transfer' ? 'transferencia' :
+                                order.payment_method === 'usd_cash' ? 'dolares' :
+                                    order.payment_method?.toLowerCase() || 'efectivo',
                 is_order: true,
                 customer_name: order.customers?.name || 'Cliente General',
                 items_summary: order.order_items?.map(it => it.product_name).join(', ')
@@ -204,19 +210,19 @@ export const cashCutService = {
             const normalizedSales = sales.map(sale => ({
                 ...sale,
                 total: parseFloat(sale.total),
-                payment_method: 
+                payment_method:
                     sale.payment_method === 'cash' ? 'efectivo' :
-                    sale.payment_method === 'card' ? 'tarjeta' :
-                    sale.payment_method === 'transfer' ? 'transferencia' :
-                    sale.payment_method === 'usd_cash' ? 'dolares' :
-                    sale.payment_method?.toLowerCase() || 'efectivo',
+                        sale.payment_method === 'card' ? 'tarjeta' :
+                            sale.payment_method === 'transfer' ? 'transferencia' :
+                                sale.payment_method === 'usd_cash' ? 'dolares' :
+                                    sale.payment_method?.toLowerCase() || 'efectivo',
                 is_sale: true,
                 customer_name: 'Venta de Mostrador',
                 items_summary: sale.sale_items?.map(it => it.product_name).join(', ')
             }));
 
             return {
-                transactions: [...normalizedSales, ...normalizedOrders].sort((a, b) => 
+                transactions: [...normalizedSales, ...normalizedOrders].sort((a, b) =>
                     new Date(b.created_at) - new Date(a.created_at)
                 ),
                 startTime,
@@ -236,29 +242,28 @@ export const cashCutService = {
 
         try {
             if (cutType === 'turno') {
-                // Buscamos la sesión activa global
+                // Buscamos la sesión activa global (sin filtrar por user_id)
                 let session = null;
-                
-                // Intento defensivo de usar el servicio o fallback a Supabase directo
+
                 try {
-                    if (typeof cashSessionService !== 'undefined' && cashSessionService.getActiveSession) {
-                        session = await cashSessionService.getActiveSession();
-                    } else {
-                        console.warn('[CashCutService] cashSessionService no está disponible, usando fallback a Supabase directo');
-                        const { data: { user } } = await supabase.auth.getUser();
-                        if (user) {
-                            const { data } = await supabase
-                                .from('cash_sessions')
-                                .select('*')
-                                .eq('status', 'open')
-                                .order('opened_at', { ascending: false })
-                                .limit(1)
-                                .single();
-                            session = data;
-                        }
-                    }
+                    // Usamos getGlobalActiveSession para encontrar CUALQUIER sesión abierta
+                    // (no solo la del usuario actual), así el reporte funciona para todos
+                    session = await cashSessionService.getGlobalActiveSession();
                 } catch (sessionErr) {
                     console.error('[CashCutService] Error obteniendo sesión:', sessionErr);
+                    // Fallback directo a Supabase si el servicio falla
+                    try {
+                        const { data } = await supabase
+                            .from('cash_sessions')
+                            .select('*')
+                            .eq('status', 'open')
+                            .order('opened_at', { ascending: false })
+                            .limit(1)
+                            .maybeSingle();
+                        session = data;
+                    } catch (fbErr) {
+                        console.error('[CashCutService] Fallback también falló:', fbErr);
+                    }
                 }
 
                 if (session && session.opened_at) {
@@ -293,7 +298,7 @@ export const cashCutService = {
 
                     sales = [...sales, ...normalizedOrders];
                 } else {
-                    const lastCut = await this.getLastCut();
+                    const lastCut = await cashCutService.getLastCut();
                     startTime = lastCut?.end_time || new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
                     console.log(`[CashCut] No session found, falling back to last cut or today. StartTime: ${startTime}`);
@@ -391,28 +396,55 @@ export const cashCutService = {
             const salesCount = sales.length;
             const salesTotal = sales.reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0);
 
-            // Calcular totales por método de pago para el resumen
-            const cardTotal = sales
+            // Separar ordenes canceladas para calculo especial
+            const cancelledOrders = sales.filter(s => s.status === 'cancelled');
+            const activeSales = sales.filter(s => s.status !== 'cancelled');
+
+            const cancelledCount = cancelledOrders.length;
+            const cancelledTotal = cancelledOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+
+            // Calcular totales por método de pago para el resumen (solo ventas activas)
+            const cardTotal = activeSales
                 .filter(s => s.payment_method === 'tarjeta')
                 .reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0);
 
-            const transferTotal = sales
+            const transferTotal = activeSales
                 .filter(s => s.payment_method === 'transferencia')
                 .reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0);
 
-            const cashTotal = sales
+            const cashTotal = activeSales
                 .filter(s => s.payment_method === 'efectivo')
                 .reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0);
 
+            // Calcular cancelaciones por método de pago
+            const cancelledCash = cancelledOrders
+                .filter(o => o.payment_method === 'efectivo')
+                .reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+
+            const cancelledCard = cancelledOrders
+                .filter(o => o.payment_method === 'tarjeta')
+                .reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+
+            const cancelledTransfer = cancelledOrders
+                .filter(o => o.payment_method === 'transferencia')
+                .reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+
             return {
                 startTime,
-                salesCount,
-                salesTotal,
+                salesCount: activeSales.length,
+                salesTotal: activeSales.reduce((sum, sale) => sum + parseFloat(sale.total || 0), 0),
                 cardTotal,
                 transferTotal,
                 cashTotal,
                 sales,
-                withdrawals
+                withdrawals,
+                // Datos de cancelaciones
+                cancelledOrders,
+                cancelledCount,
+                cancelledTotal,
+                cancelledCash,
+                cancelledCard,
+                cancelledTransfer
             };
         } catch (error) {
             console.error('Error detallado en getCurrentShiftSummary:', error);

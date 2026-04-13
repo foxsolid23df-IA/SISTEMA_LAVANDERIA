@@ -304,7 +304,15 @@ export const AuthProvider = ({ children }) => {
   // Verificar si hay sesión de caja activa
   const checkCashSession = async () => {
     try {
-      const session = await cashSessionService.getActiveSession();
+      // Primero intentar obtener la sesión del usuario actual
+      let session = await cashSessionService.getActiveSession();
+      
+      // Si no hay sesión propia, buscar cualquier sesión abierta del negocio
+      // (para que empleados que no abrieron la caja puedan operar)
+      if (!session) {
+        session = await cashSessionService.getGlobalActiveSession();
+      }
+
       if (session) {
         setCashSession(session);
         setNeedsCashFund(false);
@@ -367,6 +375,7 @@ export const AuthProvider = ({ children }) => {
   const canLockTerminal = p.can_lock_terminal ?? true;
   const canRestartCash = p.can_restart_cash ?? canAccessAdmin;
   const canLogout = p.can_logout ?? true;
+  const canViewCashReports = p.can_view_cash_reports ?? (canAccessAdmin || activeRole === "gerente");
 
   // Compatibilidad con código antiguo
   const canAccessReports = canViewDashboard;
@@ -491,6 +500,7 @@ export const AuthProvider = ({ children }) => {
       canProcessOrders,
       canDeliverOrders,
       canVoidSales,
+      canViewCashReports,
       activeRole,
       activeStaff,
       isLocked,

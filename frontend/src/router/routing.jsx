@@ -179,6 +179,11 @@ const AdminRoute = ({ children }) => {
   return isAdmin ? children : <Navigate to="/" />;
 };
 
+const CashReportsRoute = ({ children }) => {
+  const { canViewCashReports } = useAuth();
+  return canViewCashReports ? children : <Navigate to="/" />;
+};
+
 const InventoryRoute = ({ children }) => {
   const { canManageInventory, canViewSupplies } = useAuth();
   return (canManageInventory || canViewSupplies) ? children : <Navigate to="/" />;
@@ -317,9 +322,9 @@ export const Routing = () => {
                       path="/reportes-caja"
                       element={
                         <PrivateLayout>
-                          <AdminRoute>
+                          <CashReportsRoute>
                             <CashReportsView />
-                          </AdminRoute>
+                          </CashReportsRoute>
                         </PrivateLayout>
                       }
                     />

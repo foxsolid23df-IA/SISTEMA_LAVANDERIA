@@ -110,6 +110,50 @@ const TicketCorte = forwardRef(({ cutResult, settings, cutType }, ref) => {
           </div>
         )}
 
+        {/* Mostrar cancelaciones si existen */}
+        {cutResult.cancelledCount > 0 && (
+          <div style={{ padding: "4px 0", borderBottom: "1px dotted #000" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                color: "red",
+                marginBottom: "2px",
+                fontWeight: "bold",
+              }}
+            >
+              <span>CANCELACIONES ({cutResult.cancelledCount}):</span>
+              <span style={{ fontWeight: "bold" }}>
+                -{formatearDinero(cutResult.cancelledTotal)}
+              </span>
+            </div>
+            {cutResult.cancelledOrders &&
+              cutResult.cancelledOrders.map((order, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    paddingLeft: "8px",
+                    fontSize: "0.85em",
+                    color: "#666",
+                    marginBottom: "2px",
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <span>
+                      - #{order.folio || order.id?.slice(-6)} -{" "}
+                      {order.customers?.name ||
+                        order.customer_name ||
+                        "Cliente"}
+                    </span>
+                    <span>{formatearDinero(order.total)}</span>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
         {cutResult.withdrawals?.count > 0 && (
           <div style={{ padding: "4px 0", borderBottom: "1px dotted #000" }}>
             <div
