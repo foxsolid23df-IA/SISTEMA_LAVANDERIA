@@ -3,6 +3,7 @@ import { salesService } from './salesService';
 import { terminalService } from './terminalService';
 import { orderService } from './orderService';
 import { cashWithdrawalService } from './cashWithdrawalService';
+import { cashSessionService } from './cashSessionService';
 
 export const cashCutService = {
     // Obtener el último corte de caja (para saber dónde empezó el turno)
@@ -235,13 +236,43 @@ export const cashCutService = {
 
         try {
             if (cutType === 'turno') {
-                // Buscamos la sesión activa global (independiente de en qué terminal estemos)
-                const session = await cashSessionService.getActiveSession();
+                // Buscamos la sesión activa global
+                let session = null;
+                
+                // Intento defensivo de usar el servicio o fallback a Supabase directo
+                try {
+                    if (typeof cashSessionService !== 'undefined' && cashSessionService.getActiveSession) {
+                        session = await cashSessionService.getActiveSession();
+                    } else {
+                        console.warn('[CashCutService] cashSessionService no está disponible, usando fallback a Supabase directo');
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                            const { data } = await supabase
+                                .from('cash_sessions')
+                                .select('*')
+                                .eq('status', 'open')
+                                .order('opened_at', { ascending: false })
+                                .limit(1)
+                                .single();
+                            session = data;
+                        }
+                    }
+                } catch (sessionErr) {
+                    console.error('[CashCutService] Error obteniendo sesión:', sessionErr);
+                }
 
                 if (session && session.opened_at) {
                     startTime = session.opened_at;
                     // Fetch withdrawals for this session
-                    withdrawals = await cashWithdrawalService.getTotalWithdrawalsBySession(session.id);
+                    try {
+                        if (typeof cashWithdrawalService !== 'undefined' && cashWithdrawalService.getTotalWithdrawalsBySession) {
+                            withdrawals = await cashWithdrawalService.getTotalWithdrawalsBySession(session.id);
+                        } else {
+                            console.warn('[CashCutService] cashWithdrawalService no está disponible');
+                        }
+                    } catch (wErr) {
+                        console.warn('[CashCutService] Error obteniendo retiros:', wErr);
+                    }
 
                     // Buscamos órdenes y ventas globales para el negocio desde que se abrió esta sesión
                     const sessionOrders = await orderService.getOrdersBySession(session.id);
@@ -262,7 +293,7 @@ export const cashCutService = {
 
                     sales = [...sales, ...normalizedOrders];
                 } else {
-                    const lastCut = await cashCutService.getLastCut();
+                    const lastCut = await this.getLastCut();
                     startTime = lastCut?.end_time || new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
 
                     console.log(`[CashCut] No session found, falling back to last cut or today. StartTime: ${startTime}`);
