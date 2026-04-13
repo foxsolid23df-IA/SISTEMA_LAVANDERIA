@@ -79,12 +79,7 @@ export const CashCut = ({ onClose }) => {
       0,
     );
 
-    // Restar cancelaciones en efectivo del esperado
-    const cancelledCash = cancelledSales
-      .filter((s) => s.payment_method === "efectivo")
-      .reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
-    expectedMXN -= cancelledCash;
-
+    // Considerar retiros
     const withdrawalsMXN = data.withdrawals?.totalMXN || 0;
     expectedMXN -= withdrawalsMXN;
 

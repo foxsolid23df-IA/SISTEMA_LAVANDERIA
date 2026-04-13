@@ -9,13 +9,18 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .report-header h2 {
   font-size: 24px;
   font-weight: 600;
-  color: #1f2937;
+  color: #ffffff;
   margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .btn-export {
@@ -235,3 +240,129 @@
     min-width: 600px;
   }
 }
+
+/* ============================================
+   Dark Mode Support
+   ============================================ */
+
+html.dark .cancellations-report {
+  background: #0f172a;
+}
+
+html.dark .report-header {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .report-header h2 {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .btn-export {
+  background: #3b82f6;
+}
+
+html.dark .btn-export:hover {
+  background: #2563eb;
+}
+
+html.dark .filters-section {
+  background: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark .filter-group label {
+  color: #94a3b8;
+}
+
+html.dark .filter-group input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html.dark .filter-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+html.dark .loading {
+  color: #94a3b8;
+}
+
+html.dark .summary-card {
+  background: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark .summary-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .card-label {
+  color: #94a3b8;
+}
+
+html.dark .card-value {
+  color: #f8fafc;
+}
+
+html.dark .cancellations-table {
+  background: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark .cancellations-table thead {
+  background: #0f172a;
+}
+
+html.dark .cancellations-table th {
+  color: #cbd5e1;
+  border-bottom-color: #334155;
+}
+
+html.dark .cancellations-table td {
+  color: #f8fafc;
+  border-bottom-color: #334155;
+}
+
+html.dark .cancellations-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+html.dark .amount-cell {
+  color: #f87171;
+}
+
+html.dark .notes-cell {
+  color: #e2e8f0;
+}
+
+html.dark .no-data {
+  color: #94a3b8;
+}
+
+html.dark .payment-badge.cash {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+html.dark .payment-badge.card {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+html.dark .payment-badge.transfer {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+html.dark .payment-badge.usd {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+

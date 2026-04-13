@@ -201,6 +201,24 @@ const TicketCorte = forwardRef(({ cutResult, settings, cutType }, ref) => {
           </div>
         )}
 
+        <div style={{ padding: "4px 0", borderTop: "1px dashed #000" }}>
+          <div style={{ fontWeight: "bold", fontSize: "0.9em", marginBottom: "3px" }}>DESGLOSE DE VENTAS:</div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85em" }}>
+            <span>VENTA BRUTA:</span>
+            <span>{formatearDinero((cutResult.salesTotal || 0) + (cutResult.cancelledTotal || 0))}</span>
+          </div>
+          {cutResult.cancelledTotal > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85em", color: "red" }}>
+              <span>(-) CANCELACIONES:</span>
+              <span>{formatearDinero(cutResult.cancelledTotal)}</span>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9em", fontWeight: "bold", borderTop: "1px solid #000", marginTop: "2px" }}>
+            <span>VENTA NETA:</span>
+            <span>{formatearDinero(cutResult.salesTotal || 0)}</span>
+          </div>
+        </div>
+
         <div style={{ borderBottom: "1px dotted #000", margin: "5px 0" }} />
 
         <div
@@ -212,14 +230,7 @@ const TicketCorte = forwardRef(({ cutResult, settings, cutType }, ref) => {
           }}
         >
           <span>TOTAL VENTAS ({cutResult.salesCount}):</span>
-          <span>
-            {formatearDinero(
-              (cutResult.opening_fund || 0) +
-                (cutResult.cashTotal || 0) +
-                (cutResult.cardTotal || 0) +
-                (cutResult.transferTotal || 0),
-            )}
-          </span>
+          <span>{formatearDinero(cutResult.salesTotal || 0)}</span>
         </div>
 
         <div style={{ borderBottom: "1px dotted #000", margin: "5px 0" }} />
