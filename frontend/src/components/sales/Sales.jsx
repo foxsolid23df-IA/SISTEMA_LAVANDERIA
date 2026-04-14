@@ -634,7 +634,6 @@ export const Sales = () => {
                         title: "Ya en la comanda",
                         text: `El producto/servicio "${p.name}" ya ha sido agregado. Use los botones (+) y (-) del carrito para ajustar la cantidad.`,
                         confirmButtonColor: "#4f46e5",
-                        timer: 4000,
                       });
                       return;
                     }
