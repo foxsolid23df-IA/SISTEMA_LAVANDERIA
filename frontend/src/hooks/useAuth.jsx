@@ -58,22 +58,26 @@ export const AuthProvider = ({ children }) => {
             try {
               const staffData = JSON.parse(savedStaff);
               setActiveStaff(staffData);
-              
+
               // Refrescar datos desde la BD para asegurar permisos actualizados
               if (staffData.id && !staffData.isOwner) {
                 supabase
-                  .from('staff')
-                  .select('*')
-                  .eq('id', staffData.id)
-                  .eq('active', true)
+                  .from("staff")
+                  .select("*")
+                  .eq("id", staffData.id)
+                  .eq("active", true)
                   .single()
                   .then(({ data, error }) => {
                     if (data && !error) {
                       setActiveStaff(data);
                       localStorage.setItem("activeStaff", JSON.stringify(data));
-                      console.log("[Auth] Datos de empleado refrescados desde la BD.");
+                      console.log(
+                        "[Auth] Datos de empleado refrescados desde la BD.",
+                      );
                     } else if (error || !data) {
-                      console.warn("[Auth] Empleado inactivo o no encontrado. Cerrando sesión local.");
+                      console.warn(
+                        "[Auth] Empleado inactivo o no encontrado. Cerrando sesión local.",
+                      );
                       lockScreen();
                     }
                   });
@@ -182,7 +186,9 @@ export const AuthProvider = ({ children }) => {
     // Los usuarios web son siempre administradores y no necesitan configurar terminal/caja
     const isDesktop = !!window?.electron?.isElectron;
     if (!isDesktop) {
-      console.log("[Auth] Plataforma Web detectada. Activando adminMode automático.");
+      console.log(
+        "[Auth] Plataforma Web detectada. Activando adminMode automático.",
+      );
       setAdminMode(true);
       sessionStorage.setItem("adminMode", "true");
     }
@@ -243,7 +249,9 @@ export const AuthProvider = ({ children }) => {
     // Detección de plataforma: Si NO es Electron (.exe), activar modo admin automáticamente
     const isDesktop = !!window?.electron?.isElectron;
     if (!isDesktop) {
-      console.log("[Auth] Plataforma Web detectada (registro). Activando adminMode automático.");
+      console.log(
+        "[Auth] Plataforma Web detectada (registro). Activando adminMode automático.",
+      );
       setAdminMode(true);
       sessionStorage.setItem("adminMode", "true");
     }
@@ -273,11 +281,11 @@ export const AuthProvider = ({ children }) => {
       const staff = await staffService.validatePin(pin);
       setActiveStaff(staff);
       localStorage.setItem("activeStaff", JSON.stringify(staff));
-      
+
       // Asegurar que al entrar un empleado se desactive el modo admin
       setAdminMode(false);
       sessionStorage.removeItem("adminMode");
-      
+
       return staff;
     } catch (error) {
       throw new Error("PIN inválido o empleado inactivo");
@@ -306,7 +314,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // Primero intentar obtener la sesión del usuario actual
       let session = await cashSessionService.getActiveSession();
-      
+
       // Si no hay sesión propia, buscar cualquier sesión abierta del negocio
       // (para que empleados que no abrieron la caja puedan operar)
       if (!session) {
@@ -361,36 +369,58 @@ export const AuthProvider = ({ children }) => {
   // Permisos Granulares 2026
   const p = activeStaff?.permissions || {};
 
-  const canAccessSales = p.can_access_sales ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canAccessSales =
+    p.can_access_sales ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
   const canManageOrders = p.can_manage_orders ?? true;
-  const canAccessServices = p.can_access_services ?? (canAccessAdmin || activeRole === "gerente");
-  const canAccessProducts = p.can_access_products ?? (canAccessAdmin || activeRole === "gerente");
-  const canManageSupplies = p.can_manage_supplies ?? (canAccessAdmin || activeRole === "gerente");
-  const canManageClients = p.can_manage_clients ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
-  const canViewAudit = p.can_view_audit ?? (canAccessAdmin || activeRole === "gerente");
-  const canViewDashboard = p.can_view_dashboard ?? (canAccessAdmin || activeRole === "gerente");
+  const canAccessServices =
+    p.can_access_services ?? (canAccessAdmin || activeRole === "gerente");
+  const canAccessProducts =
+    p.can_access_products ?? (canAccessAdmin || activeRole === "gerente");
+  const canManageSupplies =
+    p.can_manage_supplies ?? (canAccessAdmin || activeRole === "gerente");
+  const canManageClients =
+    p.can_manage_clients ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canViewAudit =
+    p.can_view_audit ?? (canAccessAdmin || activeRole === "gerente");
+  const canViewDashboard =
+    p.can_view_dashboard ?? (canAccessAdmin || activeRole === "gerente");
   const canAccessSettings = p.can_access_settings ?? canAccessAdmin;
-  const canUseIAVision = p.can_use_ia_vision ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
-  const canManageCash = p.can_manage_cash ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canUseIAVision =
+    p.can_use_ia_vision ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
+  const canManageCash =
+    p.can_manage_cash ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
   const canLockTerminal = p.can_lock_terminal ?? true;
   const canRestartCash = p.can_restart_cash ?? canAccessAdmin;
   const canLogout = p.can_logout ?? true;
-  const canViewCashReports = p.can_view_cash_reports ?? (canAccessAdmin || activeRole === "gerente");
+  const canViewCashReports =
+    p.can_view_cash_reports ?? (canAccessAdmin || activeRole === "gerente");
+  const canViewCancellations =
+    p.can_view_cancellations ??
+    (canAccessAdmin || activeRole === "gerente" || activeRole === "cajero");
 
   // Compatibilidad con código antiguo
   const canAccessReports = canViewDashboard;
-  const canManageInventory = p.can_manage_inventory ?? (canAccessAdmin || activeRole === "gerente");
+  const canManageInventory =
+    p.can_manage_inventory ?? (canAccessAdmin || activeRole === "gerente");
   const canViewSupplies = p.can_view_supplies ?? canManageSupplies;
   const canManageStaff = p.can_manage_staff ?? canAccessAdmin;
   const canDeleteOrders = p.can_delete_orders ?? canAccessAdmin;
   const canVoidSales = p.can_void_sales ?? canAccessAdmin;
-  
-  const canProcessOrders = p.can_process_orders ?? 
+
+  const canProcessOrders =
+    p.can_process_orders ??
     (canAccessAdmin || activeRole === "gerente" || activeRole === "operador");
 
-  const canDeliverOrders = p.can_deliver_orders ??
-    (canAccessAdmin || activeRole === "gerente" || activeRole === "repartidor" || activeRole === "cajero");
-
+  const canDeliverOrders =
+    p.can_deliver_orders ??
+    (canAccessAdmin ||
+      activeRole === "gerente" ||
+      activeRole === "repartidor" ||
+      activeRole === "cajero");
 
   // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios
   const memoizedUser = React.useMemo(
@@ -436,8 +466,8 @@ export const AuthProvider = ({ children }) => {
       canDeliverOrders,
       canVoidSales,
       canViewCashReports,
-      activeRole, 
-
+      canViewCancellations,
+      activeRole,
 
       // Sistema de empleados
       activeStaff, // Quien está operando la caja actualmente
@@ -502,6 +532,7 @@ export const AuthProvider = ({ children }) => {
       canDeliverOrders,
       canVoidSales,
       canViewCashReports,
+      canViewCancellations,
       activeRole,
       activeStaff,
       isLocked,

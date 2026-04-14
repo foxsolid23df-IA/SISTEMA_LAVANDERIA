@@ -3,7 +3,17 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git tag *)",
+      "Bash(npm run *)",
+      "Bash(dir *)",
+      "Bash(taskkill *)",
+      "Bash(timeout *)",
+      "Bash(rmdir *)",
+      "Bash(gh *)",
+      "Bash(winget *)",
+      "Bash(\"c:\\program files\\github cli\\gh.exe\" *)",
+      "Bash(git config *)"
     ]
   },
   "$version": 3

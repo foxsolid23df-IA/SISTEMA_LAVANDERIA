@@ -185,6 +185,11 @@ const CashReportsRoute = ({ children }) => {
   return canViewCashReports ? children : <Navigate to="/" />;
 };
 
+const CancellationsRoute = ({ children }) => {
+  const { canViewCancellations } = useAuth();
+  return canViewCancellations ? children : <Navigate to="/" />;
+};
+
 const InventoryRoute = ({ children }) => {
   const { canManageInventory, canViewSupplies } = useAuth();
   return canManageInventory || canViewSupplies ? children : <Navigate to="/" />;
@@ -334,7 +339,9 @@ export const Routing = () => {
                       path="/reporte-cancelaciones"
                       element={
                         <PrivateLayout>
-                          <CancellationsReport />
+                          <CancellationsRoute>
+                            <CancellationsReport />
+                          </CancellationsRoute>
                         </PrivateLayout>
                       }
                     />

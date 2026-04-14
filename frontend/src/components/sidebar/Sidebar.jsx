@@ -40,6 +40,7 @@ export const Sidebar = () => {
     canLogout,
     // Compatibilidad
     canViewCashReports,
+    canViewCancellations,
     canViewSupplies,
     canManageInventory,
   } = useAuth();
@@ -485,7 +486,7 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          {canViewAudit && (
+          {canViewCancellations && (
             <NavLink
               to="/reporte-cancelaciones"
               className={({ isActive }) => `
