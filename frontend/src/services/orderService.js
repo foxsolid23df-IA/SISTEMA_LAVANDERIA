@@ -23,7 +23,9 @@ export const orderService = {
         cash_session_id: orderData.cash_session_id,
         has_tax: orderData.has_tax || false,
         tax_amount: orderData.tax_amount || 0,
-        invoice_requested: orderData.invoice_requested || false
+        invoice_requested: orderData.invoice_requested || false,
+        // Guardar el ID del empleado que creó la orden
+        created_by_staff_id: orderData.created_by_staff_id || null
       }])
       .select()
       .single();
@@ -73,7 +75,8 @@ export const orderService = {
       .select(`
         *,
         customers (name, phone),
-        order_items (*)
+        order_items (*),
+        staff:created_by_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -92,7 +95,8 @@ export const orderService = {
       .select(`
         *,
         customers (name, phone),
-        order_items (*)
+        order_items (*),
+        staff:created_by_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
       .eq('status', status)
@@ -228,7 +232,8 @@ export const orderService = {
       .select(`
         *,
         customers (name, phone),
-        order_items (*)
+        order_items (*),
+        staff:created_by_staff_id (id, name, role)
       `)
       .gte('created_at', startTime)
       .lte('created_at', endTime)
@@ -256,7 +261,8 @@ export const orderService = {
       .select(`
         *,
         customers (name, phone),
-        order_items (*)
+        order_items (*),
+        staff:created_by_staff_id (id, name, role)
       `)
       .gte('created_at', startTime)
       .order('created_at', { ascending: false });
@@ -283,7 +289,8 @@ export const orderService = {
       .select(`
         *,
         customers (name, phone),
-        order_items (*)
+        order_items (*),
+        staff:created_by_staff_id (id, name, role)
       `)
       .eq('cash_session_id', sessionId);
 

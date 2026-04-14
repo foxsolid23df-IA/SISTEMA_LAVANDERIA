@@ -64,24 +64,22 @@ export const CashCut = ({ onClose }) => {
       0,
     );
 
-    let expectedMXN = parseFloat(cashSession?.opening_fund) || 0;
-
+    // Calcular efectivo esperado (Fondo Inicial + Ventas Efectivo - Retiros)
+    let expectedMXN = parseFloat(data.opening_fund || cashSession?.opening_fund || 0);
+    
     // Separar ventas activos de cancelados
     const activeSales = sales.filter((s) => s.status !== "cancelled");
     const cancelledSales = sales.filter((s) => s.status === "cancelled");
 
-    // Calcular efectivo solo de ventas activos
     const cashSales = activeSales.filter(
       (s) => s.payment_method === "efectivo",
     );
     expectedMXN += cashSales.reduce(
-      (acc, curr) => acc + (parseFloat(curr.total) || 0),
+      (sum, sale) => sum + parseFloat(sale.total || 0),
       0,
     );
-
-    // Considerar retiros
-    const withdrawalsMXN = data.withdrawals?.totalMXN || 0;
-    expectedMXN -= withdrawalsMXN;
+    expectedMXN -= parseFloat(data.withdrawals?.totalMXN || 0);
+    // Nota: No restamos cancelaciones aquí porque cashSales ya solo incluye ventas activas.
 
     const usdSalesMixed = activeSales.filter(
       (s) => s.payment_method === "dolares",

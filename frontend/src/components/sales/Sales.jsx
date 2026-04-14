@@ -140,8 +140,6 @@ export const Sales = () => {
     }
   }, [busquedaCliente]);
 
-
-
   const handleClientRegistered = (newClient) => {
     setClienteSeleccionado(newClient);
     setBusquedaCliente(newClient.name);
@@ -191,10 +189,12 @@ export const Sales = () => {
   };
 
   // Cálculo de totales con impuestos
-  const globalTaxRate = businessSettings?.tax_percentage !== undefined && businessSettings?.tax_percentage !== null 
-    ? parseFloat(businessSettings.tax_percentage) 
-    : 16;
-  const taxAmount = wantsInvoice ? (total * (globalTaxRate / 100)) : 0;
+  const globalTaxRate =
+    businessSettings?.tax_percentage !== undefined &&
+    businessSettings?.tax_percentage !== null
+      ? parseFloat(businessSettings.tax_percentage)
+      : 16;
+  const taxAmount = wantsInvoice ? total * (globalTaxRate / 100) : 0;
   const finalTotal = total + taxAmount;
 
   // Sincronizar anticipo con el total de la orden cuando el modal de pago está abierto
@@ -267,6 +267,8 @@ export const Sales = () => {
         notes: notas,
         status: "processing", // Auto-send to washing
         cash_session_id: cashSession?.id,
+        // Registrar qué empleado creó la orden
+        created_by_staff_id: activeStaff?.id || null,
       };
 
       const result = await orderService.createOrder(orderData);
@@ -623,14 +625,16 @@ export const Sales = () => {
                   key={p.id}
                   onClick={() => {
                     // Restricción: No permitir agregar más de una vez desde el grid si ya existe en el carrito
-                    const itemExistente = carrito.find(item => item.id === p.id);
+                    const itemExistente = carrito.find(
+                      (item) => item.id === p.id,
+                    );
                     if (itemExistente) {
                       Swal.fire({
-                        icon: 'info',
-                        title: 'Ya en la comanda',
+                        icon: "info",
+                        title: "Ya en la comanda",
                         text: `El producto/servicio "${p.name}" ya ha sido agregado. Use los botones (+) y (-) del carrito para ajustar la cantidad.`,
-                        confirmButtonColor: '#4f46e5',
-                        timer: 4000
+                        confirmButtonColor: "#4f46e5",
+                        timer: 4000,
                       });
                       return;
                     }
@@ -982,9 +986,13 @@ export const Sales = () => {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl mb-6">
                   <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-white">¿Desea Facturar?</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">
+                      ¿Desea Facturar?
+                    </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {wantsInvoice ? `Se agregará el ${globalTaxRate}% de impuestos.` : 'Sin impuestos adicionales (0%).'}
+                      {wantsInvoice
+                        ? `Se agregará el ${globalTaxRate}% de impuestos.`
+                        : "Sin impuestos adicionales (0%)."}
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -997,21 +1005,26 @@ export const Sales = () => {
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
-                
+
                 {/* Desglose de impuestos siempre visible para evitar confusión */}
                 <div className="flex flex-col gap-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-4 text-left">
                   <div className="flex justify-between font-bold text-slate-600 dark:text-slate-400">
                     <span>Subtotal:</span>
                     <span>{formatearDinero(total)}</span>
                   </div>
-                  <div className={`flex justify-between font-bold ${wantsInvoice ? 'text-rose-500' : 'text-slate-500'}`}>
-                    <span>Impuestos ({wantsInvoice ? globalTaxRate : '0'}%):</span>
-                    <span>{wantsInvoice ? '+' : ''} {formatearDinero(wantsInvoice ? taxAmount : 0)}</span>
+                  <div
+                    className={`flex justify-between font-bold ${wantsInvoice ? "text-rose-500" : "text-slate-500"}`}
+                  >
+                    <span>
+                      Impuestos ({wantsInvoice ? globalTaxRate : "0"}%):
+                    </span>
+                    <span>
+                      {wantsInvoice ? "+" : ""}{" "}
+                      {formatearDinero(wantsInvoice ? taxAmount : 0)}
+                    </span>
                   </div>
                 </div>
               </div>
-
-
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button
@@ -1083,7 +1096,9 @@ export const Sales = () => {
                       Pagó Con {usarUSD ? "(USD)" : ""}:
                     </span>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{usarUSD ? "U$" : "$"}</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
+                        {usarUSD ? "U$" : "$"}
+                      </span>
                       <input
                         type="number"
                         min="0"
@@ -1099,16 +1114,28 @@ export const Sales = () => {
                       />
                     </div>
                   </div>
-                  
+
                   {usarUSD && (
                     <div className="flex flex-col gap-1 text-[10px] text-blue-600 font-bold bg-blue-50 dark:bg-blue-500/10 p-2 rounded-lg">
                       <div className="flex justify-between">
                         <span>Cobrar al menos:</span>
-                        <span>U$ {((parseFloat(anticipo) || finalTotal) / exchangeRate.rate).toFixed(2)}</span>
+                        <span>
+                          U${" "}
+                          {(
+                            (parseFloat(anticipo) || finalTotal) /
+                            exchangeRate.rate
+                          ).toFixed(2)}
+                        </span>
                       </div>
                       <div className="flex justify-between text-slate-500">
                         <span>Equivale a:</span>
-                        <span>{formatearDinero((parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate)} MXN</span>
+                        <span>
+                          {formatearDinero(
+                            (parseFloat(montoRecibidoUSD) || 0) *
+                              exchangeRate.rate,
+                          )}{" "}
+                          MXN
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1118,10 +1145,13 @@ export const Sales = () => {
                     <span className="text-lg font-black text-emerald-600">
                       {(() => {
                         const recibidoMXN = usarUSD
-                          ? (parseFloat(montoRecibidoUSD) || 0) * exchangeRate.rate
+                          ? (parseFloat(montoRecibidoUSD) || 0) *
+                            exchangeRate.rate
                           : parseFloat(montoRecibido) || 0;
                         const totalACobrar = parseFloat(anticipo) || finalTotal;
-                        return formatearDinero(Math.max(0, recibidoMXN - totalACobrar));
+                        return formatearDinero(
+                          Math.max(0, recibidoMXN - totalACobrar),
+                        );
                       })()}
                     </span>
                   </div>
@@ -1140,7 +1170,9 @@ export const Sales = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-black font-bold">Saldo pendiente:</span>
                   <span className="font-bold text-rose-500">
-                    {formatearDinero(Math.max(0, finalTotal - (parseFloat(anticipo) || 0)))}
+                    {formatearDinero(
+                      Math.max(0, finalTotal - (parseFloat(anticipo) || 0)),
+                    )}
                   </span>
                 </div>
               </div>

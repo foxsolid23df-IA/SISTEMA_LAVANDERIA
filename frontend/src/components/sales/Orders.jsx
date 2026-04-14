@@ -305,13 +305,22 @@ export const Orders = () => {
     if (!orderToUpdateMethod || !newMethodSelection) return;
     setIsProcessing(true);
     try {
-      await orderService.updateOrderPaymentMethod(orderToUpdateMethod.id, newMethodSelection);
-      setOrders(prev => prev.map(o => o.id === orderToUpdateMethod.id ? { ...o, payment_method: newMethodSelection } : o));
+      await orderService.updateOrderPaymentMethod(
+        orderToUpdateMethod.id,
+        newMethodSelection,
+      );
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderToUpdateMethod.id
+            ? { ...o, payment_method: newMethodSelection }
+            : o,
+        ),
+      );
       Swal.fire({
         title: "Método de Pago Actualizado",
         icon: "success",
         timer: 2000,
-        showConfirmButton: false
+        showConfirmButton: false,
       });
       setIsMethodModalOpen(false);
       setOrderToUpdateMethod(null);
@@ -446,9 +455,13 @@ export const Orders = () => {
     return true;
   });
 
-  const getEmployeeName = (userId) => {
-    const emp = employees.find((e) => e.user_id === userId);
-    return emp ? emp.name : "Sistema";
+  const getEmployeeName = (order) => {
+    // Usar el nombre del staff desde el join (ordenes nuevas)
+    if (order.staff && order.staff.name) {
+      return order.staff.name;
+    }
+    // Fallback para órdenes antiguas sin información de staff
+    return "Sistema";
   };
 
   // Kanban Logic
@@ -506,7 +519,7 @@ export const Orders = () => {
                     {formatearDinero(order.total)}
                   </p>
                   <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">
-                    👤 {getEmployeeName(order.user_id)}
+                    👤 {getEmployeeName(order)}
                   </p>
                 </div>
               </div>
@@ -521,7 +534,9 @@ export const Orders = () => {
                   className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400"
                   title="Imprimir ticket"
                 >
-                  <span className="material-symbols-outlined text-sm">print</span>
+                  <span className="material-symbols-outlined text-sm">
+                    print
+                  </span>
                 </button>
                 {order.status !== "delivered" && (
                   <button
@@ -529,7 +544,9 @@ export const Orders = () => {
                     className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded text-emerald-500"
                     title="Cambiar método de pago"
                   >
-                    <span className="material-symbols-outlined text-sm">currency_exchange</span>
+                    <span className="material-symbols-outlined text-sm">
+                      currency_exchange
+                    </span>
                   </button>
                 )}
               </div>
@@ -864,24 +881,37 @@ export const Orders = () => {
                 <div className="p-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex flex-col justify-between w-full md:w-1/4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                       <span
+                      <span
                         className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${statusLabels[order.status]?.color}`}
                       >
                         {statusLabels[order.status]?.label}
                       </span>
                     </div>
                     <h3 className="text-base font-bold text-slate-800 dark:text-white uppercase tracking-tight">
-                      #{order.folio ? order.folio.toString().padStart(6, "0") : order.id.toString().slice(-6).toUpperCase()} - {order.customers?.name}
+                      #
+                      {order.folio
+                        ? order.folio.toString().padStart(6, "0")
+                        : order.id.toString().slice(-6).toUpperCase()}{" "}
+                      - {order.customers?.name}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-xs">calendar_today</span>
-                      Prometido: <span className={`font-bold ${new Date(order.promised_at) < new Date() && order.status !== "delivered" ? "text-red-500" : "text-slate-700 dark:text-slate-300"}`}>{new Date(order.promised_at).toLocaleDateString()}</span>
+                      <span className="material-symbols-outlined text-xs">
+                        calendar_today
+                      </span>
+                      Prometido:{" "}
+                      <span
+                        className={`font-bold ${new Date(order.promised_at) < new Date() && order.status !== "delivered" ? "text-red-500" : "text-slate-700 dark:text-slate-300"}`}
+                      >
+                        {new Date(order.promised_at).toLocaleDateString()}
+                      </span>
                     </p>
                   </div>
                   <div className="mt-4">
                     <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px]">person</span>
-                      {getEmployeeName(order.user_id)}
+                      <span className="material-symbols-outlined text-[12px]">
+                        person
+                      </span>
+                      {getEmployeeName(order)}
                     </p>
                   </div>
                 </div>
@@ -890,18 +920,26 @@ export const Orders = () => {
                 <div className="p-5 flex-1 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700 flex flex-col justify-center">
                   <div className="space-y-1">
                     {order.order_items?.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center text-sm">
-                        <span className="text-slate-600 dark:text-slate-300 font-medium">{item.product_name}</span>
+                      <div
+                        key={item.id}
+                        className="flex justify-between items-center text-sm"
+                      >
+                        <span className="text-slate-600 dark:text-slate-300 font-medium">
+                          {item.product_name}
+                        </span>
                         <span className="font-bold text-slate-800 dark:text-white text-xs bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded">
-                          {item.quantity} {item.pricing_type === "kg" ? "kg" : "pza"}
+                          {item.quantity}{" "}
+                          {item.pricing_type === "kg" ? "kg" : "pza"}
                         </span>
                       </div>
                     ))}
                   </div>
-                  
+
                   {order.notes && (
                     <div className="mt-3 bg-amber-50 dark:bg-slate-900/50 border border-amber-100 dark:border-slate-700 p-2 rounded-lg text-xs text-slate-600 dark:text-slate-400 italic flex gap-2 items-start">
-                      <span className="material-symbols-outlined text-amber-500 dark:text-slate-500 text-sm">sticky_note_2</span>
+                      <span className="material-symbols-outlined text-amber-500 dark:text-slate-500 text-sm">
+                        sticky_note_2
+                      </span>
                       <p>{order.notes}</p>
                     </div>
                   )}
@@ -910,13 +948,23 @@ export const Orders = () => {
                 {/* Right Section: Totals & Actions */}
                 <div className="p-5 w-full md:w-1/3 flex flex-col justify-between bg-slate-50 dark:bg-slate-900/20">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-medium text-slate-500">Total: <span className="font-bold text-slate-800 dark:text-white text-lg">{formatearDinero(order.total)}</span></span>
+                    <span className="text-sm font-medium text-slate-500">
+                      Total:{" "}
+                      <span className="font-bold text-slate-800 dark:text-white text-lg">
+                        {formatearDinero(order.total)}
+                      </span>
+                    </span>
                     {(() => {
                       const balance = order.total - (order.paid_amount || 0);
-                      const isPaid = order.payment_status === "paid" || balance <= 0;
+                      const isPaid =
+                        order.payment_status === "paid" || balance <= 0;
                       return (
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${isPaid ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-orange-100 text-orange-700 border-orange-200"}`}>
-                          {isPaid ? "Pagado" : `Debe ${formatearDinero(balance)}`}
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs font-bold border ${isPaid ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-orange-100 text-orange-700 border-orange-200"}`}
+                        >
+                          {isPaid
+                            ? "Pagado"
+                            : `Debe ${formatearDinero(balance)}`}
                         </div>
                       );
                     })()}
@@ -924,44 +972,84 @@ export const Orders = () => {
 
                   <div className="flex gap-2 flex-wrap items-end justify-end mt-auto">
                     {order.status === "received" && (
-                      <button onClick={() => handleStatusChange(order, "processing")} className="flex-1 py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap">
+                      <button
+                        onClick={() => handleStatusChange(order, "processing")}
+                        className="flex-1 py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                      >
                         Empezar Lavado
                       </button>
                     )}
                     {order.status === "processing" && (
-                      <button onClick={() => handleStatusChange(order, "ready")} className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap">
+                      <button
+                        onClick={() => handleStatusChange(order, "ready")}
+                        className="flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                      >
                         Marcar Listo
                       </button>
                     )}
                     {order.status === "ready" && (
-                      <button onClick={() => handleStatusChange(order, "delivered")} className="flex-1 py-2 px-3 bg-slate-800 dark:bg-slate-700 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap">
+                      <button
+                        onClick={() => handleStatusChange(order, "delivered")}
+                        className="flex-1 py-2 px-3 bg-slate-800 dark:bg-slate-700 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                      >
                         Entregar
                       </button>
                     )}
-                    
+
                     {order.total - (order.paid_amount || 0) > 0 && (
-                      <button onClick={() => handleLiquidatePayment(order)} className="p-2 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg transition-colors" title="Liquidar saldo pendiente">
-                        <span className="material-symbols-outlined text-[18px]">payments</span>
+                      <button
+                        onClick={() => handleLiquidatePayment(order)}
+                        className="p-2 bg-emerald-100 text-emerald-600 hover:bg-emerald-200 rounded-lg transition-colors"
+                        title="Liquidar saldo pendiente"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          payments
+                        </span>
                       </button>
                     )}
-                    
-                    <button onClick={() => handleReprint(order)} className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-emerald-500 rounded-lg transition-colors" title="Reimprimir Ticket">
-                      <span className="material-symbols-outlined text-[18px]">print</span>
+
+                    <button
+                      onClick={() => handleReprint(order)}
+                      className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-emerald-500 rounded-lg transition-colors"
+                      title="Reimprimir Ticket"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        print
+                      </span>
                     </button>
 
-                    {order.status !== "delivered" && order.status !== "cancelled" && (
-                      <button onClick={() => handleStatusChange(order, "cancelled")} className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Cancelar Orden">
-                        <span className="material-symbols-outlined text-[18px]">cancel</span>
-                      </button>
-                    )}
-                    
-                    <button onClick={() => handleOrderDelete(order.id)} className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar permanentemente">
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    {order.status !== "delivered" &&
+                      order.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleStatusChange(order, "cancelled")}
+                          className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancelar Orden"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            cancel
+                          </span>
+                        </button>
+                      )}
+
+                    <button
+                      onClick={() => handleOrderDelete(order.id)}
+                      className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Eliminar permanentemente"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        delete
+                      </span>
                     </button>
 
                     {order.status !== "delivered" && (
-                      <button onClick={() => handleUpdateMethod(order)} className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors" title="Cambiar método de pago">
-                        <span className="material-symbols-outlined text-[18px]">currency_exchange</span>
+                      <button
+                        onClick={() => handleUpdateMethod(order)}
+                        className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                        title="Cambiar método de pago"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          currency_exchange
+                        </span>
                       </button>
                     )}
                   </div>
@@ -1161,44 +1249,70 @@ export const Orders = () => {
         <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <h3 className="font-bold text-lg dark:text-white uppercase tracking-tighter">Cambiar Método</h3>
-              <button onClick={() => setIsMethodModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="font-bold text-lg dark:text-white uppercase tracking-tighter">
+                Cambiar Método
+              </h3>
+              <button
+                onClick={() => setIsMethodModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div className="text-center mb-4">
-                <p className="text-[10px] text-slate-500 uppercase font-bold">Orden # {orderToUpdateMethod.folio || orderToUpdateMethod.id}</p>
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Selecciona el nuevo método de pago</p>
+                <p className="text-[10px] text-slate-500 uppercase font-bold">
+                  Orden # {orderToUpdateMethod.folio || orderToUpdateMethod.id}
+                </p>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  Selecciona el nuevo método de pago
+                </p>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {[
                   { id: "cash", label: "Efectivo", icon: "payments" },
                   { id: "card", label: "Tarjeta", icon: "credit_card" },
-                  { id: "transferencia", label: "Transferencia", icon: "account_balance" }
+                  {
+                    id: "transferencia",
+                    label: "Transferencia",
+                    icon: "account_balance",
+                  },
                 ].map((m) => (
                   <button
                     key={m.id}
                     onClick={() => setNewMethodSelection(m.id)}
                     className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${newMethodSelection === m.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "border-slate-100 dark:border-slate-800 text-slate-400"}`}
                   >
-                    <span className="material-symbols-outlined text-2xl">{m.icon}</span>
-                    <span className="text-sm font-bold uppercase">{m.label}</span>
+                    <span className="material-symbols-outlined text-2xl">
+                      {m.icon}
+                    </span>
+                    <span className="text-sm font-bold uppercase">
+                      {m.label}
+                    </span>
                     {newMethodSelection === m.id && (
-                      <span className="material-symbols-outlined ml-auto text-emerald-500">check_circle</span>
+                      <span className="material-symbols-outlined ml-auto text-emerald-500">
+                        check_circle
+                      </span>
                     )}
                   </button>
                 ))}
               </div>
             </div>
             <div className="p-6 bg-slate-50 dark:bg-slate-950 flex gap-3">
-              <button onClick={() => setIsMethodModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs text-center">Cancelar</button>
+              <button
+                onClick={() => setIsMethodModalOpen(false)}
+                className="flex-1 py-3 text-slate-500 font-bold uppercase text-xs text-center"
+              >
+                Cancelar
+              </button>
               <button
                 onClick={finalizeMethodUpdate}
                 disabled={isProcessing}
                 className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all text-xs flex items-center justify-center gap-2"
               >
-                {isProcessing && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                {isProcessing && (
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                )}
                 GUARDAR CAMBIO
               </button>
             </div>
