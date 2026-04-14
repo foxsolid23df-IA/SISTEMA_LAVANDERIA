@@ -39,8 +39,10 @@ const CancellationsReport = () => {
         .select(
           `
           *,
-          customers (name, phone)
-        `
+          customers (name, phone),
+          staff:created_by_staff_id (id, name, role),
+          cancelled_by_staff:cancelled_by_staff_id (id, name, role)
+        `,
         )
         .eq("user_id", user.id)
         .eq("status", "cancelled")
@@ -107,7 +109,8 @@ const CancellationsReport = () => {
         Cliente: order.customers?.name || "Cliente General",
         Total: parseFloat(order.total),
         "Método de Pago": order.payment_method,
-        "Notas": order.notes || "",
+        "Cajero que Canceló": order.cancelled_by_staff?.name || "N/A",
+        Notas: order.notes || "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -186,21 +189,27 @@ const CancellationsReport = () => {
               <div className="card-icon">💰</div>
               <div className="card-info">
                 <div className="card-label">Monto Total Cancelado</div>
-                <div className="card-value">{formatearDinero(summary.total)}</div>
+                <div className="card-value">
+                  {formatearDinero(summary.total)}
+                </div>
               </div>
             </div>
             <div className="summary-card">
               <div className="card-icon">💵</div>
               <div className="card-info">
                 <div className="card-label">Efectivo</div>
-                <div className="card-value">{formatearDinero(summary.cash)}</div>
+                <div className="card-value">
+                  {formatearDinero(summary.cash)}
+                </div>
               </div>
             </div>
             <div className="summary-card">
               <div className="card-icon">💳</div>
               <div className="card-info">
                 <div className="card-label">Tarjeta</div>
-                <div className="card-value">{formatearDinero(summary.card)}</div>
+                <div className="card-value">
+                  {formatearDinero(summary.card)}
+                </div>
               </div>
             </div>
           </div>
@@ -215,13 +224,14 @@ const CancellationsReport = () => {
                   <th>Cliente</th>
                   <th>Total</th>
                   <th>Método de Pago</th>
+                  <th>Cancelado por</th>
                   <th>Notas</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCancellations.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="no-data">
+                    <td colSpan="7" className="no-data">
                       No se encontraron cancelaciones en el período seleccionado
                     </td>
                   </tr>
@@ -241,25 +251,28 @@ const CancellationsReport = () => {
                             order.payment_method === "efectivo"
                               ? "cash"
                               : order.payment_method === "card" ||
-                                order.payment_method === "tarjeta"
-                              ? "card"
-                              : order.payment_method === "transfer" ||
-                                order.payment_method === "transferencia"
-                              ? "transfer"
-                              : "usd"
+                                  order.payment_method === "tarjeta"
+                                ? "card"
+                                : order.payment_method === "transfer" ||
+                                    order.payment_method === "transferencia"
+                                  ? "transfer"
+                                  : "usd"
                           }`}
                         >
                           {order.payment_method === "cash" ||
                           order.payment_method === "efectivo"
                             ? "Efectivo"
                             : order.payment_method === "card" ||
-                              order.payment_method === "tarjeta"
-                            ? "Tarjeta"
-                            : order.payment_method === "transfer" ||
-                              order.payment_method === "transferencia"
-                            ? "Transferencia"
-                            : "Dólares"}
+                                order.payment_method === "tarjeta"
+                              ? "Tarjeta"
+                              : order.payment_method === "transfer" ||
+                                  order.payment_method === "transferencia"
+                                ? "Transferencia"
+                                : "Dólares"}
                         </span>
+                      </td>
+                      <td className="staff-cell">
+                        {order.cancelled_by_staff?.name || "N/A"}
                       </td>
                       <td className="notes-cell">{order.notes || "-"}</td>
                     </tr>

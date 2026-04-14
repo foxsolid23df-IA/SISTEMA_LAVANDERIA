@@ -76,7 +76,8 @@ export const orderService = {
         *,
         customers (name, phone),
         order_items (*),
-        staff:created_by_staff_id (id, name, role)
+        staff:created_by_staff_id (id, name, role),
+        cancelled_by_staff:cancelled_by_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -107,7 +108,7 @@ export const orderService = {
   },
 
   // Actualizar estado de una orden
-  async updateOrderStatus(orderId, newStatus) {
+  async updateOrderStatus(orderId, newStatus, staffId = null) {
     if (newStatus === 'cancelled') {
       const { data: orderDetails, error: fetchError } = await supabase
         .from('orders')
@@ -130,6 +131,18 @@ export const orderService = {
           await supabase.rpc('increment_stock', { items: itemsForStockUpdate });
         }
       }
+
+      // Actualizar estado y guardar quién canceló la orden
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: newStatus,
+          cancelled_by_staff_id: staffId || null
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      return true;
     }
 
     const { error } = await supabase

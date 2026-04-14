@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useAuth } from "../../hooks/useAuth";
 import { orderService } from "../../services/orderService";
 import { staffService } from "../../services/staffService";
 import { exchangeRateService } from "../../services/exchangeRateService";
@@ -11,6 +12,7 @@ import Swal from "sweetalert2";
 import "./Orders.css";
 
 export const Orders = () => {
+  const { activeStaff } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, received, processing, ready, delivered
@@ -157,7 +159,11 @@ export const Orders = () => {
     }
 
     try {
-      await orderService.updateOrderStatus(orderId, newStatus);
+      await orderService.updateOrderStatus(
+        orderId,
+        newStatus,
+        activeStaff?.id || null,
+      );
       // Actualizar estado localmente para rapidez
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
