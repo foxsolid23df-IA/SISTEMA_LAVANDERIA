@@ -8,6 +8,100 @@
   margin: 0 auto;
 }
 
+/* NEW: Payment Breakdown */
+.cash-reports__payment-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.cash-reports__card--payment {
+  border-left: 4px solid;
+}
+
+.cash-reports__card--payment:nth-child(1) { border-left-color: #059669; }
+.cash-reports__card--payment:nth-child(2) { border-left-color: #2563eb; }
+.cash-reports__card--payment:nth-child(3) { border-left-color: #7c3aed; }
+
+.cash-reports__separator {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0.5rem 0;
+}
+
+.cash-reports__comparison-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #dbeafe, #ede9fe);
+  color: #1d4ed8;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  grid-column: 1 / -1;
+}
+
+.cash-reports__comparison-badge .material-icons-outlined {
+  font-size: 18px;
+}
+
+/* NEW: Charts Header & Grid */
+.cash-reports__charts-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.cash-reports__charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.cash-reports__chart-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cash-reports__chart-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.cash-reports__chart-card--wide {
+  grid-column: 1 / -1;
+}
+
+.cash-reports__chart-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 1rem;
+}
+
+.cash-reports__chart-title .material-icons-outlined {
+  font-size: 20px;
+  color: #2563eb;
+}
+
+/* Comparison filters */
+.cash-reports__filters--comparison {
+  background: #f8fafc;
+  border: 2px dashed #2563eb;
+}
+
 .cash-reports__header {
   display: flex;
   align-items: center;
@@ -122,6 +216,52 @@
 
 .cash-reports__filter-btn:active {
   transform: scale(0.97);
+}
+
+/* NEW: Secondary button variant */
+.cash-reports__filter-btn--secondary {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.cash-reports__filter-btn--secondary:hover {
+  background: #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* NEW: Active/Comparison button variant */
+.cash-reports__filter-btn--active {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.cash-reports__filter-btn--active:hover {
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+/* NEW: Export button variant */
+.cash-reports__filter-btn--export {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+.cash-reports__filter-btn--export:hover {
+  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+}
+
+/* NEW: PDF button variant */
+.cash-reports__filter-btn--pdf {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.cash-reports__filter-btn--pdf:hover {
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+}
+
+.cash-reports__filter-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Summary Cards */
@@ -454,6 +594,61 @@ html.dark .cash-reports__empty .material-icons-outlined {
 
 html.dark .cash-reports__empty h3 {
   color: #e2e8f0;
+}
+
+/* NEW: Dark mode for enhanced elements */
+html.dark .cash-reports__payment-breakdown {
+  background: transparent;
+}
+
+html.dark .cash-reports__comparison-badge {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+html.dark .cash-reports__separator {
+  background: #334155;
+}
+
+html.dark .cash-reports__charts-grid {
+  gap: 1.5rem;
+}
+
+html.dark .cash-reports__chart-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .cash-reports__chart-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .cash-reports__chart-title {
+  color: #f1f5f9;
+}
+
+html.dark .cash-reports__chart-title .material-icons-outlined {
+  color: #60a5fa;
+}
+
+html.dark .cash-reports__filters--comparison {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: #3b82f6;
+}
+
+html.dark .cash-reports__filter-btn--secondary {
+  background: #334155;
+  color: #f1f5f9;
+  border-color: #475569;
+}
+
+html.dark .cash-reports__filter-btn--secondary:hover {
+  background: #475569;
+}
+
+html.dark .cash-reports__filter-btn--active {
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
 }
 
 /* ===== Large Modal and Print Utility ===== */
@@ -912,4 +1107,145 @@ html.dark .status-dot--open {
 
 html.dark .status-dot--closed {
   background-color: #475569;
+}
+
+/* ===== Comparison Grid ===== */
+.cash-reports__comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.5rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  align-items: center;
+}
+
+.cash-reports__comparison-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.comparison-header {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.comparison-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comparison-row .label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.comparison-row .value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.comparison-row .value.positive { color: #059669; }
+.comparison-row .value.negative { color: #dc2626; }
+
+.cash-reports__comparison-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.cash-reports__comparison-divider .material-icons-outlined {
+  font-size: 32px;
+}
+
+/* Staff Ranking Table */
+.cash-reports__ranking-section {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.cash-reports__ranking-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 1.25rem;
+}
+
+.cash-reports__ranking-title .material-icons-outlined {
+  color: #2563eb;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ranking-table th {
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ranking-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Dark Mode Enhancements */
+html.dark .cash-reports__comparison-grid {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .comparison-header {
+  color: #f1f5f9;
+  border-bottom-color: #334155;
+}
+
+html.dark .comparison-row .value {
+  color: #f1f5f9;
+}
+
+html.dark .ranking-table {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .ranking-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+html.dark .ranking-table td {
+  color: #e2e8f0;
+  border-bottom-color: #334155;
 }
