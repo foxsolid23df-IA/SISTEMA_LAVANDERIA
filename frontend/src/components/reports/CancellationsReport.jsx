@@ -135,36 +135,50 @@ const CancellationsReport = () => {
   });
 
   return (
-    <div className="cancellations-report">
-      <div className="report-header">
-        <h2>📋 Reporte de Cancelaciones</h2>
-        <button className="btn-export" onClick={exportToExcel}>
+    <div className="p-6 bg-gray-50 dark:bg-slate-900 min-h-screen">
+      <div className="flex justify-between items-center mb-6 p-5 bg-gradient-to-r from-slate-500 to-slate-600 dark:from-slate-700 dark:to-slate-800 rounded-2xl shadow-lg">
+        <h2 className="text-2xl font-semibold text-white m-0">
+          📋 Reporte de Cancelaciones
+        </h2>
+        <button
+          className="px-5 py-2.5 bg-blue-500 text-white border-none rounded-lg text-sm font-medium cursor-pointer transition-all hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg"
+          onClick={exportToExcel}
+        >
           📊 Exportar Excel
         </button>
       </div>
 
       {/* Filtros */}
-      <div className="filters-section">
-        <div className="filter-group">
-          <label>Fecha Inicio:</label>
+      <div className="flex gap-4 mb-6 p-4 bg-white dark:bg-slate-800 rounded-xl shadow-sm flex-wrap border border-gray-200 dark:border-slate-700">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Fecha Inicio:
+          </label>
           <input
             type="date"
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             value={filters.startDate}
             onChange={(e) => handleFilterChange("startDate", e.target.value)}
           />
         </div>
-        <div className="filter-group">
-          <label>Fecha Fin:</label>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Fecha Fin:
+          </label>
           <input
             type="date"
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             value={filters.endDate}
             onChange={(e) => handleFilterChange("endDate", e.target.value)}
           />
         </div>
-        <div className="filter-group">
-          <label>Buscar:</label>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Buscar:
+          </label>
           <input
             type="text"
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             placeholder="Folio, cliente, notas..."
             value={filters.search}
             onChange={(e) => handleFilterChange("search", e.target.value)}
@@ -174,40 +188,52 @@ const CancellationsReport = () => {
 
       {/* Resumen */}
       {loading ? (
-        <div className="loading">Cargando...</div>
+        <div className="text-center py-10 text-base text-slate-500 dark:text-slate-400">
+          Cargando...
+        </div>
       ) : (
         <>
-          <div className="summary-cards">
-            <div className="summary-card">
-              <div className="card-icon">❌</div>
-              <div className="card-info">
-                <div className="card-label">Total Cancelaciones</div>
-                <div className="card-value">{summary.count}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="flex items-center gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="text-3xl flex-shrink-0">❌</div>
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
+                  Total Cancelaciones
+                </div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">
+                  {summary.count}
+                </div>
               </div>
             </div>
-            <div className="summary-card">
-              <div className="card-icon">💰</div>
-              <div className="card-info">
-                <div className="card-label">Monto Total Cancelado</div>
-                <div className="card-value">
+            <div className="flex items-center gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="text-3xl flex-shrink-0">💰</div>
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
+                  Monto Total Cancelado
+                </div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">
                   {formatearDinero(summary.total)}
                 </div>
               </div>
             </div>
-            <div className="summary-card">
-              <div className="card-icon">💵</div>
-              <div className="card-info">
-                <div className="card-label">Efectivo</div>
-                <div className="card-value">
+            <div className="flex items-center gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="text-3xl flex-shrink-0">💵</div>
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
+                  Efectivo
+                </div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">
                   {formatearDinero(summary.cash)}
                 </div>
               </div>
             </div>
-            <div className="summary-card">
-              <div className="card-icon">💳</div>
-              <div className="card-info">
-                <div className="card-label">Tarjeta</div>
-                <div className="card-value">
+            <div className="flex items-center gap-4 p-5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="text-3xl flex-shrink-0">💳</div>
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1">
+                  Tarjeta
+                </div>
+                <div className="text-2xl font-bold text-slate-800 dark:text-white">
                   {formatearDinero(summary.card)}
                 </div>
               </div>
@@ -215,71 +241,102 @@ const CancellationsReport = () => {
           </div>
 
           {/* Tabla de cancelaciones */}
-          <div className="cancellations-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Folio</th>
-                  <th>Cliente</th>
-                  <th>Total</th>
-                  <th>Método de Pago</th>
-                  <th>Cancelado por</th>
-                  <th>Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCancellations.length === 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-100 dark:bg-slate-900">
                   <tr>
-                    <td colSpan="7" className="no-data">
-                      No se encontraron cancelaciones en el período seleccionado
-                    </td>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Fecha
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Folio
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Cliente
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Total
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Método de Pago
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Cancelado por
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 border-b-2 border-gray-200 dark:border-slate-700">
+                      Notas
+                    </th>
                   </tr>
-                ) : (
-                  filteredCancellations.map((order) => (
-                    <tr key={order.id}>
-                      <td>{formatearFechaHora(new Date(order.created_at))}</td>
-                      <td>{order.folio || order.id?.slice(-6)}</td>
-                      <td>{order.customers?.name || "Cliente General"}</td>
-                      <td className="amount-cell">
-                        {formatearDinero(order.total)}
+                </thead>
+                <tbody>
+                  {filteredCancellations.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="text-center py-10 px-5 text-slate-500 dark:text-slate-400 italic"
+                      >
+                        No se encontraron cancelaciones en el período
+                        seleccionado
                       </td>
-                      <td>
-                        <span
-                          className={`payment-badge ${
-                            order.payment_method === "cash" ||
+                    </tr>
+                  ) : (
+                    filteredCancellations.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700">
+                          {formatearFechaHora(new Date(order.created_at))}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700">
+                          {order.folio || order.id?.slice(-6)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700">
+                          {order.customers?.name || "Cliente General"}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-red-500 dark:text-red-400 border-b border-gray-100 dark:border-slate-700">
+                          {formatearDinero(order.total)}
+                        </td>
+                        <td className="px-4 py-3 text-sm border-b border-gray-100 dark:border-slate-700">
+                          <span
+                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
+                              order.payment_method === "cash" ||
+                              order.payment_method === "efectivo"
+                                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                                : order.payment_method === "card" ||
+                                    order.payment_method === "tarjeta"
+                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                                  : order.payment_method === "transfer" ||
+                                      order.payment_method === "transferencia"
+                                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                                    : "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400"
+                            }`}
+                          >
+                            {order.payment_method === "cash" ||
                             order.payment_method === "efectivo"
-                              ? "cash"
+                              ? "Efectivo"
                               : order.payment_method === "card" ||
                                   order.payment_method === "tarjeta"
-                                ? "card"
+                                ? "Tarjeta"
                                 : order.payment_method === "transfer" ||
                                     order.payment_method === "transferencia"
-                                  ? "transfer"
-                                  : "usd"
-                          }`}
-                        >
-                          {order.payment_method === "cash" ||
-                          order.payment_method === "efectivo"
-                            ? "Efectivo"
-                            : order.payment_method === "card" ||
-                                order.payment_method === "tarjeta"
-                              ? "Tarjeta"
-                              : order.payment_method === "transfer" ||
-                                  order.payment_method === "transferencia"
-                                ? "Transferencia"
-                                : "Dólares"}
-                        </span>
-                      </td>
-                      <td className="staff-cell">
-                        {order.cancelled_by_staff?.name || "N/A"}
-                      </td>
-                      <td className="notes-cell">{order.notes || "-"}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                                  ? "Transferencia"
+                                  : "Dólares"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700">
+                          {order.cancelled_by_staff?.name || "N/A"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 border-b border-gray-100 dark:border-slate-700 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap">
+                          {order.notes || "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
