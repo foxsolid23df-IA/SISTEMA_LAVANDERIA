@@ -1,6 +1,6 @@
 {
   "name": "pos-frontend",
-  "version": "1.4.45",
+  "version": "1.4.46",
   "type": "module",
   "homepage": "https://ginorobia.github.io/sistema-ventas",
   "scripts": {
