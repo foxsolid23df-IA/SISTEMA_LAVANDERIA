@@ -2,9 +2,6 @@ name: Build and Release Electron
 
 on:
   push:
-    branches:
-      - main
-      - master
     tags:
       - "v*"
   workflow_dispatch:
@@ -25,7 +22,7 @@ jobs:
           node-version: 20
           cache: "npm"
 
-      - name: Install Root Dependencies
+      - name: Install Dependencies
         run: npm install
 
       - name: Install Backend Dependencies
@@ -46,16 +43,8 @@ jobs:
       - name: Prepare Backend
         run: node scripts/prepare-backend.js
 
-      - name: Build and Package Electron App
-        shell: pwsh
-        run: |
-          if ("${{ github.ref }}" -like "refs/tags/v*" -or "${{ github.event_name }}" -eq "workflow_dispatch") {
-            write-host "Publishing to GitHub Releases..."
-            npx electron-builder --win --x64 --publish always
-          } else {
-            write-host "Building without publishing..."
-            npx electron-builder --win --x64 --publish never
-          }
+      - name: Build and Publish to GitHub Releases
+        run: npx electron-builder --win --x64 --publish always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,5 +52,5 @@ jobs:
       - name: Upload Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Electron-Installer
+          name: Sistema-Ventas-Installer
           path: release/*.exe
