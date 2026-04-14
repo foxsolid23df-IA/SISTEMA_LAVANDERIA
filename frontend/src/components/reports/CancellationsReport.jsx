@@ -127,10 +127,13 @@ const CancellationsReport = () => {
   const filteredCancellations = cancellations.filter((order) => {
     if (!filters.search) return true;
     const search = filters.search.toLowerCase();
+    const folio = String(order.folio || "");
+    const clientName = (order.customers?.name || "").toLowerCase();
+    const notes = (order.notes || "").toLowerCase();
     return (
-      (order.folio || "").toLowerCase().includes(search) ||
-      (order.customers?.name || "").toLowerCase().includes(search) ||
-      (order.notes || "").toLowerCase().includes(search)
+      folio.toLowerCase().includes(search) ||
+      clientName.includes(search) ||
+      notes.includes(search)
     );
   });
 
