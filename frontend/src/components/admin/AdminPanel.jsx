@@ -88,12 +88,13 @@ export const AdminPanel = () => {
     <div className="admin-panel">
       {/* Sidebar */}
       <aside className="admin-sidebar">
-        <div style={{ padding: '1rem' }}>
+        <div className="p-1">
             <button 
                 onClick={() => navigate('/configuracion')}
-                style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', width: '100%', padding: '0.5rem 0' }}>
+                className="ap-back-btn"
+            >
                 <span className="material-icons-outlined">arrow_back</span>
-                Atrás
+                Volver a Configuración
             </button>
         </div>
         <div className="admin-brand">
@@ -676,40 +677,15 @@ const CashCutsView = () => {
 
   return (
     <div className="admin-table-container">
-      <div
-        className="table-header"
-        style={{ flexDirection: "column", alignItems: "stretch", gap: "1rem" }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+      <div className="table-header ap-filters-wrapper">
+        <div className="ap-filters-header">
           <h3>Historial de Cortes de Caja</h3>
           <span className="table-count">{cuts.length} cortes</span>
         </div>
 
-        <div
-          className="filters-row"
-          style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}
-        >
-          <div
-            className="search-group"
-            style={{ flex: 1, minWidth: "200px", position: "relative" }}
-          >
-            <span
-              className="material-icons-outlined"
-              style={{
-                position: "absolute",
-                left: "10px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#64748b",
-                fontSize: "18px",
-              }}
-            >
+        <div className="ap-filters-row">
+          <div className="ap-search-box">
+            <span className="material-symbols-outlined ap-search-icon">
               search
             </span>
             <input
@@ -717,41 +693,34 @@ const CashCutsView = () => {
               placeholder="Buscar por empleado..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-              style={{ paddingLeft: "35px", width: "100%" }}
+              className="search-input ap-search-input"
             />
           </div>
 
-          <div
-            className="date-group"
-            style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-          >
+          <div className="ap-date-filters">
             <input
               type="date"
               value={dateRange.start}
               onChange={(e) =>
                 setDateRange({ ...dateRange, start: e.target.value })
               }
-              className="search-input"
-              style={{ padding: "0.5rem" }}
+              className="search-input ap-date-input"
             />
-            <span style={{ color: "#64748b" }}>a</span>
+            <span className="text-muted">a</span>
             <input
               type="date"
               value={dateRange.end}
               onChange={(e) =>
                 setDateRange({ ...dateRange, end: e.target.value })
               }
-              className="search-input"
-              style={{ padding: "0.5rem" }}
+              className="search-input ap-date-input"
             />
           </div>
 
           <select
             value={cutTypeFilter}
             onChange={(e) => setCutTypeFilter(e.target.value)}
-            className="search-input"
-            style={{ minWidth: "150px" }}
+            className="search-input ap-select-type"
           >
             <option value="all">Todos los Tipos</option>
             <option value="turno">Turno</option>
@@ -760,7 +729,7 @@ const CashCutsView = () => {
           </select>
 
           <button
-            className="btn-icon"
+            className="btn btn-primary ap-btn-accent"
             onClick={() => {
               const dataToExport = cuts.map((cut) => ({
                 Empleado: cut.staff_name,
@@ -783,21 +752,19 @@ const CashCutsView = () => {
               );
             }}
             title="Exportar a Excel"
-            style={{ background: "#10b981", color: "#fff" }}
             disabled={cuts.length === 0}
           >
             <span className="material-icons-outlined">file_download</span>
           </button>
 
           <button
-            className="btn-icon"
+            className="btn btn-secondary ap-btn-muted"
             onClick={() => {
               setSearchTerm("");
               setDateRange({ start: "", end: "" });
               setCutTypeFilter("all");
             }}
             title="Limpiar Filtros"
-            style={{ background: "#f1f5f9", color: "#64748b" }}
           >
             <span className="material-icons-outlined">filter_alt_off</span>
           </button>
@@ -896,7 +863,7 @@ const SettingsView = () => {
       Swal.fire({
         title: "Sincronización Exitosa",
         html: `
-          <ul style="text-align: left; background: #0f172a; padding: 1rem; border-radius: 8px; color: #fff;">
+          <ul style="text-align: left; background: var(--admin-sidebar-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--admin-card-border); color: #fff;">
             <li>Inventario: ${invResult.created} nuevos, ${invResult.updated} actualizados.</li>
             <li>Ventas subidas: ${salesResult.count} pendientes procesadas.</li>
           </ul>
@@ -1022,8 +989,8 @@ const SettingsView = () => {
     const { isConfirmed } = await Swal.fire({
       title: "Generar Código de Recuperación",
       html: `
-        <p>Tu nuevo código es: <strong style="font-size: 1.5rem; color: #10b981;">${newCode}</strong></p>
-        <p style="font-size: 0.8rem; color: #ef4444; margin-top: 1rem;">
+        <p>Tu nuevo código es: <strong style="font-size: 1.5rem; color: var(--admin-accent);">${newCode}</strong></p>
+        <p style="font-size: 0.8rem; color: var(--admin-danger); margin-top: 1rem;">
           ⚠️ Guarda este código en un lugar seguro. <br/> 
           Se usará para desvincular el equipo si olvidas el PIN o la contraseña.
         </p>
@@ -1107,7 +1074,7 @@ const SettingsView = () => {
 
       <div className="settings-card security-card">
         <h3>Seguridad de la Cuenta (NexusProLavanderia 2026)</h3>
-        <p className="text-slate-400 mb-4" style={{ fontSize: "0.85rem" }}>
+        <p className="text-slate-400 mb-4 font-size-sm">
           Protege tu cuenta maestra configurando métodos de acceso local que no
           requieran tu contraseña principal.
         </p>
@@ -1130,23 +1097,14 @@ const SettingsView = () => {
           </button>
         </div>
         {user?.recovery_code && (
-          <div
-            className="mt-4 p-3 bg-slate-800 rounded-lg flex justify-between items-center"
-            style={{ border: "1px solid #1e293b" }}
-          >
+          <div className="p-4 rounded-xl ap-recovery-card flex items-center justify-between">
             <div>
-              <span
-                className="block text-slate-500"
-                style={{ fontSize: "0.7rem", textTransform: "uppercase" }}
-              >
+              <div className="text-slate-400 ap-recovery-label mb-1">
                 Código de Recuperación Activo:
-              </span>
-              <code
-                className="text-emerald-400 font-bold"
-                style={{ fontSize: "1.1rem" }}
-              >
+              </div>
+              <div className="text-xl font-mono font-bold tracking-wider text-emerald-400 ap-recovery-code">
                 {user.recovery_code}
-              </code>
+              </div>
             </div>
             <span
               className="material-icons-outlined text-slate-600"

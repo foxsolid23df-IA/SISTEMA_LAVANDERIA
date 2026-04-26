@@ -1,7 +1,7 @@
 .kardex-container {
   padding: 1.5rem;
-  background: #0f172a; /* Slate 900 */
-  color: #f8fafc;
+  background: var(--admin-bg);
+  color: var(--admin-text-main);
   min-height: 100vh;
   box-sizing: border-box;
   font-family: 'Inter', system-ui, sans-serif;
@@ -13,7 +13,7 @@
   justify-content: center;
   gap: 0.5rem;
   font-size: 1.2rem;
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   height: 200px;
 }
 
@@ -34,14 +34,14 @@
 }
 
 .kpi-card {
-  background: #1e293b;
+  background: var(--admin-card-bg);
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: var(--admin-card-shadow);
+  border: 1px solid var(--admin-card-border);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -68,7 +68,7 @@
 .kpi-data h4 {
   margin: 0;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -78,7 +78,7 @@
   margin: 0.25rem 0 0 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--admin-text-main);
 }
 
 /* Layout */
@@ -90,9 +90,9 @@
 
 .kardex-table-section {
   flex: 1;
-  background: #1e293b;
+  background: var(--admin-card-bg);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--admin-card-border);
   overflow: hidden;
   transition: all 0.3s ease;
 }
@@ -106,13 +106,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--admin-card-border);
 }
 
 .k-table-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  color: #f1f5f9;
+  color: var(--admin-text-main);
 }
 
 .search-box {
@@ -124,14 +124,14 @@
 .search-box span {
   position: absolute;
   left: 10px;
-  color: #64748b;
+  color: var(--admin-text-muted);
   font-size: 18px;
 }
 
 .search-box input {
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: #f8fafc;
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-card-border);
+  color: var(--admin-text-main);
   padding: 0.5rem 1rem 0.5rem 2.25rem;
   border-radius: 6px;
   width: 250px;
@@ -155,8 +155,8 @@
 }
 
 .k-table th {
-  background: rgba(15, 23, 42, 0.5);
-  color: #94a3b8;
+  background: var(--admin-input-bg);
+  color: var(--admin-text-muted);
   padding: 1rem 1.5rem;
   text-align: left;
   font-size: 0.85rem;
@@ -170,7 +170,7 @@
 
 .k-table td {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--admin-card-border);
   font-size: 0.95rem;
 }
 
@@ -180,7 +180,7 @@
 }
 
 .k-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--admin-accent-subtle, rgba(99, 102, 241, 0.04));
 }
 
 .k-table tr.active-row {
@@ -188,7 +188,7 @@
 }
 
 .k-barcode {
-  color: #64748b;
+  color: var(--admin-text-muted);
   font-size: 0.85rem;
   font-weight: normal;
   margin-left: 0.5rem;
@@ -224,9 +224,9 @@
 /* Side Panel */
 .kardex-side-panel {
   flex: 0 0 38%;
-  background: #1e293b;
+  background: var(--admin-card-bg);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--admin-card-border);
   display: flex;
   flex-direction: column;
   height: max-content;
@@ -246,25 +246,25 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--admin-card-border);
 }
 
 .panel-header h2 {
   margin: 0 0 0.25rem 0;
-  color: #f8fafc;
+  color: var(--admin-text-main);
   font-size: 1.25rem;
 }
 
 .panel-header p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--admin-text-muted);
   font-size: 0.95rem;
 }
 
 .close-panel {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--admin-text-muted);
   cursor: pointer;
   border-radius: 50%;
   width: 32px;
@@ -276,20 +276,20 @@
 }
 
 .close-panel:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
+  background: var(--admin-accent-subtle);
+  color: var(--admin-text-main);
 }
 
 .movement-form-box {
   padding: 1.5rem;
-  background: rgba(15, 23, 42, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--admin-input-bg);
+  border-bottom: 1px solid var(--admin-card-border);
 }
 
 .movement-form-box h3 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
-  color: #e2e8f0;
+  color: var(--admin-text-main);
 }
 
 .form-row {
@@ -298,9 +298,9 @@
 }
 
 .k-select, .k-input {
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: #f8fafc;
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  color: var(--admin-text-main);
   padding: 0.6rem 1rem;
   border-radius: 6px;
   outline: none;
@@ -348,7 +348,7 @@
 .history-section h3 {
   margin: 0 0 1.5rem 0;
   font-size: 1rem;
-  color: #e2e8f0;
+  color: var(--admin-text-main);
 }
 
 .timeline {
@@ -364,7 +364,7 @@
   bottom: 0;
   left: 20px;
   width: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--admin-card-border);
 }
 
 .timeline-item {
@@ -389,7 +389,7 @@
   justify-content: center;
   color: #fff;
   z-index: 2;
-  box-shadow: 0 0 0 4px #1e293b;
+  box-shadow: 0 0 0 4px var(--admin-card-bg);
 }
 
 .timeline-icon.IN { background: #10b981; }
@@ -397,8 +397,8 @@
 .timeline-icon.SALE { background: #3b82f6; }
 
 .timeline-content {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-card-border);
   padding: 1rem;
   border-radius: 8px;
 }
@@ -423,26 +423,26 @@
 
 .t-date {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--admin-text-muted);
 }
 
 .t-details {
   margin: 0 0 0.25rem 0;
-  color: #e2e8f0;
+  color: var(--admin-text-main);
   font-size: 0.9rem;
 }
 
 .t-notes {
   margin: 0 0 0.5rem 0;
-  color: #cbd5e1;
+  color: var(--admin-text-secondary);
   font-size: 0.85rem;
 }
 
 .t-staff {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--admin-text-muted);
   display: inline-block;
-  background: rgba(0,0,0,0.2);
+  background: var(--admin-input-bg);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
 }

@@ -13,21 +13,23 @@
 }
 
 .cash-fund-modal {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--admin-card-bg);
     backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
+    border-radius: 20px;
+    padding: 20px;
     width: 100%;
-    max-width: 420px;
+    max-width: 380px;
     position: relative;
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
     animation: slideUp 0.4s ease-out;
+    border: 1px solid var(--admin-card-border);
+    color: var(--admin-text-main);
 }
 
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(30px) scale(0.95);
+        transform: translateY(20px) scale(0.98);
     }
     to {
         opacity: 1;
@@ -35,263 +37,234 @@
     }
 }
 
-/* Dark mode */
-.dark .cash-fund-modal {
-    background: rgba(30, 41, 59, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .cash-fund-header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 15px;
+}
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 2px;
 }
 
 .cash-fund-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-    animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    font-size: 24px;
+    margin: 0;
 }
 
 .cash-fund-header h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0 0 8px 0;
-}
-
-.dark .cash-fund-header h1 {
-    color: #f1f5f9;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--admin-text-main);
+    margin: 0 0 2px 0;
+    letter-spacing: -0.5px;
 }
 
 .cash-fund-header p {
-    font-size: 0.9rem;
-    color: #64748b;
-    margin: 0 0 12px 0;
-}
-
-.dark .cash-fund-header p {
-    color: #94a3b8;
+    font-size: 0.8rem;
+    color: var(--admin-text-muted);
+    margin: 0 0 8px 0;
 }
 
 .cash-fund-staff {
     display: inline-block;
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    padding: 6px 16px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    padding: 2px 12px;
     border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* Input Type de Cambio */
+.exchange-rate-input-container {
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.exchange-rate-input-container label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--admin-text-muted);
+    margin-bottom: 4px;
+    padding-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rate-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-card-border);
+    border-radius: 12px;
+    padding: 0 10px;
+    transition: all 0.2s ease;
+}
+
+.rate-input-wrapper:focus-within {
+    border-color: var(--admin-accent);
+    background: var(--admin-card-bg);
+}
+
+.rate-input-wrapper span.material-symbols-outlined {
+    color: var(--admin-accent);
+    font-size: 18px;
+}
+
+.rate-input-wrapper input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--admin-text-main);
+    outline: none;
+}
+
+.rate-suffix {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--admin-text-muted);
+    white-space: nowrap;
 }
 
 .cash-fund-display {
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-    border: 2px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 20px;
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-card-border);
+    border-radius: 12px;
+    padding: 10px;
     display: flex;
     align-items: baseline;
     justify-content: center;
     gap: 4px;
-    margin-bottom: 20px;
-}
-
-.dark .cash-fund-display {
-    background: linear-gradient(135deg, #1e293b, #334155);
-    border-color: #475569;
+    margin-bottom: 12px;
 }
 
 .currency-symbol {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: #10b981;
 }
 
 .amount-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--admin-text-main);
     font-family: 'Inter', system-ui, sans-serif;
-    min-width: 80px;
+    min-width: 60px;
     text-align: center;
-}
-
-.dark .amount-value {
-    color: #f1f5f9;
+    letter-spacing: -1px;
 }
 
 .currency-code {
-    font-size: 0.9rem;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.dark .currency-code {
-    color: #94a3b8;
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+    font-weight: 700;
 }
 
 /* Montos rápidos */
 .quick-amounts {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .quick-btn {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 8px 16px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #475569;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--admin-text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .quick-btn:hover {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.dark .quick-btn {
-    background: #334155;
-    border-color: #475569;
-    color: #e2e8f0;
-}
-
-.dark .quick-btn:hover {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
+    background: var(--admin-input-bg);
+    border-color: var(--admin-accent);
+    color: var(--admin-text-main);
 }
 
 /* Teclado numérico */
 .cash-fund-keypad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 24px;
+    gap: 6px;
+    margin-bottom: 15px;
 }
 
 .keypad-btn {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1e293b;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--admin-text-main);
     cursor: pointer;
     transition: all 0.15s ease;
 }
 
 .keypad-btn:hover {
-    background: #e2e8f0;
-    transform: scale(1.02);
+    background: var(--admin-input-bg);
+    border-color: var(--admin-accent);
 }
 
 .keypad-btn:active {
-    transform: scale(0.98);
-    background: #cbd5e1;
+    background: var(--admin-accent-subtle);
 }
 
 .keypad-btn.clear-btn {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #dc2626;
-}
-
-.keypad-btn.clear-btn:hover {
-    background: #fee2e2;
-}
-
-.keypad-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.dark .keypad-btn {
-    background: #334155;
-    border-color: #475569;
-    color: #f1f5f9;
-}
-
-.dark .keypad-btn:hover {
-    background: #475569;
-}
-
-.dark .keypad-btn.clear-btn {
-    background: #450a0a;
-    border-color: #7f1d1d;
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
 }
 
 /* Botón submit */
 .cash-fund-submit {
     width: 100%;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: #10b981;
     border: none;
-    border-radius: 14px;
-    padding: 16px 24px;
-    font-size: 1.1rem;
-    font-weight: 700;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 800;
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    gap: 8px;
+    transition: all 0.2s ease;
 }
 
 .cash-fund-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
-}
-
-.cash-fund-submit:active {
-    transform: translateY(0);
+    background: #059669;
 }
 
 .cash-fund-submit:disabled {
-    opacity: 0.7;
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
-}
-
-.cash-fund-submit .spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 .cash-fund-note {
     text-align: center;
-    font-size: 0.8rem;
-    color: #64748b;
-    margin-top: 16px;
-    margin-bottom: 0;
-}
-
-.dark .cash-fund-note {
-    color: #94a3b8;
+    font-size: 0.7rem;
+    color: var(--admin-text-muted);
+    margin-top: 10px;
+    font-weight: 500;
 }
 
 /* Responsive */
@@ -320,12 +293,12 @@
     position: absolute;
     top: 16px;
     right: 16px;
-    background: #f1f5f9;
+    background: var(--admin-input-bg);
     border: none;
     padding: 8px;
     border-radius: 10px;
     cursor: pointer;
-    color: #64748b;
+    color: var(--admin-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -334,16 +307,6 @@
 }
 
 .cash-fund-close:hover {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.dark .cash-fund-close {
-    background: #334155;
-    color: #94a3b8;
-}
-
-.dark .cash-fund-close:hover {
-    background: #450a0a;
-    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
 }

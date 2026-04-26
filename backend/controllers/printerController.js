@@ -43,31 +43,70 @@ exports.printTicket = (req, res) => {
         return res.status(400).json({ error: 'Contenido vacío' });
     }
 
-    // Para impresión desde Web vía Backend en Windows:
-    // 1. Guardamos el HTML en un archivo temporal
-    // 2. Usamos PowerShell para imprimirlo (o una utilidad de sistema)
-    // NOTA: Imprimir HTML puro a una térmica requiere renderizado. 
-    // Como no tenemos un navegador en el backend, una opción es usar 'Notepad' para texto plano
-    // o simplemente avisar que la impresión silenciosa desde Web requiere que el Backend 
-    // tenga una utilidad de impresión instalada (como SumatraPDF o similar).
-    
-    // De momento, implementaremos el guardado y el comando Out-Printer de PowerShell para texto plano/PDF si es posible.
+    // Guardar el HTML como archivo temporal con encoding UTF-8 BOM
     const tempFile = path.join(os.tmpdir(), `ticket_${Date.now()}.html`);
     
-    fs.writeFile(tempFile, htmlContent, (err) => {
+    // Asegurar BOM UTF-8 para correcta interpretación de caracteres especiales (ñ, á, etc.)
+    const bom = '\uFEFF';
+    const content = htmlContent.startsWith('\uFEFF') ? htmlContent : bom + htmlContent;
+    
+    fs.writeFile(tempFile, content, { encoding: 'utf8' }, (err) => {
         if (err) return res.status(500).json({ error: 'Error al crear archivo temporal' });
 
-        // Intento de impresión básica vía PowerShell (Funciona mejor con texto o imágenes)
-        // Para tickets térmicos complejos desde WEB, lo ideal es enviar ESC/POS raw
-        const printerCmd = printerName ? `-Name "${printerName}"` : "";
-        const command = `powershell -Command "Start-Process -FilePath '${tempFile}' -Verb Print"`;
+        // Normalizamos la ruta del archivo para que funcione en URLs file://
+        const fileUrl = `file:///${tempFile.replace(/\\/g, '/')}`;
 
-        exec(command, (error) => {
+        // Estrategia de impresión: 
+        // 1. Si hay impresora específica → setear como predeterminada temporal, imprimir con rundll32, restaurar
+        // 2. Si no → imprimir con el método del sistema
+        let command;
+
+        if (printerName) {
+            // Método 1: Imprimir con impresora específica
+            // Setear la impresora como predeterminada, imprimir, y restaurar la original
+            const safeprinterName = printerName.replace(/'/g, "''");
+            
+            command = `powershell -NoProfile -Command "` +
+                // Guardar impresora actual
+                `$original = (Get-CimInstance -ClassName Win32_Printer | Where-Object {$_.Default}).Name; ` +
+                // Setear la impresora del ticket como predeterminada
+                `$target = '${safeprinterName}'; ` +
+                `$printer = Get-CimInstance -ClassName Win32_Printer | Where-Object {$_.Name -eq $target}; ` +
+                `if ($printer) { ` +
+                    `Invoke-CimMethod -InputObject $printer -MethodName SetDefaultPrinter | Out-Null; ` +
+                    // Imprimir via Start-Process con -Verb Print (usa la predeterminada)
+                    `Start-Process '${tempFile}' -Verb Print -WindowStyle Hidden; ` +
+                    `Start-Sleep -Seconds 3; ` +
+                    // Restaurar la impresora original
+                    `if ($original -and $original -ne $target) { ` +
+                        `$origPrinter = Get-CimInstance -ClassName Win32_Printer | Where-Object {$_.Name -eq $original}; ` +
+                        `if ($origPrinter) { Invoke-CimMethod -InputObject $origPrinter -MethodName SetDefaultPrinter | Out-Null } ` +
+                    `} ` +
+                `} else { ` +
+                    // Si no se encontró la impresora, imprimir con la predeterminada del sistema
+                    `Start-Process '${tempFile}' -Verb Print -WindowStyle Hidden ` +
+                `}"`;
+        } else {
+            // Método 2: Imprimir con la impresora predeterminada del sistema
+            command = `powershell -NoProfile -Command "Start-Process '${tempFile}' -Verb Print -WindowStyle Hidden"`;
+        }
+
+        exec(command, { timeout: 30000 }, (error) => {
             // Borramos el temporal después de un momento
-            setTimeout(() => fs.unlink(tempFile, () => {}), 5000);
+            setTimeout(() => fs.unlink(tempFile, () => {}), 15000);
             
             if (error) {
-                return res.status(500).json({ error: 'Error al enviar a la impresora: ' + error.message });
+                console.error('[PrintController] Error de impresión:', error.message);
+                
+                // Fallback: Abrir el archivo para que el usuario lo imprima manualmente
+                const fallbackCmd = `powershell -NoProfile -Command "Start-Process '${tempFile}'"`;
+                exec(fallbackCmd, (err2) => {
+                    if (err2) {
+                        return res.status(500).json({ error: 'Error al enviar a la impresora: ' + error.message });
+                    }
+                    res.json({ success: true, message: 'Ticket abierto para impresión manual', fallback: true });
+                });
+                return;
             }
             res.json({ success: true, message: 'Ticket enviado a la cola de impresión' });
         });

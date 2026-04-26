@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Inventory.css';
 import { productService } from '../../services/productService';
 import Swal from 'sweetalert2';
@@ -70,6 +70,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
 
     // Modal State de Semilla
     const [isSeeding, setIsSeeding] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Categories Management State
     const [showCategoriesModal, setShowCategoriesModal] = useState(false);
@@ -683,9 +684,10 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                             <input 
                                 id="excel-import-input"
                                 type="file" 
-                                accept=".xlsx, .xls" 
+                                accept=".xlsx, .xls, .csv" 
                                 onChange={handleImportExcel} 
-                                style={{ display: 'none' }} 
+                                ref={fileInputRef}
+                                className="hidden-input"
                             />
                         </button>
 
@@ -703,14 +705,11 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                             <button 
                                 className="control-btn" 
                                 onClick={() => setShowQuickEntryModal(true)}
-                                style={{ 
-                                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                                    color: 'white',
-                                    border: 'none'
-                                }}
                                 title="Registrar Entradas"
                             >
-                                <span className="material-symbols-outlined btn-icon">inventory_2</span>
+                                <div className="circle-icon-blue">
+                                    <span className="material-symbols-outlined">inventory</span>
+                                </div>
                                 <span className="hidden md:inline">Entradas</span>
                             </button>
                         )}

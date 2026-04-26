@@ -190,8 +190,8 @@ export const Orders = () => {
 
       if (isValidAdmin) {
         const confirm = await Swal.fire({
-          title: "¿Eliminar orden permanentemente?",
-          text: "Esta acción borrará la orden y sus prendas del sistema. Esta acción es irreversible.",
+          title: "¿Eliminar esta orden?",
+          text: "La orden será removida de la vista activa. El stock se restaurará automáticamente.",
           icon: "warning",
           showCancelButton: true,
           confirmButtonColor: "#ef4444",
@@ -202,7 +202,7 @@ export const Orders = () => {
 
         if (confirm.isConfirmed) {
           try {
-            await orderService.deleteOrder(orderId);
+            await orderService.deleteOrder(orderId, activeStaff?.id || null, 'Eliminada desde panel de órdenes');
             setOrders((prev) => prev.filter((o) => o.id !== orderId));
             Swal.fire({
               title: "Orden Eliminada",
@@ -343,35 +343,10 @@ export const Orders = () => {
 
     setIsPrinting(true);
     try {
-      const printContent = ticketRef.current.innerHTML;
-
-      const fullHtml = `
-            <html>
-                <head>
-                    <title>Reimpresión Ticket #${orderToPrint.id}</title>
-                    <style>
-                        body { 
-                            font-family: ${businessSettings.printer_font_family || "'Courier New', Courier, monospace"}; 
-                            margin: 0; 
-                            padding: ${businessSettings.printer_margin || 0}px; 
-                            width: ${businessSettings.printer_width || 80}mm;
-                            font-size: ${businessSettings.printer_font_size || 12}px;
-                        }
-                        .linea { border-bottom: 1px dashed #000; margin: 5px 0; }
-                        .text-center { text-align: center; }
-                        .text-right { text-align: right; }
-                        .font-bold { font-weight: bold; }
-                        table { width: 100%; border-collapse: collapse; }
-                        ${businessSettings.printer_is_bold ? "body { font-weight: bold; }" : ""}
-                        @page { margin: 0; size: auto; }
-                    </style>
-                </head>
-                <body>${printContent}</body>
-            </html>
-        `;
-
-      await printService.print(fullHtml, businessSettings.printer_name, {
+      // Modo imagen: Envía el elemento DOM directamente para captura pixel-perfect
+      await printService.print(ticketRef.current, businessSettings.printer_name, {
         copies: 1,
+        settings: businessSettings,
       });
     } catch (error) {
       console.error("Error al imprimir:", error);
@@ -626,7 +601,7 @@ export const Orders = () => {
   };
 
   return (
-    <div className="orders-container p-6">
+    <div className="orders-container p-6 bg-white dark:bg-slate-950 min-h-screen transition-colors duration-300">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
@@ -637,7 +612,7 @@ export const Orders = () => {
           </p>
         </div>
 
-        <div className="flex gap-2 bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto max-w-full">
+        <div className="flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto max-w-full">
           {["all", "received", "processing", "ready", "delivered"].map((f) => (
             <button
               key={f}
@@ -652,7 +627,7 @@ export const Orders = () => {
             </button>
           ))}
         </div>
-        <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
           <button
             onClick={() => setViewMode("grid")}
             className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-emerald-100 text-emerald-600" : "text-slate-400 hover:text-emerald-500"}`}
@@ -673,7 +648,7 @@ export const Orders = () => {
       </div>
 
       {/* BARRA DE HERRAMIENTAS DE FILTROS Y EXPORTACIÓN */}
-      <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 animate-fade-in-down">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 animate-fade-in-down">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           {/* Buscador */}
           <div className="relative w-full md:w-auto md:flex-1 max-w-md">

@@ -1,6 +1,6 @@
 {
   "name": "pos-backend",
-  "version": "1.4.42",
+  "version": "1.4.48",
   "private": true,
   "scripts": {
     "start": "node index.js",

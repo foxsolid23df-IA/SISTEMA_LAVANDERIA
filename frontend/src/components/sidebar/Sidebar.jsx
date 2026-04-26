@@ -55,6 +55,7 @@ export const Sidebar = () => {
   const [updaterMessage, setUpdaterMessage] = useState("");
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const isOnline = useConnectivity();
+  const isDesktop = !!window?.electron?.isElectron;
 
   useEffect(() => {
     if (window.electron?.onUpdaterMessage) {
@@ -270,7 +271,7 @@ export const Sidebar = () => {
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
               {displayRole}
               <span className="bg-slate-100 dark:bg-white/5 px-1 rounded text-[8px] border border-slate-200 dark:border-white/10">
-                v{typeof APP_VERSION !== "undefined" ? APP_VERSION : "1.4.43"}
+                v{typeof APP_VERSION !== "undefined" ? APP_VERSION : "1.4.48"}
               </span>
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -292,7 +293,7 @@ export const Sidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {canAccessSales && (
+          {isDesktop && canAccessSales && (
             <NavLink
               to="/"
               className={({ isActive }) => `
@@ -549,7 +550,7 @@ export const Sidebar = () => {
           )}
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            {(canManageCash || isAdmin) && (
+            {isDesktop && (canManageCash || isAdmin) && (
               <button
                 onClick={() => {
                   setShowCashCut(true);
@@ -575,7 +576,7 @@ export const Sidebar = () => {
               </button>
             )}
 
-            {canLockTerminal && (
+            {isDesktop && canLockTerminal && (
               <button
                 onClick={() => {
                   lockScreen();
@@ -591,7 +592,7 @@ export const Sidebar = () => {
             )}
 
             <div className="space-y-1">
-              {canRestartCash && (
+              {isDesktop && canRestartCash && (
                 <button
                   onClick={async () => {
                     const { value: password } = await Swal.fire({

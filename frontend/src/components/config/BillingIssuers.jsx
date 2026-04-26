@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../supabase";
 import { useAuth } from "../../hooks/useAuth";
 import BillingPortalModal from "./BillingPortalModal";
@@ -30,12 +31,14 @@ const REGIMENES_FISICA = [
 ];
 
 export default function BillingIssuers() {
+  const navigate = useNavigate();
   const { token } = useAuth();
   const [issuers, setIssuers] = useState([]);
   const [loading, setLoading] = useState(true);
-   const [showModal, setShowModal] = useState(false);
-   const [showPortalModal, setShowPortalModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showPortalModal, setShowPortalModal] = useState(false);
   const [selectedIssuer, setSelectedIssuer] = useState(null);
+  const [editingIssuer, setEditingIssuer] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRegimenDropdown, setShowRegimenDropdown] = useState(false);
@@ -145,6 +148,30 @@ export default function BillingIssuers() {
     }
   };
 
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingIssuer(null);
+    setFormData({
+      rfc: "", razonSocial: "", regimenFiscal: "612",
+      codigoPostal: "", branchName: "Matriz principal", password: ""
+    });
+    setFiles({ cer: null, key: null, cerBase64: "", keyBase64: "" });
+  };
+
+  const handleEdit = (issuer) => {
+    setEditingIssuer(issuer);
+    setFormData({
+      rfc: issuer.rfc || "",
+      razonSocial: issuer.razon_social || "",
+      regimenFiscal: issuer.regimen_fiscal || "612",
+      codigoPostal: issuer.codigo_postal || "",
+      branchName: issuer.branch_name || "Matriz principal",
+      password: ""
+    });
+    setFiles({ cer: null, key: null, cerBase64: "", keyBase64: "" });
+    setShowModal(true);
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("¿Está seguro de eliminar este emisor? Sus CSD se perderán.")) return;
     
@@ -162,6 +189,39 @@ export default function BillingIssuers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (editingIssuer && !files.cerBase64 && !files.keyBase64) {
+      if (formData.rfc !== editingIssuer.rfc) {
+        alert("Para cambiar el RFC, debe proporcionar los nuevos archivos de Certificado (.cer) y Llave Privada (.key) con su contraseña.");
+        return;
+      }
+      
+      try {
+        setIsSubmitting(true);
+        const { error } = await supabase
+          .from('billing_issuers')
+          .update({
+             razon_social: formData.razonSocial,
+             regimen_fiscal: formData.regimenFiscal,
+             codigo_postal: formData.codigoPostal,
+             sucursal_nombre: formData.branchName
+          })
+          .eq('id', editingIssuer.id);
+        
+        if (error) throw error;
+        
+        alert("Datos del emisor actualizados correctamente.");
+        closeModal();
+        fetchIssuers();
+      } catch (err) {
+        console.error("Error actualizando emisor:", err);
+        alert("Error al actualizar: " + err.message);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (!files.cerBase64 || !files.keyBase64 || !formData.password) {
       alert("Por favor cargue los archivos .cer y .key, además de la contraseña.");
       return;
@@ -226,12 +286,7 @@ export default function BillingIssuers() {
       }
 
       alert("Emisor validado y registrado exitosamente a través de Facturama.");
-      setShowModal(false);
-      setFormData({
-        rfc: "", razonSocial: "", regimenFiscal: "612",
-        codigoPostal: "", branchName: "Matriz principal", password: ""
-      });
-      setFiles({ cer: null, key: null, cerBase64: "", keyBase64: "" });
+      closeModal();
       fetchIssuers();
     } catch (error) {
       console.error("Error completo:", error);
@@ -247,6 +302,13 @@ export default function BillingIssuers() {
       <div className="p-8 lg:px-12 pt-10">
         <div className="flex items-center justify-between mb-8">
           <div>
+            <button 
+              onClick={() => navigate('/configuracion')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all font-bold text-sm mb-6 shadow-sm w-fit"
+            >
+              <span className="material-icons-outlined text-[18px]">arrow_back</span>
+              Volver a Configuración
+            </button>
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 font-['Manrope'] tracking-tight">
               Datos de Emisión Fiscal
             </h1>
@@ -331,6 +393,13 @@ export default function BillingIssuers() {
                       </td>
                       <td className="p-5 text-right pr-6 gap-2 flex items-center justify-end">
                         <button 
+                          onClick={() => handleEdit(issuer)}
+                          className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-slate-400 hover:text-[#003f87] hover:bg-[#003f87]/10 transition-colors"
+                          title="Editar Emisor"
+                        >
+                          <span className="material-icons-outlined text-[20px]">edit</span>
+                        </button>
+                        <button 
                           onClick={() => handleDelete(issuer.id)}
                           className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                           title="Eliminar Emisor"
@@ -349,21 +418,23 @@ export default function BillingIssuers() {
 
       {/* Modal Glassmorphism Override */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-[#001a40]/20 backdrop-blur-md"
-            onClick={() => !isSubmitting && setShowModal(false)}
+            onClick={() => !isSubmitting && closeModal()}
           />
           <div className="relative w-full max-w-3xl bg-white rounded-[24px] shadow-[0_24px_40px_-8px_rgba(0,0,0,0.1)] flex flex-col font-['Inter'] animate-in fade-in zoom-in-95 duration-200 object-contain max-h-[90vh] overflow-hidden">
             
             {/* Header Modal */}
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-[#ffffff]">
               <div>
-                <h2 className="text-2xl font-bold font-['Manrope'] text-slate-800">Cargar Datos de Facturación</h2>
+                <h2 className="text-2xl font-bold font-['Manrope'] text-slate-800">
+                  {editingIssuer ? 'Editar Datos de Facturación' : 'Cargar Datos de Facturación'}
+                </h2>
                 <p className="text-sm text-slate-500 mt-1">Configura tu CSD mediante conexión segura a Facturama.</p>
               </div>
               <button 
-                onClick={() => setShowModal(false)}
+                onClick={() => closeModal()}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 disabled={isSubmitting}
               >
@@ -480,6 +551,12 @@ export default function BillingIssuers() {
                       <span className="material-icons-outlined text-[14px]">lock</span>
                       Tus certificados se transmiten al vuelo y NUNCA se almacenan en nuestra BDD
                     </p>
+                    {editingIssuer && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1.5 font-medium mt-1">
+                        <span className="material-icons-outlined text-[14px]">info</span>
+                        Solo necesitas volver a cargarlos si cambias de RFC o si han caducado.
+                      </p>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -489,7 +566,7 @@ export default function BillingIssuers() {
                       className={`relative cursor-pointer border-2 border-dashed rounded-xl p-4 flex items-center gap-4 transition-all
                         ${files.cer ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:border-[#003f87] bg-white'}`}
                     >
-                      <input type="file" required accept=".cer" ref={cerInputRef} onChange={(e) => handleFileChange(e, 'cer')} className="hidden" />
+                      <input type="file" required={!editingIssuer} accept=".cer" ref={cerInputRef} onChange={(e) => handleFileChange(e, 'cer')} className="hidden" />
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${files.cer ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         <span className="material-icons-outlined">{files.cer ? 'check_circle' : 'upload_file'}</span>
                       </div>
@@ -505,7 +582,7 @@ export default function BillingIssuers() {
                       className={`relative cursor-pointer border-2 border-dashed rounded-xl p-4 flex items-center gap-4 transition-all
                         ${files.key ? 'border-emerald-300 bg-emerald-50' : 'border-slate-300 hover:border-[#003f87] bg-white'}`}
                     >
-                      <input type="file" required accept=".key" ref={keyInputRef} onChange={(e) => handleFileChange(e, 'key')} className="hidden" />
+                      <input type="file" required={!editingIssuer} accept=".key" ref={keyInputRef} onChange={(e) => handleFileChange(e, 'key')} className="hidden" />
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${files.key ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         <span className="material-icons-outlined">{files.key ? 'check_circle' : 'key'}</span>
                       </div>
@@ -519,8 +596,8 @@ export default function BillingIssuers() {
                   <div className="pt-2">
                     <label className="text-sm font-semibold text-slate-700 block mb-2">Contraseña del CSD</label>
                     <input 
-                      type="password" name="password" value={formData.password} onChange={handleChange} required
-                      placeholder="••••••••••••••"
+                      type="password" name="password" value={formData.password} onChange={handleChange} required={!editingIssuer || files.cerBase64 || files.keyBase64}
+                      placeholder={editingIssuer ? "(Deja en blanco si no cambias los certificados)" : "••••••••••••••"}
                       className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:border-[#003f87] focus:ring-4 focus:ring-[#d7e2ff] transition-all outline-none font-medium text-slate-900 placeholder:text-slate-400"
                     />
                   </div>
@@ -531,7 +608,7 @@ export default function BillingIssuers() {
               <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
                 <button 
                   type="button" 
-                  onClick={() => setShowModal(false)}
+                  onClick={() => closeModal()}
                   disabled={isSubmitting}
                   className="px-6 py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-semibold rounded-xl transition-colors"
                 >
@@ -545,12 +622,12 @@ export default function BillingIssuers() {
                   {isSubmitting ? (
                     <>
                       <span className="material-icons-outlined animate-spin text-[20px]">sync</span>
-                      Validando...
+                      Guardando...
                     </>
                   ) : (
                     <>
-                      <span className="material-icons-outlined text-[20px]">verified_user</span>
-                      Guardar y Validar CSD
+                      <span className="material-icons-outlined text-[20px]">{editingIssuer ? 'save' : 'verified_user'}</span>
+                      {editingIssuer ? 'Guardar Cambios' : 'Guardar y Validar CSD'}
                     </>
                   )}
                 </button>

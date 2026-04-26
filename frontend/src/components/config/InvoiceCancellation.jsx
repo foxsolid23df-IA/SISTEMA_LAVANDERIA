@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { billingService } from "../../services/billingService";
 import { supabase } from "../../supabase";
 
@@ -10,6 +11,7 @@ const CANCELLATION_MOTIVES = [
 ];
 
 export const InvoiceCancellation = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -138,6 +140,13 @@ export const InvoiceCancellation = () => {
       <div className="p-8 lg:px-12 pt-10">
         <div className="flex items-center justify-between mb-8">
           <div>
+            <button 
+              onClick={() => navigate('/configuracion')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all font-bold text-sm mb-6 shadow-sm w-fit"
+            >
+              <span className="material-icons-outlined text-[18px]">arrow_back</span>
+              Volver a Configuración
+            </button>
             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 font-['Manrope'] tracking-tight">
               Facturas
             </h1>

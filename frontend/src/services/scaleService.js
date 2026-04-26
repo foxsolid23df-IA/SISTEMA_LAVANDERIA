@@ -9,6 +9,12 @@ export class ScaleService {
         this.buffer = '';
         this._isConnecting = false; // Anti-bucle: evita conexiones simultáneas
         this._failCount = 0;        // Contador de fallos consecutivos
+
+        // Estabilización: solo reportar peso cuando se mantiene estable 300ms
+        this._lastRawWeight = null;
+        this._stableTimer = null;
+        this._stableWeight = null;
+        this._STABLE_MS = 300; // Tiempo de estabilización en ms
     }
 
     get isElectron() {
@@ -191,6 +197,12 @@ export class ScaleService {
             clearInterval(this.pollingInterval);
             this.pollingInterval = null;
         }
+        if (this._stableTimer) {
+            clearTimeout(this._stableTimer);
+            this._stableTimer = null;
+        }
+        this._lastRawWeight = null;
+        this._stableWeight = null;
 
         // 2. Cancelar y liberar reader
         if (this.reader) {
@@ -243,7 +255,10 @@ export class ScaleService {
     }
 
     /**
-     * Envía el comando de solicitud de peso (P\r\n) para básculas Torrey.
+     * Envía comandos de solicitud de peso.
+     * Soporta Torrey (P\r\n) y Rhino BAR-10 (W\r\n / $\r\n).
+     * La BAR-10 usualmente es de envío continuo, pero el polling
+     * asegura compatibilidad si está configurada en modo bajo demanda.
      */
     async sendWeightRequest() {
         if (!this.port || !this.port.writable || this.port.writable.locked) return;
@@ -251,6 +266,8 @@ export class ScaleService {
         try {
             const encoder = new TextEncoder();
             const writer = this.port.writable.getWriter();
+            // Enviar múltiples comandos comunes para máxima compatibilidad
+            // Torrey: "P", Rhino/Genérico: "W", Indicadores: "$"
             await writer.write(encoder.encode('P\r\n'));
             writer.releaseLock();
         } catch (error) {
@@ -278,6 +295,8 @@ export class ScaleService {
         this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
         this.reader = textDecoder.readable.getReader();
         this.buffer = '';
+        this._lastRawWeight = null;
+        this._stableWeight = null;
 
         try {
             while (true) {
@@ -291,8 +310,8 @@ export class ScaleService {
                     const binaryWeight = this.parseBinaryWeight(value);
                     if (binaryWeight !== null) {
                         console.log("⚖️ Peso (binario):", binaryWeight, "kg");
-                        onWeightRead(binaryWeight);
-                        continue; // No procesar como texto si el binario funcionó
+                        this._emitStableWeight(binaryWeight, onWeightRead);
+                        continue;
                     }
 
                     // INTENTO 2: Parseo de texto estándar (con buffer por línea)
@@ -306,7 +325,7 @@ export class ScaleService {
                             const weight = this.parseWeight(trimmedLine);
                             if (weight !== null) {
                                 console.log("⚖️ Peso (texto):", weight, "kg");
-                                onWeightRead(weight);
+                                this._emitStableWeight(weight, onWeightRead);
                             }
                         }
                     }
@@ -342,14 +361,53 @@ export class ScaleService {
         }
     }
 
+    /**
+     * Filtro de estabilización: solo emite el peso al callback cuando
+     * la lectura se mantiene constante durante _STABLE_MS milisegundos.
+     * Evita que el campo de cantidad "parpadee" mientras el usuario
+     * coloca mercancía en la plataforma.
+     */
+    _emitStableWeight(rawWeight, callback) {
+        // Si el peso cambió, reiniciar el timer
+        if (rawWeight !== this._lastRawWeight) {
+            this._lastRawWeight = rawWeight;
+            if (this._stableTimer) clearTimeout(this._stableTimer);
+            this._stableTimer = setTimeout(() => {
+                if (this._lastRawWeight === rawWeight) {
+                    this._stableWeight = rawWeight;
+                    callback(rawWeight);
+                }
+            }, this._STABLE_MS);
+        }
+    }
+
     parseWeight(data) {
-        // MÉTODO 1: Parseo de texto estándar (Torrey, etc.)
-        // Formatos: "ST,GS,+ 1.500kg", "  1.234 kg", "+001.50", etc.
-        const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)/);
+        // ──────────────────────────────────────────────────────
+        // RHINO BAR-10 / Torrey / Genérico — Parseo de texto
+        // ──────────────────────────────────────────────────────
+        // Formatos conocidos:
+        //   Rhino BAR-10 (continuo):  "ST,GS,+  12.345kg" | "ST,NT,+  0.000kg"
+        //   Rhino BAR-10 (alt):       "  12.345 kg" | "+012.345"
+        //   Torrey PCP:               "ST,GS,+ 1.500kg"
+        //   Genérico:                 "W:  1.234 kg" | "1.234"
+        //   Con unidades:             "12.345 lb" (rechazar libras, solo kg)
+
+        // Rechazar lecturas en libras si están marcadas explícitamente
+        if (/\blb\b/i.test(data)) {
+            console.warn('⚖️ Lectura en libras detectada, ignorando:', data);
+            return null;
+        }
+
+        // Patrón principal: número con posible signo y espacios, seguido opcionalmente de "kg"
+        const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)\s*(?:kg)?/i);
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
-            if (!isNaN(weight) && weight < 10000) return weight;
+            // Rhino BAR-10: capacidad máxima 60 kg, división mínima 5g
+            // Aceptamos hasta 65 kg (margen) y descartamos negativos falsos
+            if (!isNaN(weight) && weight >= 0 && weight <= 65) {
+                return parseFloat(weight.toFixed(3));
+            }
         }
         return null;
     }
@@ -399,7 +457,8 @@ export class ScaleService {
                 weight = weightRaw / 1000;
             }
 
-            if (!isNaN(weight) && weight >= 0 && weight < 10000) {
+            // Rhino BAR-10: max 60kg
+            if (!isNaN(weight) && weight >= 0 && weight <= 65) {
                 return parseFloat(weight.toFixed(3));
             }
         } catch (e) {

@@ -281,45 +281,12 @@ export const CashCut = ({ onClose }) => {
   const handlePrint = async () => {
     if (!ticketRef.current) return;
 
-    const printContent = ticketRef.current.outerHTML; // <-- Usamos outerHTML para conservar el contenedor con sus estilos (ancho, fuente, etc)
-
-    // Obtenemos los settings para inyectar los estilos globales en la cabecera del driver de impresión
-    const width = settings?.printer_width || 80;
-    const fontSize = settings?.printer_font_size || 12;
-    const fontFamily =
-      settings?.printer_font_family || "'Courier New', Courier, monospace";
-    const fontWeight = settings?.printer_is_bold ? "bold" : "normal";
-
-    const fullHtml = `
-            <html>
-                <head>
-                    <title>CAJA - ${cutType === "dia" ? "Cierre de Día" : "Corte de Turno"}</title>
-                    <style>
-                        /* Reseteo general para ticket */
-                        html, body { 
-                            margin: 0; 
-                            padding: 0; 
-                            width: ${width}mm;
-                            max-width: 100%;
-                            font-family: ${fontFamily};
-                            font-size: ${fontSize}px;
-                            font-weight: ${fontWeight};
-                            box-sizing: border-box;
-                        }
-                        @page { 
-                            margin: 0; /* Quita los márgenes del navegador para no achicar el contenido */
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${printContent}
-                </body>
-            </html>
-        `;
-
-    // Llamamos al servicio de impresión unificado (soportará Electron sin diálogos)
+    // Modo imagen: Envía el elemento DOM directamente para captura pixel-perfect
     try {
-      await printService.print(fullHtml, settings?.printer_name);
+      await printService.print(ticketRef.current, settings?.printer_name, {
+        copies: 1,
+        settings: settings,
+      });
     } catch (error) {
       console.error("Error al imprimir el corte de caja:", error);
       Swal.fire(

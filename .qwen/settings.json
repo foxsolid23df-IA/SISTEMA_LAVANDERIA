@@ -13,7 +13,11 @@
       "Bash(gh *)",
       "Bash(winget *)",
       "Bash(\"c:\\program files\\github cli\\gh.exe\" *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(git ls-remote *)",
+      "Bash(findstr *)",
+      "Bash(git checkout *)",
+      "Bash(npm install *)"
     ]
   },
   "$version": 3

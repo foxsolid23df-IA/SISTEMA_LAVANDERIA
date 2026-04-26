@@ -16,8 +16,10 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
     <div
       ref={ref}
       className="ticket-venta"
+      data-printer-width={settings?.printer_width || 80}
       style={{
         width: settings?.printer_width ? `${settings.printer_width}mm` : "80mm",
+        maxWidth: "100%",
         fontSize: settings?.printer_font_size
           ? `${settings.printer_font_size}px`
           : "12px",
@@ -30,12 +32,14 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         paddingRight: settings?.printer_margin
           ? `${settings.printer_margin}px`
           : "2px",
+        paddingBottom: "30px",
         margin: "0 auto",
         backgroundColor: "white",
         color: "black",
         boxSizing: "border-box",
-        overflow: "hidden",
-        wordWrap: "break-word",
+        overflow: "visible",
+        overflowWrap: "break-word",
+        wordBreak: "break-word",
         whiteSpace: "pre-wrap",
       }}
     >
@@ -276,27 +280,52 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
               className="ticket-linea"
               style={{ borderBottom: "1px dotted #000", margin: "5px 0" }}
             />
-            <div
-              className="ticket-summary-row"
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: "0.9em",
-              }}
-            >
-              <span>
-                {venta.usar_usd
-                  ? `RECIBIDO (U$ ${venta.monto_recibido})`
-                  : "RECIBIDO:"}
-              </span>
-              <span>
-                {venta.usar_usd
-                  ? formatearDinero(
-                      venta.monto_recibido * (venta.exchange_rate || 1),
-                    )
-                  : formatearDinero(venta.monto_recibido)}
-              </span>
-            </div>
+            {venta.pagos_multimoneda && Object.keys(venta.pagos_multimoneda).length > 0 ? (
+               Object.keys(venta.pagos_multimoneda).map(curr => {
+                  const val = parseFloat(venta.pagos_multimoneda[curr]);
+                  if (val > 0) {
+                     return (
+                      <div
+                        key={curr}
+                        className="ticket-summary-row"
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: "0.9em",
+                        }}
+                      >
+                        <span>RECIBIDO ({curr}):</span>
+                        <span>
+                          {curr === 'MXN' ? formatearDinero(val) : val.toFixed(2)}
+                        </span>
+                      </div>
+                     );
+                  }
+                  return null;
+               })
+            ) : (
+                <div
+                  className="ticket-summary-row"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "0.9em",
+                  }}
+                >
+                  <span>
+                    {venta.usar_usd
+                      ? `RECIBIDO (U$ ${venta.monto_recibido})`
+                      : "RECIBIDO:"}
+                  </span>
+                  <span>
+                    {venta.usar_usd
+                      ? formatearDinero(
+                          venta.monto_recibido * (venta.exchange_rate || 1),
+                        )
+                      : formatearDinero(venta.monto_recibido)}
+                  </span>
+                </div>
+            )}
             <div
               className="ticket-summary-row"
               style={{
@@ -308,9 +337,11 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
               <span>CAMBIO:</span>
               <span>
                 {(() => {
-                  const recibidoMXN = venta.usar_usd
-                    ? venta.monto_recibido * (venta.exchange_rate || 1)
-                    : venta.monto_recibido;
+                  const recibidoMXN = venta.pagos_multimoneda && Object.keys(venta.pagos_multimoneda).length > 0 
+                    ? venta.monto_recibido // It was passed as MXN total in Sales.jsx changes 
+                    : venta.usar_usd
+                      ? venta.monto_recibido * (venta.exchange_rate || 1)
+                      : venta.monto_recibido;
                   const baseCobro =
                     venta.paid_amount > 0 ? venta.paid_amount : venta.total;
                   return formatearDinero(Math.max(0, recibidoMXN - baseCobro));
@@ -421,11 +452,15 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         className="ticket-billing-section"
         style={{
           border: "1.5px solid black",
-          padding: "10px",
+          padding: "8px 6px",
           marginTop: "15px",
           textAlign: "center",
-          borderRadius: "8px",
-          backgroundColor: "#f9f9f9"
+          borderRadius: "6px",
+          backgroundColor: "#f9f9f9",
+          boxSizing: "border-box",
+          maxWidth: "100%",
+          overflow: "hidden",
+          wordBreak: "break-word",
         }}
       >
         <div style={{ fontWeight: "900", fontSize: "0.95em", marginBottom: "8px" }}>
@@ -454,7 +489,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
           </div>
         </div>
 
-        <div style={{ fontSize: "0.8em", fontWeight: "900", margin: "2px 0", wordBreak: "break-all" }}>
+        <div style={{ fontSize: "0.7em", fontWeight: "900", margin: "2px 0", wordBreak: "break-all", overflowWrap: "break-word", maxWidth: "100%" }}>
            {settings?.billing_url || "https://pos-autofactura.vercel.app/"}
         </div>
         
@@ -484,7 +519,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
 
       <div
         className="ticket-footer"
-        style={{ textAlign: "center", fontSize: "0.9em", marginTop: "10px" }}
+        style={{ textAlign: "center", fontSize: "0.9em", marginTop: "10px", paddingBottom: "20px" }}
       >
         {settings?.ticket_message ? (
           <div style={{ whiteSpace: "pre-wrap" }}>

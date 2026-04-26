@@ -6,7 +6,18 @@ export const orderService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No authenticated user');
 
-    // 1. Insertar la cabecera de la orden
+    // 1. Obtener folio secuencial único para este negocio
+    let folio = null;
+    try {
+      const { data: folioData, error: folioError } = await supabase.rpc('next_folio');
+      if (!folioError && folioData) {
+        folio = folioData;
+      }
+    } catch (e) {
+      console.warn('No se pudo obtener folio secuencial, se usará el ID:', e);
+    }
+
+    // 2. Insertar la cabecera de la orden
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([{
@@ -24,6 +35,7 @@ export const orderService = {
         has_tax: orderData.has_tax || false,
         tax_amount: orderData.tax_amount || 0,
         invoice_requested: orderData.invoice_requested || false,
+        folio: folio,
         // Guardar el ID del empleado que creó la orden
         created_by_staff_id: orderData.created_by_staff_id || null
       }])
@@ -32,7 +44,7 @@ export const orderService = {
 
     if (orderError) throw orderError;
 
-    // 2. Insertar los items de la orden
+    // 3. Insertar los items de la orden
     const items = orderData.items.map(item => ({
       order_id: order.id,
       user_id: user.id,
@@ -50,7 +62,7 @@ export const orderService = {
 
     if (itemsError) throw itemsError;
 
-    // 3. Actualizar stock para productos
+    // 4. Actualizar stock para productos
     const itemsForStockUpdate = items
       .filter(item => item.product_id)
       .map(item => ({
@@ -80,6 +92,7 @@ export const orderService = {
         cancelled_by_staff:cancelled_by_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -101,6 +114,7 @@ export const orderService = {
       `)
       .eq('user_id', user.id)
       .eq('status', status)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -154,9 +168,9 @@ export const orderService = {
     return true;
   },
 
-  // Eliminar una orden (requiere permisos administrativos)
-  async deleteOrder(orderId) {
-    // Primero buscar items para restaurar el stock si la orden no estaba cancelada
+  // Eliminar una orden (soft delete - no se borra de la base de datos)
+  async deleteOrder(orderId, staffId = null, reason = '') {
+    // Buscar items para restaurar el stock si la orden no estaba cancelada
     const { data: orderDetails, error: fetchError } = await supabase
       .from('orders')
       .select('status, order_items(product_id, quantity)')
@@ -176,18 +190,15 @@ export const orderService = {
       }
     }
 
-    // Luego eliminar items
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (itemsError) throw itemsError;
-
-    // Finalmente eliminar orden
+    // Soft delete: marcar como eliminada sin borrar datos
     const { error: orderError } = await supabase
       .from('orders')
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by_staff_id: staffId || null,
+        deletion_reason: reason || 'Eliminada por administrador',
+        status: 'deleted'
+      })
       .eq('id', orderId);
 
     if (orderError) throw orderError;
@@ -229,6 +240,7 @@ export const orderService = {
       .from('orders')
       .select('*')
       .gte('created_at', today.toISOString())
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -250,6 +262,7 @@ export const orderService = {
       `)
       .gte('created_at', startTime)
       .lte('created_at', endTime)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     // Since orders don't have terminal_id DIRECTLY in this version of the schema, 
@@ -278,6 +291,7 @@ export const orderService = {
         staff:created_by_staff_id (id, name, role)
       `)
       .gte('created_at', startTime)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (user) {
@@ -305,7 +319,8 @@ export const orderService = {
         order_items (*),
         staff:created_by_staff_id (id, name, role)
       `)
-      .eq('cash_session_id', sessionId);
+      .eq('cash_session_id', sessionId)
+      .is('deleted_at', null);
 
     if (user) {
       query = query.eq('user_id', user.id);
@@ -339,6 +354,7 @@ export const orderService = {
       .from('orders')
       .select('total, paid_amount, created_at')
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(2000);
 
@@ -418,6 +434,7 @@ export const orderService = {
       .from('orders')
       .select('total, created_at')
       .eq('user_id', user.id)
+      .is('deleted_at', null)
       .gte('created_at', inicioSemana.toISOString());
 
     if (signal) query = query.abortSignal(signal);
@@ -435,7 +452,7 @@ export const orderService = {
 
   // Estadísticas por rango para órdenes
   async getStatisticsByDateRange(fechaInicio, fechaFin, signal) {
-    let query = supabase.from('orders').select('total, paid_amount, created_at');
+    let query = supabase.from('orders').select('total, paid_amount, created_at').is('deleted_at', null);
     if (fechaInicio) query = query.gte('created_at', fechaInicio);
     if (fechaFin) {
       const d = new Date(fechaFin);

@@ -26,12 +26,14 @@ import { ClientManager } from "../components/admin/ClientManager";
 import CustomerDisplay from "../components/customer/CustomerDisplay";
 import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
 import TaxSettings from "../components/admin/TaxSettings";
+import PaymentMethodsSettings from "../components/admin/PaymentMethodsSettings";
 import { PriceConfiguration } from "../components/admin/PriceConfiguration";
 import { TicketConfiguration } from "../components/admin/TicketConfiguration";
 import { terminalService } from "../services/terminalService";
 import Maintenance from "../components/admin/Maintenance";
 import BillingIssuers from "../components/config/BillingIssuers";
 import { InvoiceCancellation } from "../components/config/InvoiceCancellation";
+import { ServiciosExpressSettings } from "../components/config/ServiciosExpressSettings";
 
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
@@ -195,6 +197,14 @@ const InventoryRoute = ({ children }) => {
   return canManageInventory || canViewSupplies ? children : <Navigate to="/" />;
 };
 
+const DefaultRoute = () => {
+  const isDesktop = !!window?.electron?.isElectron;
+  if (!isDesktop) {
+    return <Navigate to="/estadisticas" replace />;
+  }
+  return <Sales />;
+};
+
 export const Routing = () => {
   return (
     <HashRouter>
@@ -235,7 +245,7 @@ export const Routing = () => {
                       path="/"
                       element={
                         <PrivateLayout>
-                          <Sales />
+                          <DefaultRoute />
                         </PrivateLayout>
                       }
                     />
@@ -384,6 +394,24 @@ export const Routing = () => {
                       element={
                         <PrivateLayout>
                           <TaxSettings />
+                        </PrivateLayout>
+                      }
+                    />
+
+                    <Route
+                      path="/configuracion-pagos"
+                      element={
+                        <PrivateLayout>
+                          <PaymentMethodsSettings />
+                        </PrivateLayout>
+                      }
+                    />
+
+                    <Route
+                      path="/configuracion-servicios-express"
+                      element={
+                        <PrivateLayout>
+                          <ServiciosExpressSettings />
                         </PrivateLayout>
                       }
                     />

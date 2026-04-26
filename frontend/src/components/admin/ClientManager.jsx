@@ -337,14 +337,7 @@ export const ClientManager = () => {
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan="6"
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "#64748b",
-                    }}
-                  >
+                  <td colSpan="6" className="empty-state-cell">
                     No se encontraron clientes que coincidan con la búsqueda.
                   </td>
                 </tr>
@@ -459,7 +452,7 @@ export const ClientManager = () => {
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Historial del Cliente
                 </span>
-                <h2 className="text-xl font-black">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">
                   {selectedClientForHistory.name}
                 </h2>
               </div>

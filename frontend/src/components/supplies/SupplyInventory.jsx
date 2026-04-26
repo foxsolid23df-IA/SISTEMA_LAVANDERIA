@@ -559,7 +559,7 @@ export const SupplyInventory = () => {
     );
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-7xl mx-auto bg-white dark:bg-slate-950 min-h-screen transition-colors duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
@@ -575,7 +575,7 @@ export const SupplyInventory = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl mb-8 w-fit">
+      <div className="flex bg-slate-100 dark:bg-slate-800/80 backdrop-blur-sm p-1.5 rounded-2xl mb-8 w-fit border border-slate-200 dark:border-slate-700/50">
         {[
           { id: "usage", label: "Libreta Digital", icon: "edit_note" },
           { id: "inventory", label: "Existencias", icon: "inventory" },
