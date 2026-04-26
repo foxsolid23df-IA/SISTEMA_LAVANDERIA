@@ -27,6 +27,7 @@ export const TicketConfiguration = () => {
     printer_name: "",
     ticket_double_print: false,
     enable_billing_system: false,
+    ticket_preview: true,
   });
   const [printersList, setPrintersList] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -53,6 +54,7 @@ export const TicketConfiguration = () => {
         printer_name: settings.printer_name || "",
         ticket_double_print: settings.ticket_double_print || false,
         enable_billing_system: settings.enable_billing_system || false,
+        ticket_preview: settings.ticket_preview !== undefined ? settings.ticket_preview : true,
       });
     }
     loadPrinters();
@@ -142,16 +144,26 @@ export const TicketConfiguration = () => {
       {/* HEADER SECTION */}
       <div className="config-header mb-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-4xl font-black text-slate-800 dark:text-white flex items-center gap-4 tracking-tight">
-              <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none">
-                <span className="material-icons-outlined text-white text-3xl">settings_applications</span>
-              </div>
-              Configuración del Sistema
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-3 text-lg font-medium max-w-2xl">
-              Gestiona la identidad de tu negocio, datos fiscales y parámetros de impresión POS en un solo lugar.
-            </p>
+          <div className="flex items-center gap-4">
+            <button
+               onClick={() => navigate('/configuracion')}
+               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors shrink-0 flex items-center gap-2 font-bold text-sm"
+               title="Volver a Configuración"
+            >
+               <span className="material-icons-outlined">arrow_back</span>
+               Volver a Configuración
+            </button>
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white flex items-center gap-4 tracking-tight">
+                <div className="hidden md:flex w-14 h-14 bg-indigo-600 rounded-2xl items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none">
+                  <span className="material-icons-outlined text-white text-3xl">settings_applications</span>
+                </div>
+                Configuración
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 md:mt-3 text-base md:text-lg font-medium max-w-2xl">
+                Gestiona la identidad de tu negocio, datos fiscales y parámetros de impresión POS en un solo lugar.
+              </p>
+            </div>
           </div>
           
           <button
@@ -326,9 +338,196 @@ export const TicketConfiguration = () => {
               </div>
             </div>
           </div>
+
+          {/* PRINTER CONFIGURATION PANEL */}
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-md">
+            <div className="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-800 dark:bg-slate-700 flex items-center justify-center">
+                <span className="material-icons-outlined text-white">print</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest text-xs">Configuración de Impresora</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Terminal POS y parámetros de impresión</p>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${formData.printer_name ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                {formData.printer_name ? 'Conectada' : 'No Configurada'}
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* SELECCIONAR IMPRESORA */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Seleccionar Impresora</label>
+                <div className="flex flex-col gap-3">
+                  <select
+                    name="printer_name"
+                    value={formData.printer_name || ""}
+                    onChange={handleChange}
+                    className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-sm font-bold text-slate-800 dark:text-white"
+                  >
+                    <option value="">Impresora Predeterminada</option>
+                    {printersList.map((p) => (
+                      <option key={p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={loadPrinters} 
+                      className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all border border-slate-200 dark:border-slate-600 flex items-center justify-center gap-2 font-bold text-xs uppercase"
+                      title="Refrescar lista de impresoras"
+                    >
+                      <span className="material-icons-outlined text-lg">refresh</span>
+                      Actualizar
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={handleTestPrint} 
+                      className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                      <span className="material-icons-outlined text-lg">print</span>
+                      Prueba de Impresión
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ROW: ANCHO DEL PAPEL + TAMAÑO FUENTE + MARGEN */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Ancho del Papel</label>
+                  <select
+                    name="printer_width"
+                    value={formData.printer_width}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-bold text-slate-800 dark:text-white"
+                  >
+                    <option value={58}>58 mm (Impresora Mini)</option>
+                    <option value={80}>80 mm (Impresora Estándar)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Tamaño Fuente</label>
+                  <input
+                    type="number"
+                    name="printer_font_size"
+                    value={formData.printer_font_size}
+                    onChange={handleChange}
+                    min={8}
+                    max={24}
+                    className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-bold text-slate-800 dark:text-white"
+                    placeholder="12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Margen (PX)</label>
+                  <input
+                    type="number"
+                    name="printer_margin"
+                    value={formData.printer_margin}
+                    onChange={handleChange}
+                    min={0}
+                    max={50}
+                    className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-bold text-slate-800 dark:text-white"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* ROW: TIPO DE FUENTE + TEXTO EN NEGRITA + IMPRIMIR DOBLE TICKET */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Familia de Fuente</label>
+                  <select
+                    name="printer_font_family"
+                    value={formData.printer_font_family}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-bold text-slate-800 dark:text-white"
+                  >
+                    <option value="'Courier New', Courier, monospace">Monospace (Courier)</option>
+                    <option value="Arial, Helvetica, sans-serif">Sans-Serif (Arial)</option>
+                    <option value="'Times New Roman', serif">Serif (Times)</option>
+                    <option value="'Lucida Console', monospace">Lucida Console</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Negrita</label>
+                  <div 
+                    onClick={() => setFormData(p => ({ ...p, printer_is_bold: !p.printer_is_bold }))}
+                    className="flex items-center gap-2 px-3 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-indigo-300 transition-all min-h-[54px]"
+                  >
+                    <div className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${formData.printer_is_bold ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm" style={{ left: formData.printer_is_bold ? '1.125rem' : '0.125rem' }}></div>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase ${formData.printer_is_bold ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {formData.printer_is_bold ? 'SÍ' : 'NO'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Impresión Doble</label>
+                  <div 
+                    onClick={() => setFormData(p => ({ ...p, ticket_double_print: !p.ticket_double_print }))}
+                    className="flex items-center gap-2 px-3 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-indigo-300 transition-all min-h-[54px]"
+                  >
+                    <div className={`w-9 h-5 rounded-full transition-all relative shrink-0 ${formData.ticket_double_print ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm" style={{ left: formData.ticket_double_print ? '1.125rem' : '0.125rem' }}></div>
+                    </div>
+                    <span className={`text-[10px] font-black uppercase leading-tight ${formData.ticket_double_print ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {formData.ticket_double_print ? 'CLIENTE' : 'NO'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* TICKET PREVIEW TOGGLE + FOOTER */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-700/50 space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${formData.ticket_preview ? 'bg-indigo-500 shadow-lg shadow-indigo-200 dark:shadow-none' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                      <span className="material-icons-outlined text-white text-base">{formData.ticket_preview ? 'preview' : 'visibility_off'}</span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 dark:text-white">Vista Previa Modal de Ticket</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Muestra el ticket antes de imprimir al completar una venta</p>
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => setFormData(p => ({ ...p, ticket_preview: !p.ticket_preview }))}
+                    className={`w-12 h-6 rounded-full transition-all relative cursor-pointer shrink-0 ${formData.ticket_preview ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${formData.ticket_preview ? 'left-7' : 'left-1'}`}></div>
+                  </div>
+                </div>
+
+                {!formData.ticket_preview && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1 flex items-center gap-1">
+                    <span className="material-icons-outlined text-xs">info</span>
+                    Al desactivar, el ticket se imprimirá automáticamente al confirmar el pago sin previsualización
+                  </p>
+                )}
+              </div>
+
+              {/* TICKET MESSAGE */}
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-700/50 space-y-2">
+                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Mensaje Personalizado del Ticket</label>
+                <textarea
+                  name="ticket_message"
+                  value={formData.ticket_message}
+                  onChange={handleChange}
+                  rows="2"
+                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-sm text-slate-800 dark:text-white font-medium resize-none"
+                  placeholder="¡Gracias por su preferencia!"
+                />
+                <p className="text-[10px] text-slate-500 ml-1">Aparecerá al pie de cada ticket impreso</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT COLUMN: LOGO & PRINTER */}
+        {/* RIGHT COLUMN: LOGO ONLY */}
         <div className="lg:col-span-4 space-y-8">
           
           {/* LOGO SECTION */}
@@ -373,81 +572,6 @@ export const TicketConfiguration = () => {
                 <span className="material-icons-outlined text-sm">tips_and_updates</span>
                 <span>Optimiza tu imagen: Usa PNG con fondo transparente (min 500x500px).</span>
               </p>
-            </div>
-          </div>
-
-          {/* POS PRINTER MINI SECTION */}
-          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 p-8 space-y-6 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px]">Terminal Punto de Venta</h3>
-              <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${formData.printer_name ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'}`}>
-                {formData.printer_name ? 'Conectada' : 'No Configurada'}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Impresora Seleccionada</label>
-                <div className="flex gap-2">
-                  <select
-                    name="printer_name"
-                    value={formData.printer_name || ""}
-                    onChange={handleChange}
-                    className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 outline-none text-xs font-bold"
-                  >
-                    <option value="">Predeterminada</option>
-                    {printersList.map((p) => (
-                      <option key={p.name} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={loadPrinters} className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-xl hover:scale-105 active:scale-95 transition-all">
-                    <span className="material-icons-outlined text-sm">refresh</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Papel (mm)</label>
-                  <select
-                    name="printer_width"
-                    value={formData.printer_width}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-xs font-black"
-                  >
-                    <option value={58}>58 mm</option>
-                    <option value={80}>80 mm</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={handleTestPrint}
-                    className="w-full py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-slate-900 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-icons-outlined text-sm">print</span>
-                    Probar
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Impresión Doble (Caja/Cli)</span>
-                  <input
-                    type="checkbox"
-                    className="hidden"
-                    checked={formData.ticket_double_print}
-                    onChange={() => setFormData(p => ({ ...p, ticket_double_print: !p.ticket_double_print }))}
-                  />
-                  <div 
-                    onClick={() => setFormData(p => ({ ...p, ticket_double_print: !p.ticket_double_print }))}
-                    className={`w-12 h-6 rounded-full transition-all relative ${formData.ticket_double_print ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-slate-700'}`}
-                  >
-                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${formData.ticket_double_print ? 'left-7' : 'left-1'}`}></div>
-                  </div>
-                </label>
-              </div>
             </div>
           </div>
         </div>

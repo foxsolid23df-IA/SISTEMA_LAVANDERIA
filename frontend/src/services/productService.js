@@ -56,61 +56,63 @@ export const productService = {
             return [...productsCache];
         }
 
-        console.log('[ProductService] Obteniendo productos...');
-
-        // 2. Obtener el usuario actual para filtrar productos
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !userData?.user) {
-            console.warn('[ProductService] No hay usuario autenticado');
-            return productsCache || [];
-        }
-
-        const currentUserId = userData.user.id;
-
-        // 3. Intentar Supabase (Nube) - FILTRANDO por user_id
+        let currentUserId = null;
         try {
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('user_id', currentUserId)
-                .order('name', { ascending: true });
-
-            if (!error && data) {
-                productsCache = data;
-                lastFetchTime = now;
-                return data;
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (!userError && userData?.user) {
+                currentUserId = userData.user.id;
+            } else {
+                console.warn('[ProductService] No se pudo obtener el usuario para filtrar productos:', userError?.message);
             }
-
-            if (error) console.warn('[ProductService] Error en Supabase, intentando local...', error.message);
-        } catch (error) {
-            console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
+        } catch (authError) {
+            console.warn('[ProductService] Error de autenticación al intentar cargar productos:', authError.message);
         }
 
-        // 4. Fallback: Intentar API Local (SQLite) solo en Electron
-        if (!config.isElectron) {
-            console.log('[ProductService] Modo Web: Saltando fallback local.');
-            return productsCache || [];
+        // 3. Intentar Supabase (Nube) - Solo si tenemos usuario
+        if (currentUserId) {
+            try {
+                const { data, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('user_id', currentUserId)
+                    .order('name', { ascending: true });
+
+                if (!error && Array.isArray(data)) {
+                    productsCache = data;
+                    lastFetchTime = now;
+                    return data;
+                }
+                
+                if (error) console.warn('[ProductService] Error en Supabase, intentando local...', error.message);
+            } catch (error) {
+                console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
+            }
         }
 
+        // 4. Fallback: Intentar API Local (SQLite)
+        // Intentamos local si no hay usuario (offline) o si falló Supabase
         try {
-            console.log('[ProductService] Consultando SQLite local...');
-            const response = await fetch(LOCAL_API_URL);
-            if (response.ok) {
+            const response = await fetch(LOCAL_API_URL).catch(() => null);
+            if (response && response.ok) {
                 const localData = await response.json();
                 // Normalizar datos de SQLite a formato Supabase si es necesario
-                const normalized = (localData.productos || localData).map(p => ({
+                const rawList = Array.isArray(localData) ? localData : (localData.productos || []);
+                const normalized = rawList.map(p => ({
                     ...p,
-                    image_url: p.image // Mapear image de SQLite a image_url
+                    image_url: p.image_url || p.image // Mapear image de SQLite a image_url
                 }));
-                productsCache = normalized;
-                lastFetchTime = now;
-                return normalized;
+                
+                if (normalized.length > 0) {
+                    productsCache = normalized;
+                    lastFetchTime = now;
+                    return normalized;
+                }
             }
         } catch (localError) {
-            console.error('[ProductService] Error crítico: Ni Supabase ni API Local responden.');
+            console.error('[ProductService] Error crítico: Ni Supabase ni API Local responden correctamente.', localError);
         }
 
+        // 5. Última opción: Retornar caché anterior o array vacío
         return productsCache || [];
     },
 

@@ -23,7 +23,7 @@ export const licenseService = {
                 .from('profiles')
                 .select('license_expires_at')
                 .eq('id', user.id)
-                .single();
+                .maybeSingle();
 
             if (error) throw error;
             if (!profile?.license_expires_at) return null;

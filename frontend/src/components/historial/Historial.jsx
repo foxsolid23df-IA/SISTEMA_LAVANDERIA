@@ -283,20 +283,22 @@ export const Historial = () => {
 
       if (isValidAdmin) {
         const confirm = await Swal.fire({
-          title: "¿Estás completamente seguro?",
-          text: "Esta acción no se puede deshacer y el registro se borrará permanentemente de la base de datos.",
+          title: "¿Estás seguro?",
+          text: reportMode === "SERVICES"
+            ? "La orden será removida de la vista activa y el stock se restaurará."
+            : "Esta acción no se puede deshacer y el registro se borrará permanentemente de la base de datos.",
           icon: "warning",
           showCancelButton: true,
           confirmButtonColor: "#d33",
           cancelButtonColor: "#000000",
-          confirmButtonText: "Sí, borrar definitivamente",
+          confirmButtonText: "Sí, eliminar",
           cancelButtonText: "No, cancelar",
         });
 
         if (confirm.isConfirmed) {
           try {
             if (reportMode === "SERVICES") {
-              await orderService.deleteOrder(saleId);
+              await orderService.deleteOrder(saleId, null, 'Eliminada desde historial');
             } else {
               await salesService.deleteSale(saleId);
             }
@@ -445,7 +447,7 @@ export const Historial = () => {
     setIsPrinting(true);
     try {
       if (ventaSeleccionada.isCut) {
-        // Lógica específica para reimprimir cortes
+        // Lógica específica para reimprimir cortes de caja
         const width = businessSettings?.printer_width || 80;
         const fontSize = businessSettings?.printer_font_size || 12;
         const fontFamily =
@@ -455,31 +457,46 @@ export const Historial = () => {
           ? "bold"
           : "normal";
 
-        // Usamos una aproximación recreando el HTML que generaría TicketCorte si estuviera montado
-        // o mejor aún, si lo tenemos en el modal, podemos usar refs.
-        // Pero para simplificar en el servicio de impresión:
-        const ticketHtml = `
-                <html>
-                    <body style="width: ${width}mm; font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: ${fontWeight};">
-                        <div style="text-align: center;">
-                            <h2 style="margin: 0;">${businessSettings?.name || "LAVANDERIA"}</h2>
-                            <p style="margin: 5px 0;">${ventaSeleccionada.paymentMethod.toUpperCase()}</p>
-                            <p style="font-size: 0.8em;">Reimpresión: ${formatearFechaHora(new Date())}</p>
-                        </div>
-                        <hr />
-                        <p>Fecha Original: ${formatearFechaHora(ventaSeleccionada.createdAt)}</p>
-                        <p>Operador: ${ventaSeleccionada.employeeName}</p>
-                        <hr />
-                        <p>Ventas: ${ventaSeleccionada.salesCount}</p>
-                        <p>Total Ventas: ${formatearDinero(ventaSeleccionada.total)}</p>
-                        <hr />
-                        <p><b>ESPERADO: ${formatearDinero(ventaSeleccionada.expectedCash)}</b></p>
-                        <p><b>CONTADO: ${formatearDinero(ventaSeleccionada.actualCash)}</b></p>
-                        <p><b>DIFERENCIA: ${formatearDinero(ventaSeleccionada.difference)}</b></p>
-                        ${ventaSeleccionada.notes ? `<p>Notas: ${ventaSeleccionada.notes}</p>` : ""}
-                    </body>
-                </html>
-            `;
+        const ticketHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { margin: 0; size: ${width}mm auto; }
+        body {
+            width: ${width}mm;
+            max-width: 100%;
+            font-family: ${fontFamily};
+            font-size: ${fontSize}px;
+            font-weight: ${fontWeight};
+            padding: ${businessSettings?.printer_margin || 0}px;
+            -webkit-print-color-adjust: exact;
+        }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        hr { border: none; border-top: 1px dashed #000; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="text-center">
+        <div class="bold" style="font-size: 1.2em;">${businessSettings?.name || "LAVANDERIA"}</div>
+        <div>${ventaSeleccionada.paymentMethod.toUpperCase()}</div>
+        <div style="font-size: 0.8em;">Reimpresión: ${formatearFechaHora(new Date())}</div>
+    </div>
+    <hr />
+    <div>Fecha Original: ${formatearFechaHora(ventaSeleccionada.createdAt)}</div>
+    <div>Operador: ${ventaSeleccionada.employeeName}</div>
+    <hr />
+    <div>Ventas: ${ventaSeleccionada.salesCount}</div>
+    <div>Total Ventas: ${formatearDinero(ventaSeleccionada.total)}</div>
+    <hr />
+    <div class="bold">ESPERADO: ${formatearDinero(ventaSeleccionada.expectedCash)}</div>
+    <div class="bold">CONTADO: ${formatearDinero(ventaSeleccionada.actualCash)}</div>
+    <div class="bold">DIFERENCIA: ${formatearDinero(ventaSeleccionada.difference)}</div>
+    ${ventaSeleccionada.notes ? `<div>Notas: ${ventaSeleccionada.notes}</div>` : ""}
+</body>
+</html>`;
 
         await printService.print(ticketHtml, businessSettings?.printer_name);
       } else {

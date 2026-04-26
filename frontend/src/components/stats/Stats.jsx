@@ -12,6 +12,37 @@ import "../common/DateFilter.css";
 import "./Stats.css";
 
 export const Stats = () => {
+  // TEMA
+  const [isDarkMode, setIsDarkMode] = useState(
+    document.documentElement.classList.contains("dark")
+  );
+
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("lavanderia_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("lavanderia_theme", "light");
+    }
+  };
+
+  useEffect(() => {
+    // Escuchar cambios externos en el tema (ej: desde Sidebar)
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          setIsDarkMode(document.documentElement.classList.contains("dark"));
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
   // MODO DE REPORTE (A solicitud del usuario: Reportes Separados)
   const [reportMode, setReportMode] = useState("SERVICES"); // 'SERVICES' (Laundry) o 'PRODUCTS' (Sales)
 
@@ -147,19 +178,6 @@ export const Stats = () => {
     });
   };
 
-  // FUNCIÓN PARA TOGGLE DARK MODE
-  const toggleDarkMode = () => {
-    const html = document.documentElement;
-    if (html.classList.contains("dark")) {
-      html.classList.remove("dark");
-      html.classList.add("light");
-      localStorage.setItem("theme", "light");
-    } else {
-      html.classList.remove("light");
-      html.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    }
-  };
 
   // FUNCIÓN PARA ANALIZAR PERIODO (COMO EN HISTORIAL)
   const analizarPeriodo = async () => {
@@ -332,7 +350,7 @@ export const Stats = () => {
   }
 
   return (
-    <div className="stats-view">
+    <div className="stats-view bg-white dark:bg-slate-950 transition-colors duration-300">
       {/* HEADER */}
       <header className="stats-header">
         <div className="header-title-section">
@@ -365,8 +383,10 @@ export const Stats = () => {
             </div>
 
             <button onClick={toggleDarkMode} className="btn-dark-mode">
-              <span className="material-icons-outlined">dark_mode</span>
-              <span>Modo Oscuro</span>
+              <span className="material-icons-outlined">
+                {isDarkMode ? "light_mode" : "dark_mode"}
+              </span>
+              <span>{isDarkMode ? "Modo Claro" : "Modo Oscuro"}</span>
             </button>
             {canAccessReports && (
               <button
@@ -385,8 +405,8 @@ export const Stats = () => {
 
       <div className="stats-content">
         {/* ESTADÍSTICAS PRINCIPALES */}
-        <div className="stats-grid">
-          <div className="stat-card">
+        <div className="stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm">
             <div className="stat-content">
               <h3>{reportMode === "SERVICES" ? "Órdenes Hoy" : "Hoy"}</h3>
               <div className="stat-value">
@@ -400,7 +420,7 @@ export const Stats = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm">
             <div className="stat-content">
               <h3>
                 {reportMode === "SERVICES" ? "Semana (Órdenes)" : "Esta Semana"}
@@ -416,7 +436,7 @@ export const Stats = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm">
             <div className="stat-content">
               <h3>{reportMode === "SERVICES" ? "Ingresos Mes" : "Este Mes"}</h3>
               <div className="stat-value">
@@ -437,7 +457,7 @@ export const Stats = () => {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm">
             <div className="stat-content">
               <h3>{reportMode === "SERVICES" ? "Total Histórico" : "Total"}</h3>
               <div className="stat-value">
@@ -456,7 +476,7 @@ export const Stats = () => {
         <div className="content-columns">
           {/* GRÁFICO DE VENTAS DE LA SEMANA */}
           <div className="column">
-            <div className="section-card">
+            <div className="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm">
               <div className="section-header">
                 <h2>
                   {reportMode === "SERVICES"
@@ -484,10 +504,7 @@ export const Stats = () => {
                           <div
                             className={`chart-bar ${esHoy ? "active" : ""}`}
                             style={{
-                              height: calcularAlturaBarra(
-                                valor,
-                                maxVentaSemana,
-                              ),
+                              height: `${(valor / (Math.max(...ventasSemana, 1) * 1.2)) * 100}%`,
                             }}
                             title={`${dia}: ${formatearDinero(valor)}`}
                           />
@@ -512,7 +529,7 @@ export const Stats = () => {
 
           {/* TOP 5 PRODUCTOS/SERVICIOS */}
           <div className="column">
-            <div className="section-card">
+            <div className="section-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm">
               <div className="section-header">
                 <h2>
                   {reportMode === "SERVICES"

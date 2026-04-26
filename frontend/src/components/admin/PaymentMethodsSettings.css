@@ -1,0 +1,108 @@
+/* ═══════════════════════════════════════════════════
+   PAYMENT METHODS SETTINGS — Module-specific layout
+   Consumes global --admin-* tokens + UI Kit classes
+   ═══════════════════════════════════════════════════ */
+
+.pms-container {
+  padding: 2rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  min-height: 100vh;
+  color: var(--admin-text-main);
+}
+
+/* ───── ADD FORM ───── */
+.pms-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--admin-input-bg);
+  border-radius: var(--admin-radius-lg);
+  border: 1px solid var(--admin-card-border);
+  margin-bottom: 1.5rem;
+}
+
+.pms-add-form__field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.pms-add-form__submit {
+  flex-shrink: 0;
+}
+
+/* ───── LIST ───── */
+.pms-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ───── MENU TRIGGER ───── */
+.pms-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  color: var(--admin-text-muted);
+  border-radius: var(--admin-radius-sm);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+  flex-shrink: 0;
+}
+
+.pms-menu-trigger:hover {
+  background: var(--admin-accent-subtle);
+  color: var(--admin-accent);
+}
+
+/* ───── STATES ───── */
+.pms-loading {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--admin-text-muted);
+  font-size: 0.9375rem;
+}
+
+.pms-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--admin-text-muted);
+}
+
+.pms-empty__icon {
+  font-size: 3rem;
+  opacity: 0.3;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.pms-empty p {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+}
+
+.pms-empty small {
+  font-size: 0.8125rem;
+}
+
+/* ───── RESPONSIVE ───── */
+@media (max-width: 768px) {
+  .pms-container {
+    padding: 1rem;
+  }
+
+  .pms-add-form {
+    flex-direction: column;
+  }
+
+  .pms-add-form__field {
+    min-width: 100%;
+  }
+}

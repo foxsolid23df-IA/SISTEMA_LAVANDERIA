@@ -70,8 +70,8 @@ export const ConfiguracionPortal = () => {
                     <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-5">
                         <span className="material-icons-outlined">currency_exchange</span>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Tipos de Cambio</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Ajustar la tasa de cambio aplicable a transacciones en dólares</p>
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Monedas Internacionales</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Administrar las tasas de cambio para USD, EUR y CAD</p>
                 </NavLink>
 
                 {isAdmin && (
@@ -93,6 +93,28 @@ export const ConfiguracionPortal = () => {
                         <p className="text-slate-500 dark:text-slate-400 text-sm">Gestionar la cancelación de folios fiscales (CFDI 4.0)</p>
                     </NavLink>
                 )}
+
+                {isAdmin && (
+                    <NavLink to="/configuracion-pagos" className="flex flex-col p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center mb-5">
+                            <span className="material-icons-outlined">payments</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Formas de Pago</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Administrar los métodos de pago y sus claves SAT</p>
+                    </NavLink>
+                )}
+
+                {isAdmin && (
+                    <NavLink to="/configuracion-servicios-express" className="flex flex-col p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-500 flex items-center justify-center mb-5">
+                            <span className="material-icons-outlined">bolt</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Servicios Express</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Configurar nombres de servicios express disponibles en venta</p>
+                    </NavLink>
+                )}
+
+
             </div>
         </div>
     );

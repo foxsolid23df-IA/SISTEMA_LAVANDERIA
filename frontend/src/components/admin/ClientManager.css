@@ -9,15 +9,15 @@
 
 /* HEADER SECTION */
 .client-manager-header {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 16px;
     padding: 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--admin-card-shadow);
 }
 
 .search-container {
@@ -31,17 +31,17 @@
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
+    color: var(--admin-text-muted);
     pointer-events: none;
 }
 
 .search-container input {
     width: 100%;
     padding: 0.875rem 1rem 0.875rem 3rem;
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 12px;
-    color: #f1f5f9;
+    color: var(--admin-text-main);
     font-size: 0.95rem;
     transition: all 0.2s;
 }
@@ -94,11 +94,11 @@
 
 /* TABLE CARD */
 .client-table-card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--admin-card-shadow);
 }
 
 .client-table-scroll {
@@ -112,20 +112,20 @@
 }
 
 .client-table th {
-    background: #0f172a;
+    background: var(--admin-input-bg);
     padding: 1.25rem 1rem;
     text-align: left;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #64748b;
+    color: var(--admin-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    border-bottom: 2px solid #334155;
+    border-bottom: 2px solid var(--admin-card-border);
 }
 
 .client-table td {
     padding: 1rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--admin-card-border);
     vertical-align: middle;
 }
 
@@ -155,13 +155,13 @@
 
 .client-info h4 {
     margin: 0;
-    color: #f1f5f9;
+    color: var(--admin-text-main);
     font-size: 0.95rem;
 }
 
 .client-info span {
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--admin-text-muted);
 }
 
 .phone-badge {
@@ -190,7 +190,7 @@
 }
 
 .address-text {
-    color: #94a3b8;
+    color: var(--admin-text-muted);
     font-size: 0.85rem;
     max-width: 200px;
     overflow: hidden;
@@ -200,7 +200,7 @@
 
 .notes-text {
     font-style: italic;
-    color: #64748b;
+    color: var(--admin-text-muted);
     font-size: 0.85rem;
     max-width: 150px;
 }
@@ -258,18 +258,18 @@
 }
 
 .client-modal {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 24px;
     width: 90%;
     max-width: 600px;
     overflow: hidden;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--admin-card-shadow);
 }
 
 .modal-head {
     padding: 2rem;
-    background: #0f172a;
+    background: var(--admin-input-bg);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -278,13 +278,13 @@
 .modal-head h2 {
     margin: 0;
     font-size: 1.5rem;
-    color: #fff;
+    color: var(--admin-text-main);
 }
 
 .btn-close {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--admin-text-muted);
     cursor: pointer;
 }
 
@@ -311,17 +311,17 @@
 .input-group label {
     font-size: 0.8rem;
     font-weight: 700;
-    color: #94a3b8;
+    color: var(--admin-text-muted);
     text-transform: uppercase;
 }
 
 .input-group input, 
 .input-group textarea {
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 12px;
     padding: 0.875rem 1rem;
-    color: #f1f5f9;
+    color: var(--admin-text-main);
     font-size: 1rem;
 }
 
@@ -333,14 +333,20 @@
 
 .modal-footer {
     padding: 2rem;
-    background: #0f172a;
+    background: var(--admin-input-bg);
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
 }
 
+.empty-state-cell {
+    text-align: center;
+    padding: 3rem !important;
+    color: var(--admin-text-muted);
+}
+
 .btn-cancel {
-    background: #334155;
+    background: var(--admin-text-secondary);
     color: #fff;
 }
 

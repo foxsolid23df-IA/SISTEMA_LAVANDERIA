@@ -11,7 +11,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #f1f5f9;
+    color: var(--admin-text-main);
+}
+
+.bulk-import-modal .modal-header p {
+    color: var(--admin-text-muted);
 }
 
 .bulk-import-modal .upload-step {
@@ -22,13 +26,13 @@
 }
 
 .bulk-import-modal .drop-zone {
-    border: 2px dashed #334155;
+    border: 2px dashed var(--admin-card-border);
     border-radius: 20px;
     padding: 3rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: rgba(15, 23, 42, 0.5);
+    background: var(--admin-input-bg);
 }
 
 .bulk-import-modal .drop-zone:hover, 
@@ -40,7 +44,7 @@
 
 .bulk-import-modal .upload-icon {
     font-size: 56px;
-    color: #475569;
+    color: var(--admin-text-secondary);
     margin-bottom: 1rem;
     transition: color 0.3s;
 }
@@ -51,21 +55,31 @@
 
 .bulk-import-modal .file-types {
     font-size: 0.85rem;
-    color: #64748b;
+    color: var(--admin-text-muted);
     margin-top: 0.5rem;
+}
+
+.bulk-import-modal .drop-content h3 {
+    color: var(--admin-text-main);
+    margin: 0;
+}
+
+.bulk-import-modal .drop-content p {
+    color: var(--admin-text-muted);
+    margin: 0.5rem 0 0 0;
 }
 
 .bulk-import-modal .template-section {
     padding: 1.5rem;
-    background: rgba(15, 23, 42, 0.3);
+    background: var(--admin-input-bg);
     border-radius: 16px;
-    border: 1px solid #334155;
+    border: 1px solid var(--admin-card-border);
     text-align: center;
 }
 
 .bulk-import-modal .text-btn {
     background: transparent;
-    border: 1px solid #334155;
+    border: 1px solid var(--admin-card-border);
     color: #10b981;
     cursor: pointer;
     font-weight: 700;
@@ -78,7 +92,7 @@
 }
 
 .bulk-import-modal .text-btn:hover {
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(16, 185, 129, 0.05);
     border-color: #10b981;
 }
 
@@ -92,9 +106,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.25rem;
-    background: #0f172a;
+    background: var(--admin-input-bg);
     border-radius: 12px;
-    border: 1px solid #334155;
+    border: 1px solid var(--admin-card-border);
     margin-bottom: 1rem;
 }
 
@@ -102,16 +116,16 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #f1f5f9;
+    color: var(--admin-text-main);
     font-weight: 600;
 }
 
 .bulk-import-modal .preview-table-wrapper {
     max-height: 350px;
     overflow-y: auto;
-    border: 1px solid #334155;
+    border: 1px solid var(--admin-card-border);
     border-radius: 12px;
-    background: #0f172a;
+    background: var(--admin-card-bg);
 }
 
 .bulk-import-modal .preview-table {
@@ -120,22 +134,22 @@
 }
 
 .bulk-import-modal .preview-table th {
-    background: #1e293b;
+    background: var(--admin-input-bg);
     padding: 0.875rem 1rem;
     text-align: left;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #64748b;
+    color: var(--admin-text-muted);
     text-transform: uppercase;
     position: sticky;
     top: 0;
-    border-bottom: 2px solid #334155;
+    border-bottom: 2px solid var(--admin-card-border);
 }
 
 .bulk-import-modal .preview-table td {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #334155;
-    color: #94a3b8;
+    border-bottom: 1px solid var(--admin-card-border);
+    color: var(--admin-text-muted);
     font-size: 0.875rem;
 }
 

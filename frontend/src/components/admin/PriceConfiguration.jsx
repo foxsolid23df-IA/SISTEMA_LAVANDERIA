@@ -91,32 +91,39 @@ export const PriceConfiguration = () => {
     }, [productos]);
 
     return (
-        <div className="price-config-container p-6 bg-slate-50 dark:bg-slate-950 min-h-screen">
+        <div className="price-config-container p-6 bg-[var(--admin-bg)] min-h-screen">
             <div className="max-w-5xl mx-auto">
                 <header className="mb-8">
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">
+                    <button 
+                        onClick={() => navigate('/configuracion')}
+                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-bold mb-4 transition-colors"
+                    >
+                        <span className="material-icons-outlined">arrow_back</span>
+                        Volver a Configuración
+                    </button>
+                    <h1 className="text-3xl font-black text-[var(--admin-text-main)] mb-2">
                         Configuración de Precios
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400">
+                    <p className="text-[var(--admin-text-muted)]">
                         Ajusta rápidamente los costos de tus servicios de lavandería.
                     </p>
                 </header>
 
                 {/* Filtros */}
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="bg-[var(--admin-card-bg)] p-4 rounded-2xl shadow-sm border border-[var(--admin-card-border)] mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="flex items-center gap-4 w-full md:w-auto flex-1">
                         <div className="relative flex-1 max-w-md">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]">search</span>
                             <input
                                 type="text"
-                                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                                className="w-full pl-10 pr-4 py-2 bg-[var(--admin-input-bg)] border-none rounded-xl focus:ring-2 focus:ring-emerald-500 text-[var(--admin-text-main)]"
                                 placeholder="Buscar servicio..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <select
-                            className="bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-2 pl-4 pr-10 font-medium text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-emerald-500"
+                            className="bg-[var(--admin-input-bg)] border-none rounded-xl py-2 pl-4 pr-10 font-medium text-[var(--admin-text-main)] focus:ring-2 focus:ring-emerald-500"
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
                         >
@@ -153,7 +160,7 @@ export const PriceConfiguration = () => {
                 </div>
 
                 {/* Lista de Precios */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="bg-[var(--admin-card-bg)] rounded-2xl shadow-sm border border-[var(--admin-card-border)] overflow-hidden">
                     {loading ? (
                         <div className="p-12 text-center text-slate-400">
                             <div className="animate-spin material-symbols-outlined text-4xl mb-2">sync</div>
@@ -167,13 +174,13 @@ export const PriceConfiguration = () => {
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+                                <thead className="bg-[var(--admin-sidebar-bg)] border-b border-[var(--admin-card-border)]">
                                     <tr>
-                                        <th className="px-6 py-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Servicio / Producto</th>
-                                        <th className="px-6 py-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Categoría</th>
-                                        <th className="px-6 py-4 font-bold text-xs text-slate-500 uppercase tracking-wider">Modo Cobro</th>
-                                        <th className="px-6 py-4 font-bold text-xs text-slate-500 uppercase tracking-wider text-right">Precio Actual</th>
-                                        <th className="px-6 py-4 font-bold text-xs text-slate-500 uppercase tracking-wider w-40 text-center">Nuevo Precio</th>
+                                        <th className="px-6 py-4 font-bold text-xs text-[var(--admin-text-muted)] uppercase tracking-wider">Servicio / Producto</th>
+                                        <th className="px-6 py-4 font-bold text-xs text-[var(--admin-text-muted)] uppercase tracking-wider">Categoría</th>
+                                        <th className="px-6 py-4 font-bold text-xs text-[var(--admin-text-muted)] uppercase tracking-wider">Modo Cobro</th>
+                                        <th className="px-6 py-4 font-bold text-xs text-[var(--admin-text-muted)] uppercase tracking-wider text-right">Precio Actual</th>
+                                        <th className="px-6 py-4 font-bold text-xs text-[var(--admin-text-muted)] uppercase tracking-wider w-40 text-center">Nuevo Precio</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -183,9 +190,9 @@ export const PriceConfiguration = () => {
                                         const hasChanged = editedPrices[p.id] !== undefined && parseFloat(editedPrices[p.id]) !== p.price;
 
                                         return (
-                                            <tr key={p.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isKilo ? 'bg-emerald-50/30 dark:bg-emerald-500/5' : ''}`}>
+                                            <tr key={p.id} className={`hover:bg-[var(--admin-input-bg)] transition-colors ${isKilo ? 'bg-emerald-50/30' : ''}`}>
                                                 <td className="px-6 py-4">
-                                                    <div className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                                    <div className="font-bold text-[var(--admin-text-main)] flex items-center gap-2">
                                                         {isKilo && <span className="material-symbols-outlined text-emerald-500">scale</span>}
                                                         {p.name}
                                                     </div>
@@ -209,8 +216,8 @@ export const PriceConfiguration = () => {
                                                             step="0.50"
                                                             className={`w-32 pl-7 pr-3 py-2 rounded-xl text-right font-bold outline-none ring-2 transition-all ${
                                                                 hasChanged 
-                                                                    ? 'ring-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' 
-                                                                    : 'ring-slate-200 dark:ring-slate-700 bg-white dark:bg-slate-900 dark:text-white focus:ring-emerald-500'
+                                                                    ? 'ring-emerald-500 bg-emerald-50 text-emerald-700' 
+                                                                    : 'ring-[var(--admin-card-border)] bg-[var(--admin-input-bg)] text-[var(--admin-text-main)] focus:ring-emerald-500'
                                                             }`}
                                                             value={currentPrice}
                                                             onChange={(e) => handlePriceChange(p.id, e.target.value)}

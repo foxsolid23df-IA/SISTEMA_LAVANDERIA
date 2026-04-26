@@ -1,12 +1,12 @@
-
 .ticket-config-container {
     max-width: 800px;
     margin: 2rem auto;
     padding: 2rem;
-    background-color: var(--card-bg, #fff); /* Fallback to white */
+    background-color: var(--admin-card-bg);
+    border: 1px solid var(--admin-card-border);
     border-radius: 12px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    color: var(--text-primary);
+    color: var(--admin-text-main);
 }
 
 .ticket-config-header {
@@ -18,11 +18,11 @@
     font-size: 1.8rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
-    color: #1a202c; /* More specific dark color (slate-900) */
+    color: var(--admin-text-main);
 }
 
 .ticket-config-header p {
-    color: #4a5568; /* darker grey (slate-600) */
+    color: var(--admin-text-muted);
     font-weight: 500;
 }
 
@@ -41,18 +41,18 @@
 .form-group-config label {
     font-weight: 700;
     font-size: 0.95rem;
-    color: #2d3748; /* slate-800 */
+    color: var(--admin-text-main);
     margin-bottom: 0.25rem;
 }
 
 .form-group-config input,
 .form-group-config textarea {
     padding: 0.75rem;
-    border: 1px solid var(--border-color, #e2e8f0);
+    border: 1px solid var(--admin-card-border);
     border-radius: 8px;
     font-size: 1rem;
-    background-color: var(--bg-secondary, #f8fafc);
-    color: var(--text-primary);
+    background-color: var(--admin-input-bg);
+    color: var(--admin-text-main);
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -162,15 +162,15 @@
   background: #94a3b8;
 }
 
-/* Color negro intenso para el texto de selección */
 .printer-config-section select, 
 .printer-config-section select option {
-    color: #000 !important;
-    font-weight: 800 !important;
+    color: var(--admin-text-main) !important;
+    background-color: var(--admin-card-bg);
+    font-weight: 600 !important;
 }
 
 .printer-config-section label {
-    color: #000 !important;
+    color: var(--admin-text-main) !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }

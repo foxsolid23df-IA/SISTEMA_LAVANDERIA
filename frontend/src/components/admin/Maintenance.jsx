@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { maintenanceService } from '../../services/maintenanceService';
 import { terminalService } from '../../services/terminalService';
 import './Maintenance.css';
 
 const Maintenance = () => {
+    const navigate = useNavigate();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [masterPin, setMasterPin] = useState('');
     const [pinError, setPinError] = useState('');
@@ -159,6 +161,12 @@ const Maintenance = () => {
     return (
         <div className="maintenance-container">
             <header className="maintenance-header">
+                <button 
+                    onClick={() => navigate('/configuracion')}
+                    style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                    <span className="material-icons-outlined">arrow_back</span>
+                    Volver a Configuración
+                </button>
                 <h1>Administración y Mantenimiento</h1>
                 <p>Gestiona la limpieza de datos y licencias del sistema.</p>
             </header>

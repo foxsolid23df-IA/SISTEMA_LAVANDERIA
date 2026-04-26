@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { staffService } from "../../services/staffService";
 import Swal from "sweetalert2";
+import { UiButton, UiCard, UiBadge, UiPageHeader } from "../common/ui";
+import "../common/ui/ui-kit.css";
 import "./UserManager.css";
 
 const ROLES = {
@@ -446,49 +448,31 @@ export const UserManager = () => {
 
   return (
     <div className="user-manager-container">
-      <div style={{ marginBottom: "1rem" }}>
-        <button
-          onClick={() => navigate("/configuracion")}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#6366f1",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            fontWeight: "bold",
-          }}
-        >
-          <span className="material-icons-outlined">arrow_back</span>
-          Volver a Configuración
-        </button>
-      </div>
-      <header className="manager-header">
-        <div>
-          <div className="header-badge">Personal & Seguridad</div>
-          <h2>Gestión de Usuarios</h2>
-          <p style={{ color: "var(--text-muted)", marginTop: "0.5rem" }}>
-            Administra roles y permisos para el acceso al punto de venta
-          </p>
-        </div>
-        <button
-          className="btn-add-employee-premium"
-          onClick={() => handleOpenModal()}
-        >
-          <span className="material-icons-outlined">person_add</span>
-          Nuevo Empleado
-        </button>
-      </header>
+      <UiPageHeader
+        title="Gestión de Usuarios"
+        description="Administra roles y permisos para el acceso al punto de venta"
+        backTo="/configuracion"
+        backLabel="Volver a Configuración"
+        actions={
+          <UiButton
+            variant="primary"
+            icon="person_add"
+            onClick={() => handleOpenModal()}
+          >
+            Nuevo Empleado
+          </UiButton>
+        }
+      />
 
-      <div className="user-list-card">
+      <UiCard>
+        <UiCard.Body flush>
         {staff.length === 0 ? (
           <div className="empty-state">
             <p>No hay empleados registrados</p>
             <small>Haz clic en "Nuevo Empleado" para agregar uno</small>
           </div>
         ) : (
-          <table className="user-table">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -503,37 +487,41 @@ export const UserManager = () => {
                 const roleInfo = getRoleBadge(s.role);
                 return (
                   <tr key={s.id}>
-                    <td className="font-bold">{s.name}</td>
+                    <td className="font-bold-700">{s.name}</td>
                     <td>
-                      <span className={`role-badge ${roleInfo.class}`}>
-                        {roleInfo.icon} {roleInfo.label}
-                      </span>
+                      <UiBadge variant={roleInfo.id} icon={roleInfo.icon}>
+                        {roleInfo.label}
+                      </UiBadge>
                     </td>
                     <td>
-                      <code className="pin-display">****</code>
+                      <code className="um-code-pin">****</code>
                     </td>
                     <td>
-                      <span
-                        className={`status-badge ${s.active ? "active" : "inactive"}`}
+                      <UiBadge
+                        variant={s.active ? 'success' : 'danger'}
                         onClick={() => toggleActive(s)}
-                        style={{ cursor: "pointer" }}
+                        className="cursor-pointer"
                       >
-                        {s.active ? "✓ Activo" : "✗ Inactivo"}
-                      </span>
+                        {s.active ? '✓ Activo' : '✗ Inactivo'}
+                      </UiBadge>
                     </td>
                     <td className="actions-cell">
-                      <button
-                        className="btn-edit"
+                      <UiButton
+                        variant="outline"
+                        size="sm"
+                        icon="edit"
                         onClick={() => handleOpenModal(s)}
                       >
                         Editar
-                      </button>
-                      <button
-                        className="btn-delete"
+                      </UiButton>
+                      <UiButton
+                        variant="danger"
+                        size="sm"
+                        icon="delete"
                         onClick={() => handleDelete(s.id, s.name)}
                       >
                         Eliminar
-                      </button>
+                      </UiButton>
                     </td>
                   </tr>
                 );
@@ -541,23 +529,16 @@ export const UserManager = () => {
             </tbody>
           </table>
         )}
-      </div>
+        </UiCard.Body>
+      </UiCard>
 
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>{editingStaff ? "Editar Empleado" : "Nuevo Empleado"}</h3>
             <form onSubmit={handleSubmit}>
-              <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                <label
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Nombre completo *
-                </label>
+              <div className="form-group mb-1-5">
+                <label className="ui-label">Nombre completo *</label>
                 <input
                   type="text"
                   required
@@ -566,26 +547,11 @@ export const UserManager = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid var(--glass-border)",
-                    padding: "0.8rem",
-                    borderRadius: "10px",
-                    color: "#fff",
-                  }}
+                  className="ui-input"
                 />
               </div>
 
-              <label
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "var(--text-muted)",
-                  display: "block",
-                  marginBottom: "1rem",
-                }}
-              >
+              <label className="ui-label d-block mb-1">
                 Seleccionar Rol del Sistema
               </label>
               <div className="role-cards-grid">
@@ -602,16 +568,8 @@ export const UserManager = () => {
                 ))}
               </div>
 
-              <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                <label
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  PIN de acceso * (4-6 dígitos)
-                </label>
+              <div className="form-group mb-1-5">
+                <label className="ui-label">PIN de acceso * (4-6 dígitos)</label>
                 <input
                   type="password"
                   required
@@ -624,34 +582,13 @@ export const UserManager = () => {
                       pin: e.target.value.replace(/\D/g, ""),
                     })
                   }
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid var(--glass-border)",
-                    padding: "0.8rem",
-                    borderRadius: "10px",
-                    color: "#fff",
-                    letterSpacing: "4px",
-                  }}
+                  className="ui-input um-pin-input"
                 />
               </div>
 
-              <div
-                className="permissions-section"
-                style={{ marginTop: "2rem" }}
-              >
-                <label
-                  style={{
-                    fontSize: "1rem",
-                    fontWeight: 800,
-                    color: "#fff",
-                    display: "block",
-                    marginBottom: "1.5rem",
-                    borderBottom: "2px solid rgba(99, 102, 241, 0.3)",
-                    paddingBottom: "0.5rem",
-                  }}
-                >
-                  Panel de Control de Permisos 2026
+              <div className="mt-2">
+                <label className="ui-label font-size-lg font-bold-800">
+                  Panel de Control de Permisos
                 </label>
 
                 {[
@@ -702,95 +639,39 @@ export const UserManager = () => {
                     ],
                   },
                 ].map((category) => (
-                  <div
-                    key={category.title}
-                    style={{
-                      marginBottom: "2rem",
-                      background: "rgba(255,255,255,0.02)",
-                      padding: "1rem",
-                      borderRadius: "15px",
-                      border: "1px solid rgba(255,255,255,0.05)",
-                    }}
-                  >
-                    <h4
-                      style={{
-                        color: "#6366f1",
-                        fontSize: "0.9rem",
-                        fontWeight: "bold",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        marginBottom: "1rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "1px",
-                      }}
-                    >
+                  <div key={category.title} className="um-permissions-category">
+                    <h4 className="text-accent font-size-md mb-1">
                       <span
-                        className="material-icons-outlined"
-                        style={{ fontSize: "18px" }}
+                        className="material-icons-outlined icon-18"
                       >
                         {category.icon}
                       </span>
                       {category.title}
                     </h4>
-                    <div
-                      className="permissions-grid"
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fill, minmax(280px, 1fr))",
-                        gap: "1rem",
-                      }}
-                    >
+                    <div className="um-permissions-grid">
                       {category.keys.map((key) => {
                         const info = PERMISSION_LABELS[key];
                         if (!info) return null;
                         return (
                           <div
                             key={key}
-                            className="permission-item"
-                            style={{
-                              background: "rgba(255,255,255,0.03)",
-                              padding: "0.8rem",
-                              borderRadius: "10px",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              transition: "all 0.2s",
-                              border: "1px solid transparent",
-                            }}
+                            className="um-permission-item"
                           >
-                            <div
-                              className="permission-info"
-                              style={{ pointerEvents: "none" }}
-                            >
-                              <div
-                                className="permission-title"
-                                style={{
-                                  color: "#fff",
-                                  fontSize: "0.85rem",
-                                  fontWeight: 600,
-                                }}
-                              >
+                            <div className="um-no-events">
+                              <div className="text-main font-size-sm">
                                 {info.label}
                               </div>
-                              <div
-                                className="permission-desc"
-                                style={{
-                                  color: "var(--text-muted)",
-                                  fontSize: "0.7rem",
-                                }}
-                              >
+                              <div className="text-muted font-size-xs">
                                 {info.desc}
                               </div>
                             </div>
-                            <label className="switch">
+                            <label className="ui-toggle">
                               <input
                                 type="checkbox"
                                 checked={formData.permissions[key] || false}
                                 onChange={() => handlePermissionToggle(key)}
                               />
-                              <span className="slider round"></span>
+                              <span className="ui-toggle__slider"></span>
                             </label>
                           </div>
                         );
@@ -800,38 +681,22 @@ export const UserManager = () => {
                 ))}
               </div>
 
-              <div
-                className="modal-actions"
-                style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}
-              >
-                <button
+              <div className="d-flex gap-1 mt-2">
+                <UiButton
                   type="button"
-                  className="btn-secondary"
+                  variant="secondary"
+                  className="flex-1"
                   onClick={handleCloseModal}
-                  style={{
-                    flex: 1,
-                    padding: "1rem",
-                    borderRadius: "12px",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid var(--glass-border)",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
                 >
                   Cancelar
-                </button>
-                <button
+                </UiButton>
+                <UiButton
                   type="submit"
-                  className="btn-primary"
-                  style={{
-                    flex: 1,
-                    padding: "1rem",
-                    borderRadius: "12px",
-                    cursor: "pointer",
-                  }}
+                  variant="primary"
+                  className="flex-1"
                 >
                   {editingStaff ? "Guardar Cambios" : "Crear Empleado"}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>

@@ -19,8 +19,8 @@ import { cashWithdrawalService } from "../../services/cashWithdrawalService";
 import { supabase } from "../../supabase";
 import Modal from "../common/Modal";
 import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import { autoTable } from "jspdf-autotable";
 import "./CashReportsView.css";
 
 const TYPE_LABELS = {
@@ -64,23 +64,99 @@ const formatShortDate = (iso) => {
 };
 
 const COLORS = [
-  "#0f172a",
-  "#2563eb",
-  "#059669",
-  "#f59e0b",
-  "#dc2626",
-  "#7c3aed",
+  "var(--chart-color-1)",
+  "var(--chart-color-2)",
+  "var(--chart-color-3)",
+  "var(--chart-color-4)",
+  "var(--chart-color-5)",
 ];
 
 export const CashReportsView = () => {
   const [cuts, setCuts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const getDefaultDates = () => {
+    const today = new Date();
+    const lastWeek = new Date();
+    lastWeek.setDate(today.getDate() - 7);
+    return {
+      start: lastWeek.toISOString().split("T")[0],
+      end: today.toISOString().split("T")[0],
+    };
+  };
+
+  const { start: defaultStart, end: defaultEnd } = getDefaultDates();
+
   const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
+    startDate: defaultStart,
+    endDate: defaultEnd,
     cutType: "all",
     staffName: "",
   });
+
+  const setQuickFilter = (type) => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (type) {
+      case "today":
+        // start and end are already today
+        break;
+      case "yesterday":
+        start.setDate(now.getDate() - 1);
+        end.setDate(now.getDate() - 1);
+        break;
+      case "week":
+        start.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "all":
+        start = "";
+        end = "";
+        break;
+      default:
+        return;
+    }
+
+    const startStr = start ? (typeof start === "string" ? start : start.toISOString().split("T")[0]) : "";
+    const endStr = end ? (typeof end === "string" ? end : end.toISOString().split("T")[0]) : "";
+
+    setFilters((prev) => ({
+      ...prev,
+      startDate: startStr,
+      endDate: endStr,
+    }));
+  };
+
+  const isPresetActive = (type) => {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+
+    switch (type) {
+      case "today":
+        return filters.startDate === todayStr && filters.endDate === todayStr;
+      case "yesterday":
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+        const yestStr = yesterday.toISOString().split("T")[0];
+        return filters.startDate === yestStr && filters.endDate === yestStr;
+      case "week":
+        const lastWeek = new Date();
+        lastWeek.setDate(now.getDate() - 7);
+        const lwStr = lastWeek.toISOString().split("T")[0];
+        return filters.startDate === lwStr && filters.endDate === todayStr;
+      case "month":
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+          .toISOString()
+          .split("T")[0];
+        return filters.startDate === monthStart && filters.endDate === todayStr;
+      default:
+        return false;
+    }
+  };
+
   const [selectedCut, setSelectedCut] = useState(null);
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -574,88 +650,101 @@ export const CashReportsView = () => {
     }
   };
 
-  const handleExportFullReport = () => {
-    const doc = new jsPDF();
-    const primaryColor = [15, 23, 42]; // slate-900
-    const accentColor = [37, 99, 235]; // blue-600
+  const handleExportFullReport = async () => {
+    setExportLoading(true);
+    try {
+      const doc = new jsPDF();
+      const primaryColor = [15, 23, 42]; // slate-900
+      const accentColor = [37, 99, 235]; // blue-600
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(...primaryColor);
-    doc.text("REPORTE EJECUTIVO DE CAJA", 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 27);
-    doc.text(`Período: ${filters.startDate || "Inicio"} al ${filters.endDate || "Hoy"}`, 14, 32);
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(...primaryColor);
+      doc.text("REPORTE EJECUTIVO DE CAJA", 14, 20);
 
-    // Summary Section
-    doc.setFontSize(14);
-    doc.setTextColor(...accentColor);
-    doc.text("Resumen de Operaciones", 14, 45);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 27);
+      doc.text(
+        `Período: ${filters.startDate || "Inicio"} al ${filters.endDate || "Hoy"}`,
+        14,
+        32,
+      );
 
-    const summaryData = [
-      ["Total Ventas", formatCurrency(totalSales)],
-      ["Nº Transacciones", totalSalesCount.toString()],
-      ["Diferencia Total", formatCurrency(totalDiff)],
-      ["Efectivo", formatCurrency(paymentBreakdown.efectivo)],
-      ["Tarjeta", formatCurrency(paymentBreakdown.tarjeta)],
-      ["Transferencia", formatCurrency(paymentBreakdown.transferencia)],
-      ["Dólares", formatCurrency(paymentBreakdown.dolares)],
-    ];
+      // Summary Section
+      doc.setFontSize(14);
+      doc.setTextColor(...accentColor);
+      doc.text("Resumen de Operaciones", 14, 45);
 
-    doc.autoTable({
-      startY: 50,
-      head: [["Métrica", "Valor"]],
-      body: summaryData,
-      theme: "striped",
-      headStyles: { fillStyle: primaryColor },
-      styles: { cellPadding: 3, fontSize: 10 }
-    });
+      const summaryData = [
+        ["Total Ventas", formatCurrency(totalSales)],
+        ["Nº Transacciones", totalSalesCount.toString()],
+        ["Diferencia Total", formatCurrency(totalDiff)],
+        ["Efectivo", formatCurrency(paymentBreakdown.efectivo)],
+        ["Tarjeta", formatCurrency(paymentBreakdown.tarjeta)],
+        ["Transferencia", formatCurrency(paymentBreakdown.transferencia)],
+        ["Dólares", formatCurrency(paymentBreakdown.dolares)],
+      ];
 
-    // Staff Ranking
-    doc.setFontSize(14);
-    doc.setTextColor(...accentColor);
-    doc.text("Desempeño del Personal", 14, doc.lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: 50,
+        head: [["Métrica", "Valor"]],
+        body: summaryData,
+        theme: "striped",
+        headStyles: { fillColor: primaryColor },
+        styles: { cellPadding: 3, fontSize: 10 },
+      });
 
-    const rankingData = staffRanking.map(staff => [
-      staff.name,
-      staff.cortes,
-      staff.ventas,
-      formatCurrency(staff.totalVentas),
-      formatCurrency(staff.diferencia)
-    ]);
+      // Staff Ranking
+      doc.setFontSize(14);
+      doc.setTextColor(...accentColor);
+      doc.text("Desempeño del Personal", 14, doc.lastAutoTable.finalY + 15);
 
-    doc.autoTable({
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [["Empleado", "Cortes", "Ventas", "Monto Total", "Dif. Acum."]],
-      body: rankingData,
-      theme: "grid",
-      headStyles: { fillStyle: [5, 150, 105] }, // emerald-600
-    });
+      const rankingData = staffRanking.map((staff) => [
+        staff.name,
+        staff.cortes,
+        staff.ventas,
+        formatCurrency(staff.totalVentas),
+        formatCurrency(staff.diferencia),
+      ]);
 
-    // Detail List
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.setTextColor(...accentColor);
-    doc.text("Detalle Cronológico de Cortes", 14, 20);
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 20,
+        head: [["Empleado", "Cortes", "Ventas", "Monto Total", "Dif. Acum."]],
+        body: rankingData,
+        theme: "grid",
+        headStyles: { fillColor: [5, 150, 105] }, // emerald-600
+      });
 
-    const cutsData = cuts.slice(0, 50).map(cut => [
-      formatDate(cut.created_at),
-      cut.staff_name,
-      TYPE_LABELS[cut.cut_type] || cut.cut_type,
-      formatCurrency(cut.sales_total),
-      formatCurrency(cut.difference)
-    ]);
+      // Detail List
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.setTextColor(...accentColor);
+      doc.text("Detalle Cronológico de Cortes", 14, 20);
 
-    doc.autoTable({
-      startY: 25,
-      head: [["Fecha", "Encargado", "Tipo", "Ventas", "Diferencia"]],
-      body: cutsData,
-      headStyles: { fillStyle: [124, 58, 237] }, // violet-600
-    });
+      const cutsData = cuts.slice(0, 50).map((cut) => [
+        formatDate(cut.created_at),
+        cut.staff_name,
+        TYPE_LABELS[cut.cut_type] || cut.cut_type,
+        formatCurrency(cut.sales_total),
+        formatCurrency(cut.difference),
+      ]);
 
-    doc.save(`Reporte_Caja_${filters.startDate || "hist"}.pdf`);
+      autoTable(doc, {
+        startY: 25,
+        head: [["Fecha", "Encargado", "Tipo", "Ventas", "Diferencia"]],
+        body: cutsData,
+        headStyles: { fillColor: [124, 58, 237] }, // violet-600
+      });
+
+      const fileName = `Reporte_Caja_${filters.startDate || "hist"}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error("[CashReportsView] Error exportando a PDF:", err);
+      alert("Error al exportar. Revisa la consola para más detalles.");
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   return (
@@ -667,7 +756,7 @@ export const CashReportsView = () => {
           <span>Reportes de Caja</span>
         </h1>
         <span className="cash-reports__badge">
-          <span className="material-icons-outlined" style={{ fontSize: 14 }}>
+          <span className="material-icons-outlined icon-14">
             cloud
           </span>
           Acceso Web Remoto
@@ -675,6 +764,45 @@ export const CashReportsView = () => {
       </div>
 
       {/* Filters */}
+      {/* Filtros Rápidos */}
+      <div className="cash-reports__quick-filters">
+        <button
+          type="button"
+          className={`quick-filter-btn ${filters.startDate === "" ? "active" : ""}`}
+          onClick={() => setQuickFilter("all")}
+        >
+          Todo
+        </button>
+        <button
+          type="button"
+          className={`quick-filter-btn ${isPresetActive("today") ? "active" : ""}`}
+          onClick={() => setQuickFilter("today")}
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          className={`quick-filter-btn ${isPresetActive("yesterday") ? "active" : ""}`}
+          onClick={() => setQuickFilter("yesterday")}
+        >
+          Ayer
+        </button>
+        <button
+          type="button"
+          className={`quick-filter-btn ${isPresetActive("week") ? "active" : ""}`}
+          onClick={() => setQuickFilter("week")}
+        >
+          Esta Semana
+        </button>
+        <button
+          type="button"
+          className={`quick-filter-btn ${isPresetActive("month") ? "active" : ""}`}
+          onClick={() => setQuickFilter("month")}
+        >
+          Este Mes
+        </button>
+      </div>
+
       <form className="cash-reports__filters" onSubmit={handleSearch}>
         <div className="cash-reports__filter-group">
           <label>Desde</label>
@@ -714,7 +842,7 @@ export const CashReportsView = () => {
           />
         </div>
         <button type="submit" className="cash-reports__filter-btn">
-          <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+          <span className="material-icons-outlined icon-18">
             search
           </span>
           Buscar
@@ -724,7 +852,7 @@ export const CashReportsView = () => {
           className={`cash-reports__filter-btn cash-reports__filter-btn--${comparisonMode ? "active" : "secondary"}`}
           onClick={() => setComparisonMode(!comparisonMode)}
         >
-          <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+          <span className="material-icons-outlined icon-18">
             compare_arrows
           </span>
           {comparisonMode ? "Quitar Comparativa" : "Comparar"}
@@ -735,7 +863,7 @@ export const CashReportsView = () => {
           onClick={handleExportExcel}
           disabled={exportLoading}
         >
-          <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+          <span className="material-icons-outlined icon-18">
             {exportLoading ? "sync" : "download"}
           </span>
           {exportLoading ? "Exportando..." : "Exportar Excel"}
@@ -746,7 +874,7 @@ export const CashReportsView = () => {
           onClick={handleExportFullReport}
           disabled={exportLoading}
         >
-          <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+          <span className="material-icons-outlined icon-18">
             picture_as_pdf
           </span>
           PDF Ejecutivo
@@ -797,20 +925,13 @@ export const CashReportsView = () => {
               }
             }}
           >
-            <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+            <span className="material-icons-outlined icon-18">
               search
             </span>
             Cargar Período 2
           </button>
           {cutsPeriod2.length > 0 && (
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                color: "#2563eb",
-                alignSelf: "center",
-              }}
-            >
+            <span className="cash-reports__cuts-count">
               {cutsPeriod2.length} cortes cargados
             </span>
           )}
@@ -866,10 +987,7 @@ export const CashReportsView = () => {
       {/* NEW: Payment Breakdown Cards */}
       <div className="cash-reports__payment-breakdown">
         <div className="cash-reports__card cash-reports__card--payment">
-          <div
-            className="cash-reports__card-icon"
-            style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}
-          >
+          <div className="cash-reports__card-icon bg-gradient-emerald">
             <span className="material-icons-outlined">attach_money</span>
           </div>
           <div className="cash-reports__card-info">
@@ -880,10 +998,7 @@ export const CashReportsView = () => {
           </div>
         </div>
         <div className="cash-reports__card cash-reports__card--payment">
-          <div
-            className="cash-reports__card-icon"
-            style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)" }}
-          >
+          <div className="cash-reports__card-icon bg-gradient-blue">
             <span className="material-icons-outlined">credit_card</span>
           </div>
           <div className="cash-reports__card-info">
@@ -894,10 +1009,7 @@ export const CashReportsView = () => {
           </div>
         </div>
         <div className="cash-reports__card cash-reports__card--payment">
-          <div
-            className="cash-reports__card-icon"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #8b5cf6)" }}
-          >
+          <div className="cash-reports__card-icon bg-gradient-purple">
             <span className="material-icons-outlined">account_balance</span>
           </div>
           <div className="cash-reports__card-info">
@@ -908,10 +1020,7 @@ export const CashReportsView = () => {
           </div>
         </div>
         <div className="cash-reports__card cash-reports__card--payment">
-          <div
-            className="cash-reports__card-icon"
-            style={{ background: "linear-gradient(135deg, #f59e0b, #fbbf24)" }}
-          >
+          <div className="cash-reports__card-icon bg-gradient-amber">
             <span className="material-icons-outlined">payments</span>
           </div>
           <div className="cash-reports__card-info">
@@ -979,7 +1088,7 @@ export const CashReportsView = () => {
             className="cash-reports__filter-btn cash-reports__filter-btn--secondary"
             onClick={() => setShowCharts(!showCharts)}
           >
-            <span className="material-icons-outlined" style={{ fontSize: 18 }}>
+            <span className="material-icons-outlined icon-18">
               {showCharts ? "collapse_all" : "expand_all"}
             </span>
             {showCharts ? "Ocultar Gráficas" : "Mostrar Gráficas"}
@@ -998,29 +1107,34 @@ export const CashReportsView = () => {
             </h3>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={salesEvolutionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fontWeight: 600 }}
+                  tick={{ fontSize: 11, fontWeight: 600, fill: "var(--chart-text)" }}
                 />
                 <YAxis
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: "var(--chart-text)" }}
                   tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                 />
-                <Tooltip formatter={(value) => formatCurrency(value)} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--chart-tooltip-bg)', borderColor: 'var(--chart-tooltip-border)' }}
+                  itemStyle={{ color: 'var(--chart-tooltip-text)' }}
+                  formatter={(value) => formatCurrency(value)} 
+                />
                 <Legend />
                 <Line
                   type="monotone"
                   dataKey="ventas"
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
+                  stroke="var(--chart-color-1)"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "var(--chart-color-1)", strokeWidth: 2, stroke: "#fff" }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
                   name="Ventas"
                 />
                  <Line
                   type="monotone"
                   dataKey="diferencia"
-                  stroke="#dc2626"
+                  stroke="var(--chart-line-diff)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   name="Diferencia"
@@ -1028,7 +1142,7 @@ export const CashReportsView = () => {
                 <Line
                   type="monotone"
                   dataKey="tarjeta"
-                  stroke="#7c3aed"
+                  stroke="var(--chart-color-3)"
                   strokeWidth={1}
                   strokeDasharray="3 3"
                   name="V. Tarjeta"
@@ -1036,7 +1150,7 @@ export const CashReportsView = () => {
                 <Line
                   type="monotone"
                   dataKey="transferencia"
-                  stroke="#10b981"
+                  stroke="var(--chart-color-2)"
                   strokeWidth={1}
                   strokeDasharray="3 3"
                   name="V. Transf."
@@ -1062,8 +1176,9 @@ export const CashReportsView = () => {
                     `${name}: ${(percent * 100).toFixed(0)}%`
                   }
                   outerRadius={90}
-                  fill="#8884d8"
+                  fill="var(--chart-color-1)"
                   dataKey="value"
+                  stroke="none"
                 >
                   {paymentMethodData.map((entry, index) => (
                     <Cell
@@ -1072,7 +1187,11 @@ export const CashReportsView = () => {
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(value)} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--chart-tooltip-bg)', borderColor: 'var(--chart-tooltip-border)' }}
+                  itemStyle={{ color: 'var(--chart-tooltip-text)' }}
+                  formatter={(value) => formatCurrency(value)} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -1086,29 +1205,35 @@ export const CashReportsView = () => {
               </h3>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={staffRanking}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 10, fontWeight: 600 }}
+                    tick={{ fontSize: 10, fontWeight: 600, fill: "var(--chart-text)" }}
                     interval={0}
                     angle={-30}
                     textAnchor="end"
                     height={60}
                   />
                   <YAxis
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: "var(--chart-text)" }}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip-bg)', borderColor: 'var(--chart-tooltip-border)' }}
+                    itemStyle={{ color: 'var(--chart-tooltip-text)' }}
+                    formatter={(value) => formatCurrency(value)} 
+                  />
                   <Legend />
                   <Bar
                     dataKey="totalVentas"
-                    fill="#0f172a"
+                    fill="var(--chart-bar-1)"
+                    radius={[4, 4, 0, 0]}
                     name="Total Ventas"
                   />
                   <Bar
                     dataKey="ventas"
-                    fill="#059669"
+                    fill="var(--chart-bar-2)"
+                    radius={[4, 4, 0, 0]}
                     name="Nº Transacciones"
                   />
                 </BarChart>
@@ -1141,19 +1266,43 @@ export const CashReportsView = () => {
                 const effectiveness = staff.totalVentas > 0 
                   ? ((staff.totalVentas / (staff.totalVentas + Math.abs(staff.diferencia))) * 100).toFixed(1)
                   : "0.0";
+                
+                const effNum = parseFloat(effectiveness);
+                const rankClass = idx === 0 ? "rank-gold" : idx === 1 ? "rank-silver" : idx === 2 ? "rank-bronze" : "";
+
                 return (
-                  <tr key={idx}>
-                    <td>{staff.name}</td>
-                    <td>{staff.cuts}</td>
-                    <td>{staff.ventas}</td>
-                    <td style={{ fontWeight: 700 }}>{formatCurrency(staff.totalVentas)}</td>
+                  <tr key={idx} className={idx === 0 ? "row-top-performer" : ""}>
+                    <td>
+                      <div className="ranking-staff-cell">
+                        <div className={`rank-badge ${rankClass}`}>{idx + 1}</div>
+                        <div className="staff-avatar">
+                          <span className="material-icons-outlined">account_circle</span>
+                        </div>
+                        <div className="staff-info">
+                          <span className="staff-name">{staff.name}</span>
+                          {idx === 0 && <span className="top-performer-tag">Top Performer</span>}
+                        </div>
+                      </div>
+                    </td>
+                    <td><span className="ranking-count-badge">{staff.cortes}</span></td>
+                    <td><span className="ranking-count-badge">{staff.ventas}</span></td>
+                    <td className="ranking-currency-cell">{formatCurrency(staff.totalVentas)}</td>
                     <td className={staff.diferencia >= 0 ? "cash-reports__diff--positive" : "cash-reports__diff--negative"}>
-                      {formatCurrency(staff.diferencia)}
+                      <div className="ranking-diff-cell">
+                        {staff.diferencia > 0 && <span className="material-icons-outlined">trending_up</span>}
+                        {staff.diferencia < 0 && <span className="material-icons-outlined">trending_down</span>}
+                        {formatCurrency(staff.diferencia)}
+                      </div>
                     </td>
                     <td>
-                      <div className="status-indicator">
-                        <span className={`status-dot status-dot--${parseFloat(effectiveness) > 98 ? "open" : "warning"}`}></span>
-                        <span>{effectiveness}%</span>
+                      <div className="ranking-effectiveness-cell">
+                        <div className="effectiveness-bar-container">
+                          <div 
+                            className={`effectiveness-bar ${effNum > 98 ? 'bg-emerald' : effNum > 90 ? 'bg-amber' : 'bg-rose'}`}
+                            style={{ width: `${Math.min(effNum, 100)}%` }}
+                          ></div>
+                        </div>
+                        <span className="effectiveness-text">{effectiveness}%</span>
                       </div>
                     </td>
                   </tr>
@@ -1241,7 +1390,7 @@ export const CashReportsView = () => {
                     </td>
                     <td>{cut.staff_name || "—"}</td>
                     <td>{cut.sales_count || 0}</td>
-                    <td style={{ fontWeight: 700 }}>
+                    <td className="font-bold-700">
                       {formatCurrency(cut.sales_total)}
                     </td>
                     <td>{formatCurrency(cut.opening_fund || 0)}</td>
@@ -1345,10 +1494,7 @@ export const CashReportsView = () => {
                   </div>
                 ) : (
                   <>
-                    <div
-                      className="cut-details__tabs"
-                      style={{ marginBottom: "1.5rem" }}
-                    >
+                    <div className="cut-details__tabs mb-1-5">
                       <button
                         className={`cut-details__tab ${activeTab === "orders" ? "active" : ""}`}
                         onClick={() => setActiveTab("orders")}

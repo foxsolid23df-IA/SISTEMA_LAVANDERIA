@@ -102,15 +102,34 @@ ipcMain.handle('print-ticket', async (event, htmlContent, printerName) => {
         const printWindow = new BrowserWindow({
             show: false,
             webPreferences: {
-                nodeIntegration: true
+                nodeIntegration: true,
+                webSecurity: false  // Permitir carga de imágenes base64 embebidas
             }
         });
 
-        printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+        // Usar base64 encoding para evitar el límite de longitud de encodeURIComponent
+        // que causa fallos silenciosos con HTML que contiene imágenes base64 grandes (html2canvas)
+        const base64Html = Buffer.from(htmlContent, 'utf-8').toString('base64');
+        printWindow.loadURL(`data:text/html;base64,${base64Html}`);
 
         return new Promise((resolve) => {
+            // Timeout de seguridad: si no carga en 15s, cerrar y reportar error
+            const loadTimeout = setTimeout(() => {
+                log.error('[Print] Timeout: el contenido no se cargó en 15 segundos');
+                try { printWindow.close(); } catch(e) {}
+                resolve({ success: false, error: 'Timeout al cargar contenido de impresión' });
+            }, 15000);
+
+            printWindow.webContents.on('did-fail-load', (ev, errorCode, errorDescription) => {
+                clearTimeout(loadTimeout);
+                log.error(`[Print] Error al cargar contenido: ${errorCode} - ${errorDescription}`);
+                try { printWindow.close(); } catch(e) {}
+                resolve({ success: false, error: `Error al cargar: ${errorDescription}` });
+            });
+
             printWindow.webContents.on('did-finish-load', () => {
-                // Pequeña espera para asegurar que el contenido (especialmente imágenes) se renderice
+                clearTimeout(loadTimeout);
+                // Espera mayor para asegurar que imágenes base64 embebidas se rendericen completamente
                 setTimeout(() => {
                     printWindow.webContents.print({
                         silent: true,
@@ -118,18 +137,20 @@ ipcMain.handle('print-ticket', async (event, htmlContent, printerName) => {
                         deviceName: printerName || '',
                         margins: { marginType: 'none' }
                     }, (success, failureReason) => {
-                        printWindow.close();
+                        try { printWindow.close(); } catch(e) {}
                         if (!success) {
-                            console.error('Error al imprimir:', failureReason);
+                            log.error('[Print] Error al imprimir:', failureReason);
                             resolve({ success: false, error: failureReason });
                         } else {
+                            log.info('[Print] Impresión exitosa');
                             resolve({ success: true });
                         }
                     });
-                }, 200);
+                }, 800);
             });
         });
     } catch (error) {
+        log.error('[Print] Error general:', error.message);
         return { success: false, error: error.message };
     }
 });

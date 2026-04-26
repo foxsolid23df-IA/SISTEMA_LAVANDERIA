@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
+const aiService = require('../services/aiService');
 
 // Inicializar Groq con precaución para evitar crasheos si falta la llave en el .env
 const groqApiKey = process.env.GROQ_API_KEY || 'no-key-provided';
@@ -76,6 +77,36 @@ router.post('/analyze-cloth', async (req, res) => {
             success: false,
             error: errorMessage,
             details: error.stack
+        });
+    }
+});
+/**
+ * Ruta para chat general usando OpenRouter
+ * Soporta cualquier modelo y mantiene la API Key oculta en el servidor.
+ */
+router.post('/chat', async (req, res) => {
+    try {
+        const { messages, model } = req.body;
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({
+                success: false,
+                error: 'El campo "messages" es requerido y debe ser un arreglo.'
+            });
+        }
+
+        const result = await aiService.openRouterChat(messages, model);
+
+        res.json({
+            success: true,
+            ...result
+        });
+
+    } catch (error) {
+        console.error('❌ Error en AI Chat:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 });

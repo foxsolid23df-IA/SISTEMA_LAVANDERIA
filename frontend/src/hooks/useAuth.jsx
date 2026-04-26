@@ -22,9 +22,12 @@ export const AuthProvider = ({ children }) => {
   const [needsCashFund, setNeedsCashFund] = useState(false);
 
   // Modo Admin: permite acceder sin terminal/caja para tareas administrativas
-  const [adminMode, setAdminMode] = useState(
-    () => sessionStorage.getItem("adminMode") === "true",
-  );
+  const [adminMode, setAdminMode] = useState(() => {
+    const isDesktop = !!window?.electron?.isElectron;
+    // Forzar modo admin en la web siempre
+    if (!isDesktop) return true;
+    return sessionStorage.getItem("adminMode") === "true";
+  });
 
   // La pantalla está bloqueada si hay sesión pero no hay empleado activo
   const isLocked = !!session && !activeStaff;
@@ -125,12 +128,12 @@ export const AuthProvider = ({ children }) => {
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.warn("Error fetching profile:", error);
       }
-      setProfile(data);
+      setProfile(data || null);
 
       // Verificar sesión de caja inmediatamente después de obtener el perfil
       await checkCashSession();
@@ -271,8 +274,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("activeStaff");
     setCashSession(null);
     setNeedsCashFund(false);
-    setAdminMode(false);
-    sessionStorage.removeItem("adminMode");
+    const isDesktop = !!window?.electron?.isElectron;
+    if (isDesktop) {
+      setAdminMode(false);
+      sessionStorage.removeItem("adminMode");
+    }
   };
 
   // Login de empleado por PIN
@@ -283,8 +289,11 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("activeStaff", JSON.stringify(staff));
 
       // Asegurar que al entrar un empleado se desactive el modo admin
-      setAdminMode(false);
-      sessionStorage.removeItem("adminMode");
+      const isDesktop = !!window?.electron?.isElectron;
+      if (isDesktop) {
+        setAdminMode(false);
+        sessionStorage.removeItem("adminMode");
+      }
 
       return staff;
     } catch (error) {
@@ -491,6 +500,9 @@ export const AuthProvider = ({ children }) => {
       // Modo Admin (sin terminal/caja)
       adminMode, // Si está en modo admin sin caja
       setAdminMode: (value) => {
+        const isDesktop = !!window?.electron?.isElectron;
+        if (!isDesktop) return; // En web no se puede quitar el modo admin
+        
         setAdminMode(value);
         if (value) {
           sessionStorage.setItem("adminMode", "true");
