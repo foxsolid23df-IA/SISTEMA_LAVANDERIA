@@ -7,25 +7,72 @@ export class ScaleService {
         this.simulationInterval = null;
         this.pollingInterval = null;
         this.buffer = '';
-        this._isConnecting = false; // Anti-bucle: evita conexiones simultáneas
-        this._failCount = 0;        // Contador de fallos consecutivos
+        this._isConnecting = false;
+        this._failCount = 0;
+        this._isReading = false;       // ¿Hay un loop de lectura activo?
+        this._skipAutoReconnect = false; // Flag para evitar race condition watchdog/finally
 
-        // Estabilización: solo reportar peso cuando se mantiene estable 300ms
+        // Estabilización
         this._lastRawWeight = null;
         this._stableTimer = null;
         this._stableWeight = null;
-        this._STABLE_MS = 300; // Tiempo de estabilización en ms
+        this._STABLE_MS = 250;
+
+        // ► PATRÓN SUSCRIPTORES: callbacks registrados para recibir peso
+        this._subscribers = new Set();
+        this._lastWeight = 0;          // Último peso leído (para nuevos suscriptores)
+        this._lastDataTime = null;     // Timestamp del último dato recibido
+
+        // ► AUTO-RECONNECT integrado en el servicio
+        this._userDisconnected = false;
+        this._reconnectCount = 0;
+        this._MAX_RECONNECT = 5;
+        this._RECONNECT_DELAY = 2000;
+        this._watchdogTimer = null;
+        this._WATCHDOG_INTERVAL = 15000;
+        this._WATCHDOG_CHECK = 5000;
     }
 
     get isElectron() {
         return !!(window.electron && window.electron.isElectron);
     }
 
+    // ─── SUSCRIPTORES ─────────────────────────────────────
     /**
-     * Conectar a la báscula serial (con protección anti-bucle).
+     * Registra un callback para recibir lecturas de peso.
+     * Si ya hay lectura activa, el suscriptor recibe el último peso inmediatamente.
      */
+    subscribe(callback) {
+        this._subscribers.add(callback);
+        // Enviar último peso conocido inmediatamente
+        if (this._lastWeight > 0) {
+            try { callback(this._lastWeight); } catch (e) { /* ignorar */ }
+        }
+        console.log(`📬 Suscriptor registrado. Total: ${this._subscribers.size}`);
+    }
+
+    /**
+     * Elimina un callback de la lista de suscriptores.
+     * NO detiene la lectura — otros suscriptores pueden seguir activos.
+     */
+    unsubscribe(callback) {
+        this._subscribers.delete(callback);
+        console.log(`📭 Suscriptor removido. Total: ${this._subscribers.size}`);
+    }
+
+    /**
+     * Notifica a todos los suscriptores con el nuevo peso.
+     */
+    _notifySubscribers(weight) {
+        this._lastWeight = weight;
+        this._lastDataTime = Date.now();
+        for (const cb of this._subscribers) {
+            try { cb(weight); } catch (e) { /* ignorar errores de suscriptores */ }
+        }
+    }
+
+    // ─── CONEXIÓN ──────────────────────────────────────────
     async connect(baudRate = 9600) {
-        // GUARDIA 1: Evitar conexiones simultáneas
         if (this._isConnecting) {
             console.warn("⏳ Conexión ya en progreso, ignorando solicitud duplicada.");
             return false;
@@ -39,15 +86,18 @@ export class ScaleService {
             );
         }
 
-        // GUARDIA 2: Si ya estamos conectados, no reconectar
         if (this.isConnected && this.port) {
             console.log("✅ Ya conectado, no se requiere reconexión.");
+            // Si ya estamos conectados pero no leyendo, iniciar lectura
+            if (!this._isReading) {
+                this._startReadingLoop();
+            }
             return true;
         }
 
         this._isConnecting = true;
+        this._userDisconnected = false;
 
-        // Limpiar cualquier estado anterior COMPLETAMENTE
         try {
             await this._forceCleanup();
         } catch (e) {
@@ -58,11 +108,12 @@ export class ScaleService {
             console.log("🔍 Solicitando puerto serial...");
             this.port = await navigator.serial.requestPort();
 
-            // Verificar si el puerto ya está abierto (por sesión anterior)
             if (this.port.readable) {
                 console.log("♻️ Puerto ya abierto desde sesión previa. Reutilizando.");
                 this.isConnected = true;
                 this._failCount = 0;
+                this._startReadingLoop();
+                this._startWatchdog();
                 return true;
             }
 
@@ -71,17 +122,20 @@ export class ScaleService {
             this.isConnected = true;
             this._failCount = 0;
             console.log("✅ Báscula conectada exitosamente");
+            this._startReadingLoop();
+            this._startWatchdog();
             return true;
 
         } catch (error) {
             console.error("❌ Error al conectar báscula:", error.name, error.message);
 
-            // Si el puerto ya estaba abierto (por nosotros), usarlo
             if (error.name === 'InvalidStateError') {
                 if (this.port && this.port.readable) {
                     console.warn("⚠️ Puerto ya abierto. Reutilizando conexión existente.");
                     this.isConnected = true;
                     this._failCount = 0;
+                    this._startReadingLoop();
+                    this._startWatchdog();
                     return true;
                 }
             }
@@ -89,7 +143,6 @@ export class ScaleService {
             this._failCount++;
             this.isConnected = false;
 
-            // Mensaje INTELIGENTE según el tipo de error
             if (error.name === 'NotFoundError') {
                 this.port = null;
                 throw new Error(
@@ -101,7 +154,6 @@ export class ScaleService {
 
             if (error.name === 'NetworkError') {
                 this.port = null;
-                // DETECCIÓN DE CONFLICTO con otro programa
                 throw new Error(
                     "No se pudo abrir el puerto serial. Posibles causas:\n" +
                     "• Otro programa tiene la báscula abierta (ej: Eleventa, HyperTerminal).\n" +
@@ -123,14 +175,15 @@ export class ScaleService {
         }
     }
 
-    /**
-     * Intenta reconectar a un puerto previamente autorizado (auto-connect).
-     */
     async checkPreviousConnection(baudRate = 9600) {
         if (!navigator.serial) return false;
         if (this._isConnecting) return false;
 
-        // Si ya hemos fallado 3+ veces, no intentar más automáticamente
+        // ► Si ya estamos conectados y leyendo, NO tocar nada
+        if (this.isConnected && this._isReading) {
+            return true;
+        }
+
         if (this._failCount >= 3) {
             console.warn("🛑 Demasiados fallos consecutivos. Auto-connect deshabilitado.");
             return false;
@@ -141,10 +194,11 @@ export class ScaleService {
             if (ports.length > 0) {
                 this.port = ports[0];
 
-                // Si ya está abierto (sesión anterior), reutilizar
                 if (this.port.readable) {
                     console.log("♻️ Puerto previo ya abierto. Reutilizando.");
                     this.isConnected = true;
+                    this._startReadingLoop();
+                    this._startWatchdog();
                     return true;
                 }
 
@@ -152,13 +206,16 @@ export class ScaleService {
                     await this.port.open({ baudRate });
                     this.isConnected = true;
                     this._failCount = 0;
+                    this._startReadingLoop();
+                    this._startWatchdog();
                     return true;
                 } catch (openError) {
                     if (openError.name === 'InvalidStateError' && this.port.readable) {
                         this.isConnected = true;
+                        this._startReadingLoop();
+                        this._startWatchdog();
                         return true;
                     }
-                    // NetworkError = otro programa tiene el puerto
                     this._failCount++;
                     console.warn("Auto-connect falló:", openError.name);
                     this.port = null;
@@ -172,23 +229,23 @@ export class ScaleService {
         return false;
     }
 
-    async connectSimulation(onWeightRead) {
+    async connectSimulation() {
         console.log("⚠️ Iniciando Modo Simulación");
         this.isConnected = true;
+        this._userDisconnected = false;
         this.simulationInterval = setInterval(() => {
             const randomWeight = (Math.random() * 4.5 + 0.5).toFixed(3);
             const simulatedData = `ST,GS,+  ${randomWeight}kg\r\n`;
             const weight = this.parseWeight(simulatedData);
-            if (weight !== null) onWeightRead(weight);
+            if (weight !== null) {
+                this._notifySubscribers(weight);
+            }
         }, 800);
         return true;
     }
 
-    /**
-     * Limpieza forzada de TODOS los recursos (streams, readers, timers).
-     */
+    // ─── LIMPIEZA ──────────────────────────────────────────
     async _forceCleanup() {
-        // 1. Detener timers
         if (this.simulationInterval) {
             clearInterval(this.simulationInterval);
             this.simulationInterval = null;
@@ -204,39 +261,34 @@ export class ScaleService {
         this._lastRawWeight = null;
         this._stableWeight = null;
 
-        // 2. Cancelar y liberar reader
         if (this.reader) {
-            try {
-                await this.reader.cancel();
-            } catch (e) { /* ignorar */ }
-            try {
-                this.reader.releaseLock();
-            } catch (e) { /* ignorar */ }
+            try { await this.reader.cancel(); } catch (e) { /* ignorar */ }
+            try { this.reader.releaseLock(); } catch (e) { /* ignorar */ }
             this.reader = null;
         }
 
-        // 3. Esperar a que readableStreamClosed se resuelva
         if (this.readableStreamClosed) {
-            try {
-                await this.readableStreamClosed;
-            } catch (e) { /* ignorar - puede ser error de cancelación */ }
+            try { await this.readableStreamClosed; } catch (e) { /* ignorar */ }
             this.readableStreamClosed = null;
         }
 
-        // 4. Dar tiempo al sistema para liberar el stream
         await new Promise(resolve => setTimeout(resolve, 150));
 
-        // 5. Cerrar puerto si está accesible
         if (this.port) {
             try {
                 if (this.port.readable && !this.port.readable.locked) {
                     await this.port.close();
                     console.log("🔒 Puerto cerrado correctamente.");
                 } else if (!this.port.readable) {
-                    // Puerto ya cerrado
                     console.log("🔒 Puerto ya estaba cerrado.");
                 } else {
-                    console.warn("⚠️ Puerto con stream bloqueado. No se puede cerrar, se libera referencia.");
+                    console.warn("⚠️ Puerto con stream bloqueado. Esperando liberación...");
+                    // Esperar un poco más y reintentar
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (this.port && this.port.readable && !this.port.readable.locked) {
+                        await this.port.close();
+                        console.log("🔒 Puerto cerrado tras espera.");
+                    }
                 }
             } catch (e) {
                 console.warn("⚠️ Error al cerrar puerto:", e.message);
@@ -245,47 +297,68 @@ export class ScaleService {
         }
 
         this.buffer = '';
+        this._isReading = false;
     }
 
     async disconnect() {
+        this._userDisconnected = true;
+        this._stopWatchdog();
         await this._forceCleanup();
         this.isConnected = false;
         this._failCount = 0;
+        this._reconnectCount = 0;
         console.log("🔌 Báscula desconectada.");
     }
 
-    /**
-     * Envía comandos de solicitud de peso.
-     * Soporta Torrey (P\r\n) y Rhino BAR-10 (W\r\n / $\r\n).
-     * La BAR-10 usualmente es de envío continuo, pero el polling
-     * asegura compatibilidad si está configurada en modo bajo demanda.
-     */
+    // ─── POLLING ───────────────────────────────────────────
     async sendWeightRequest() {
         if (!this.port || !this.port.writable || this.port.writable.locked) return;
 
         try {
             const encoder = new TextEncoder();
             const writer = this.port.writable.getWriter();
-            // Enviar múltiples comandos comunes para máxima compatibilidad
-            // Torrey: "P", Rhino/Genérico: "W", Indicadores: "$"
             await writer.write(encoder.encode('P\r\n'));
             writer.releaseLock();
         } catch (error) {
-            // Silenciar errores de escritura para no saturar consola
+            // Silenciar
         }
     }
 
-    async readWeight(onWeightRead) {
-        if (this.simulationInterval) return;
-        if (!this.port || !this.port.readable) throw new Error("Puerto no conectado");
+    // ─── LOOP DE LECTURA (INTERNO) ─────────────────────────
+    /**
+     * Inicia el loop de lectura SOLO si no hay uno activo.
+     * Este método es interno — los consumidores usan subscribe/unsubscribe.
+     */
+    _startReadingLoop() {
+        if (this._isReading) {
+            console.log("📖 Lectura ya activa, no se reinicia.");
+            return;
+        }
+        // Lanzar el loop sin bloquear
+        this._readLoopAsync();
+    }
 
-        // Verificar que el stream no esté bloqueado por una lectura previa
-        if (this.port.readable.locked) {
-            console.warn("⚠️ Stream de lectura ya activo. Omitiendo nueva lectura.");
+    async _readLoopAsync() {
+        if (this._isReading) return;
+        if (!this.port || !this.port.readable) {
+            console.warn("⚠️ No se puede iniciar lectura: puerto no disponible.");
             return;
         }
 
-        // Iniciar POLLING para modelos Torrey PCP-500
+        if (this.port.readable.locked) {
+            console.warn("⚠️ Stream de lectura ya bloqueado. Esperando liberación...");
+            // Esperar a que se libere
+            await new Promise(resolve => setTimeout(resolve, 500));
+            if (!this.port || !this.port.readable || this.port.readable.locked) {
+                console.warn("⚠️ Stream sigue bloqueado. Abortando.");
+                return;
+            }
+        }
+
+        this._isReading = true;
+        console.log("📖 Iniciando loop de lectura...");
+
+        // Iniciar polling
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         this.pollingInterval = setInterval(() => {
             this.sendWeightRequest();
@@ -305,16 +378,15 @@ export class ScaleService {
                 if (value) {
                     console.log("SCALE_RAW:", JSON.stringify(value));
 
-                    // INTENTO 1: Parseo binario directo del valor raw completo
-                    // (para básculas HID que envían paquetes binarios sin delimitadores de línea)
+                    // Parseo binario
                     const binaryWeight = this.parseBinaryWeight(value);
                     if (binaryWeight !== null) {
                         console.log("⚖️ Peso (binario):", binaryWeight, "kg");
-                        this._emitStableWeight(binaryWeight, onWeightRead);
+                        this._emitStableWeight(binaryWeight);
                         continue;
                     }
 
-                    // INTENTO 2: Parseo de texto estándar (con buffer por línea)
+                    // Parseo de texto
                     this.buffer += value;
                     const lines = this.buffer.split(/\r\n|\r|\n/);
                     this.buffer = lines.pop();
@@ -325,7 +397,7 @@ export class ScaleService {
                             const weight = this.parseWeight(trimmedLine);
                             if (weight !== null) {
                                 console.log("⚖️ Peso (texto):", weight, "kg");
-                                this._emitStableWeight(weight, onWeightRead);
+                                this._emitStableWeight(weight);
                             }
                         }
                     }
@@ -338,17 +410,14 @@ export class ScaleService {
                 console.error("Error leyendo báscula:", error);
             }
 
-            // Si el dispositivo se perdió físicamente, limpiar estado interno
             const msg = (error.message || '').toLowerCase();
             if (msg.includes('lost') || msg.includes('detach') || msg.includes('disconnect')) {
-                console.warn("🔌 Dispositivo perdido físicamente. Limpiando estado del servicio...");
+                console.warn("🔌 Dispositivo perdido físicamente. Limpiando estado...");
                 this.isConnected = false;
                 this.port = null;
                 this.buffer = '';
                 this._failCount = 0;
             }
-
-            throw error;
         } finally {
             if (this.reader) {
                 try { this.reader.releaseLock(); } catch (e) { }
@@ -358,53 +427,151 @@ export class ScaleService {
                 clearInterval(this.pollingInterval);
                 this.pollingInterval = null;
             }
+            this._isReading = false;
+
+            // ► AUTO-RECONEXIÓN: solo si NO fue el watchdog quien reinició
+            //   y NO fue desconexión del usuario
+            if (!this._userDisconnected && !this._skipAutoReconnect) {
+                console.log('📡 Lectura terminó. Intentando reconexión automática...');
+                this._attemptAutoReconnect();
+            } else if (this._skipAutoReconnect) {
+                console.log('📡 Lectura terminó (reinicio por watchdog, sin auto-reconnect).');
+            }
         }
     }
 
-    /**
-     * Filtro de estabilización: solo emite el peso al callback cuando
-     * la lectura se mantiene constante durante _STABLE_MS milisegundos.
-     * Evita que el campo de cantidad "parpadee" mientras el usuario
-     * coloca mercancía en la plataforma.
-     */
-    _emitStableWeight(rawWeight, callback) {
-        // Si el peso cambió, reiniciar el timer
+    // ─── AUTO-RECONEXIÓN ───────────────────────────────────
+    async _attemptAutoReconnect() {
+        if (this._userDisconnected) return;
+        if (this._reconnectCount >= this._MAX_RECONNECT) {
+            console.warn(`🛑 Máximo de reconexiones alcanzado (${this._MAX_RECONNECT}).`);
+            return;
+        }
+
+        this._reconnectCount++;
+        console.log(`🔄 Reconexión automática (${this._reconnectCount}/${this._MAX_RECONNECT})...`);
+
+        await new Promise(resolve => setTimeout(resolve, this._RECONNECT_DELAY));
+
+        if (this._userDisconnected) return;
+
+        try {
+            // Limpiar estado
+            this.isConnected = false;
+            this._failCount = 0;
+            if (this.port) {
+                try {
+                    if (this.port.readable && !this.port.readable.locked) {
+                        await this.port.close();
+                    }
+                } catch (e) { /* ignorar */ }
+                this.port = null;
+            }
+
+            const reconnected = await this.checkPreviousConnection();
+            if (reconnected) {
+                console.log('✅ Reconexión automática exitosa.');
+                this._reconnectCount = 0;
+            }
+        } catch (err) {
+            console.warn('⚠️ Reconexión falló:', err.message);
+        }
+    }
+
+    // ─── WATCHDOG ──────────────────────────────────────────
+    _startWatchdog() {
+        this._stopWatchdog();
+        this._watchdogTimer = setInterval(() => {
+            if (this._userDisconnected) return;
+            if (!this.isConnected || !this._isReading) return;
+
+            const now = Date.now();
+            if (this._lastDataTime && (now - this._lastDataTime) > this._WATCHDOG_INTERVAL) {
+                console.warn(`⏰ Watchdog: Sin datos por ${Math.round((now - this._lastDataTime) / 1000)}s. Reiniciando lectura...`);
+                // Reiniciar solo el loop de lectura, sin desconectar el puerto
+                this._restartReadingLoop();
+            }
+        }, this._WATCHDOG_CHECK);
+    }
+
+    _stopWatchdog() {
+        if (this._watchdogTimer) {
+            clearInterval(this._watchdogTimer);
+            this._watchdogTimer = null;
+        }
+    }
+
+    async _restartReadingLoop() {
+        // ► Señalar al finally block que NO haga auto-reconnect
+        this._skipAutoReconnect = true;
+
+        // Cancelar la lectura actual
+        if (this.reader) {
+            try { await this.reader.cancel(); } catch (e) { /* ignorar */ }
+            try { this.reader.releaseLock(); } catch (e) { /* ignorar */ }
+            this.reader = null;
+        }
+        if (this.readableStreamClosed) {
+            try { await this.readableStreamClosed; } catch (e) { /* ignorar */ }
+            this.readableStreamClosed = null;
+        }
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+
+        // Esperar a que el finally block termine de ejecutarse
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        this._isReading = false;
+        this._skipAutoReconnect = false;
+
+        // Refrescar timestamp para evitar watchdog inmediato
+        this._lastDataTime = Date.now();
+
+        // Si el puerto sigue disponible, reiniciar lectura
+        if (this.port && this.port.readable && !this.port.readable.locked) {
+            console.log('🔄 Watchdog: reiniciando loop de lectura...');
+            this._startReadingLoop();
+        } else {
+            console.warn("⚠️ Puerto no disponible para reiniciar lectura. Intentando reconexión...");
+            this._attemptAutoReconnect();
+        }
+    }
+
+    // ─── ESTABILIZACIÓN ────────────────────────────────────
+    _emitStableWeight(rawWeight) {
+        // SIEMPRE actualizar timestamp para que el watchdog sepa que hay datos
+        this._lastDataTime = Date.now();
+
         if (rawWeight !== this._lastRawWeight) {
+            // Peso cambió → esperar estabilización antes de notificar
             this._lastRawWeight = rawWeight;
             if (this._stableTimer) clearTimeout(this._stableTimer);
             this._stableTimer = setTimeout(() => {
                 if (this._lastRawWeight === rawWeight) {
                     this._stableWeight = rawWeight;
-                    callback(rawWeight);
+                    this._notifySubscribers(rawWeight);
                 }
             }, this._STABLE_MS);
+        } else if (this._stableWeight === rawWeight) {
+            // Peso igual y estable → re-notificar periódicamente para mantener UI viva
+            // (Sin timer de estabilización, envío directo cada lectura)
+            this._notifySubscribers(rawWeight);
         }
     }
 
+    // ─── PARSEO ────────────────────────────────────────────
     parseWeight(data) {
-        // ──────────────────────────────────────────────────────
-        // RHINO BAR-10 / Torrey / Genérico — Parseo de texto
-        // ──────────────────────────────────────────────────────
-        // Formatos conocidos:
-        //   Rhino BAR-10 (continuo):  "ST,GS,+  12.345kg" | "ST,NT,+  0.000kg"
-        //   Rhino BAR-10 (alt):       "  12.345 kg" | "+012.345"
-        //   Torrey PCP:               "ST,GS,+ 1.500kg"
-        //   Genérico:                 "W:  1.234 kg" | "1.234"
-        //   Con unidades:             "12.345 lb" (rechazar libras, solo kg)
-
-        // Rechazar lecturas en libras si están marcadas explícitamente
         if (/\blb\b/i.test(data)) {
             console.warn('⚖️ Lectura en libras detectada, ignorando:', data);
             return null;
         }
 
-        // Patrón principal: número con posible signo y espacios, seguido opcionalmente de "kg"
         const weightMatch = data.match(/([-+]?\s*[0-9]+(?:\.[0-9]+)?)\s*(?:kg)?/i);
         if (weightMatch && weightMatch[1]) {
             const cleanNumber = weightMatch[1].replace(/\s+/g, '');
             const weight = parseFloat(cleanNumber);
-            // Rhino BAR-10: capacidad máxima 60 kg, división mínima 5g
-            // Aceptamos hasta 65 kg (margen) y descartamos negativos falsos
             if (!isNaN(weight) && weight >= 0 && weight <= 65) {
                 return parseFloat(weight.toFixed(3));
             }
@@ -412,59 +579,56 @@ export class ScaleService {
         return null;
     }
 
-    /**
-     * Intenta parsear datos binarios HID de básculas USB (formato crudo).
-     * Muchas básculas baratas envían paquetes HID de 6 bytes:
-     * [reportId, status, unitCode, scalingFactor, weightLowByte, weightHighByte]
-     */
     parseBinaryWeight(rawString) {
         try {
-            // Convertir string con caracteres de control a array de bytes
             const bytes = [];
             for (let i = 0; i < rawString.length; i++) {
                 bytes.push(rawString.charCodeAt(i));
             }
 
-            // Necesitamos al menos 6 bytes para un paquete HID estándar
             if (bytes.length < 6) return null;
 
-            // Verificar que no sea solo bytes nulos (basura)
             const nonZero = bytes.filter(b => b !== 0);
             if (nonZero.length < 2) return null;
 
-            // Byte 2: Status (0x04 = estable, 0x02 = en movimiento)
-            // Byte 3: Unit code (factor de escala o unidad)
-            // Byte 4-5: Peso como entero little-endian
             const status = bytes[2];
             const scalingByte = bytes[3];
             const weightRaw = bytes[4] | (bytes[5] << 8);
 
-            // Solo aceptar si el status indica datos válidos (0x04 estable, 0x02 movimiento)
             if (status !== 0x04 && status !== 0x02 && status !== 0x21) return null;
 
-            // Calcular peso según el factor de escala
             let weight;
             if (scalingByte === 0xFF || scalingByte === 0xFE) {
-                // Factor negativo = dividir (ej: gramos a kg)
                 const divisor = scalingByte === 0xFF ? 10 : 100;
                 weight = weightRaw / divisor;
             } else if (scalingByte <= 4) {
-                // Factor de escala directo
                 const divisor = Math.pow(10, scalingByte);
                 weight = weightRaw / divisor;
             } else {
-                // Sin escala, asumir gramos
                 weight = weightRaw / 1000;
             }
 
-            // Rhino BAR-10: max 60kg
             if (!isNaN(weight) && weight >= 0 && weight <= 65) {
                 return parseFloat(weight.toFixed(3));
             }
         } catch (e) {
-            // Silenciar errores de parseo binario
+            // Silenciar
         }
         return null;
+    }
+
+    // ─── COMPATIBILIDAD LEGACY ─────────────────────────────
+    /**
+     * Método legacy para compatibilidad con código que llame readWeight(callback).
+     * Internamente registra el callback como suscriptor y delega al loop.
+     */
+    async readWeight(onWeightRead) {
+        if (onWeightRead) {
+            this.subscribe(onWeightRead);
+        }
+        if (!this._isReading) {
+            this._startReadingLoop();
+        }
     }
 }
 

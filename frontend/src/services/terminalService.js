@@ -68,7 +68,7 @@ export const terminalService = {
         // Inactivamos la terminal (Soft Delete).
         const { error } = await supabase
             .from('terminals')
-            .update({ is_active: false })
+            .update({ active: false })
             .eq('id', id);
 
         if (error) throw error;

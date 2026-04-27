@@ -6,15 +6,28 @@ export const orderService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('No authenticated user');
 
-    // 1. Obtener folio secuencial único para este negocio
+    // 1. Obtener folio secuencial único para este negocio (con reintentos)
     let folio = null;
-    try {
-      const { data: folioData, error: folioError } = await supabase.rpc('next_folio');
-      if (!folioError && folioData) {
-        folio = folioData;
+    const MAX_FOLIO_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_FOLIO_RETRIES; attempt++) {
+      try {
+        const { data: folioData, error: folioError } = await supabase.rpc('next_folio');
+        if (!folioError && folioData) {
+          folio = folioData;
+          break;
+        }
+        console.warn(`[Folio] Intento ${attempt + 1}/${MAX_FOLIO_RETRIES} falló:`, folioError?.message);
+      } catch (e) {
+        console.warn(`[Folio] Intento ${attempt + 1}/${MAX_FOLIO_RETRIES} excepción:`, e.message);
       }
-    } catch (e) {
-      console.warn('No se pudo obtener folio secuencial, se usará el ID:', e);
+      // Espera exponencial entre reintentos
+      if (attempt < MAX_FOLIO_RETRIES - 1) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
+      }
+    }
+
+    if (!folio) {
+      throw new Error('No se pudo obtener folio secuencial. Verifique su conexión e intente de nuevo.');
     }
 
     // 2. Insertar la cabecera de la orden

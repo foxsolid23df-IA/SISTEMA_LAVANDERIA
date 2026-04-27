@@ -54,19 +54,13 @@ const KgQuantityModal = ({ product, onAccept, onCancel }) => {
     onAccept(quantity);
   };
 
-  // Al cancelar o aceptar, desconectar la báscula para liberar el puerto
-  const handleCancel = async () => {
-    if (scaleConnected) {
-      try { await disconnectScale(); } catch (e) { /* silenciar */ }
-    }
+  // Al cancelar NO desconectar — la báscula debe seguir disponible para la siguiente operación
+  const handleCancel = () => {
     onCancel();
   };
 
-  const handleAcceptAndCleanup = async () => {
+  const handleAcceptAndCleanup = () => {
     if (quantity <= 0) return;
-    if (scaleConnected) {
-      try { await disconnectScale(); } catch (e) { /* silenciar */ }
-    }
     onAccept(quantity);
   };
 

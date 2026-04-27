@@ -703,7 +703,19 @@ export const Sales = () => {
                 <button
                   key={p.id}
                   onClick={() => {
-                    // Restricción: No permitir agregar más de una vez desde el grid si ya existe en el carrito
+                    // Servicios de tipo KG: abrir modal para pesar en tandas
+                    if (p.pricing_type === "kg") {
+                      setKgModalProduct(p);
+                      return;
+                    }
+
+                    // Servicios unitarios: permitir seleccionar múltiples veces (incrementa cantidad)
+                    if (isService) {
+                      agregarProducto(p);
+                      return;
+                    }
+
+                    // Productos físicos: si ya está en carrito, guiar al usuario a usar +/-
                     const itemExistente = carrito.find(
                       (item) => item.id === p.id,
                     );
@@ -711,17 +723,13 @@ export const Sales = () => {
                       Swal.fire({
                         icon: "info",
                         title: "Ya en la comanda",
-                        text: `El producto/servicio "${p.name}" ya ha sido agregado. Use los botones (+) y (-) del carrito para ajustar la cantidad.`,
+                        text: `El producto "${p.name}" ya ha sido agregado. Use los botones (+) y (-) del carrito para ajustar la cantidad.`,
                         confirmButtonColor: "#4f46e5",
                       });
                       return;
                     }
 
-                    if (p.pricing_type === "kg") {
-                      setKgModalProduct(p);
-                    } else {
-                      agregarProducto(p);
-                    }
+                    agregarProducto(p);
                   }}
                   disabled={!isService && p.stock <= 0}
                   className={`flex flex-col text-left bg-white dark:bg-slate-900 p-4 rounded-2xl border transition-all shadow-sm hover:shadow-xl group relative min-h-[190px] ${
@@ -1471,9 +1479,14 @@ export const Sales = () => {
         <KgQuantityModal
           product={kgModalProduct}
           onAccept={(quantity) => {
-            agregarProducto(kgModalProduct);
-            // Después de agregar (con cantidad 1), ajustar a la cantidad real
-            cambiarCantidad(kgModalProduct.id, quantity);
+            const existente = carrito.find(item => item.id === kgModalProduct.id);
+            if (existente) {
+              // Ya existe en el carrito → SUMAR la nueva pesada al peso anterior
+              cambiarCantidad(kgModalProduct.id, existente.quantity + quantity);
+            } else {
+              // Primera vez → agregar con cantidad inicial del peso
+              agregarProducto(kgModalProduct, quantity);
+            }
             setKgModalProduct(null);
           }}
           onCancel={() => setKgModalProduct(null)}
