@@ -53,6 +53,7 @@ export const terminalService = {
         const { data, error } = await supabase
             .from('terminals')
             .select('*')
+            .eq('active', true)
             .order('name', { ascending: true });
 
         if (error) {
@@ -64,20 +65,33 @@ export const terminalService = {
     },
 
     async deleteTerminal(id) {
-        // En un sistema contable, no borramos físicamente si hay historial. 
-        // Inactivamos la terminal (Soft Delete).
-        const { error } = await supabase
-            .from('terminals')
-            .update({ active: false })
-            .eq('id', id);
+        try {
+            // Usamos el RPC maestro para asegurar que el borrado funcione incluso con RLS estricto
+            // (Útil para soporte técnico)
+            const { data, error } = await supabase.rpc('delete_terminal_master', {
+                p_terminal_id: id
+            });
 
-        if (error) throw error;
+            if (error) {
+                console.warn('[TerminalService] RPC delete_terminal_master falló, intentando update directo:', error);
+                // Fallback a comportamiento original si el RPC falla
+                const { error: updateError } = await supabase
+                    .from('terminals')
+                    .update({ active: false })
+                    .eq('id', id);
+                
+                if (updateError) throw updateError;
+            }
 
-        // Si inactivamos la terminal actual, limpiar localStorage
-        if (id === this.getTerminalId()) {
-            this.resetLocalTerminal();
+            // Si inactivamos la terminal actual, limpiar localStorage
+            if (id === this.getTerminalId()) {
+                this.resetLocalTerminal();
+            }
+            return true;
+        } catch (error) {
+            console.error('[TerminalService] Error eliminando terminal:', error);
+            throw error;
         }
-        return true;
     },
 
     resetLocalTerminal() {
