@@ -11,6 +11,9 @@ export const maintenanceService = {
    * Obtiene el estado de salud del sistema desde la API Administrativa local
    */
   async getSystemHealth(masterPin) {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost) return { status: 'offline', database: 'n/a' };
+
     try {
       const response = await fetch(`${ADMIN_API_URL}/health?masterPin=${masterPin}`);
       if (!response.ok) throw new Error('Offline');
@@ -50,6 +53,9 @@ export const maintenanceService = {
    * Obtiene los logs de auditoria
    */
   async getAdminLogs(masterPin) {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocalhost) throw new Error('Logs locales solo disponibles en entorno local');
+
     try {
       const response = await fetch(`${ADMIN_API_URL}/logs?masterPin=${masterPin}`);
       if (!response.ok) throw new Error('Error al obtener logs');
@@ -77,8 +83,10 @@ export const maintenanceService = {
         endpoint = '/reset/devices';
       }
 
-      if (endpoint) {
-        // Intentar usar la nueva API Administrativa local primero
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+      if (endpoint && isLocalhost) {
+        // Intentar usar la nueva API Administrativa local solo si estamos en localhost
         try {
           const response = await fetch(`${ADMIN_API_URL}${endpoint}?masterPin=${masterPin}`, {
             method: 'POST'
@@ -96,6 +104,7 @@ export const maintenanceService = {
       }
 
       // Fallback a la función RPC de Supabase (comportamiento original)
+      // Asegurarse de que los parámetros coincidan con lo que espera el RPC restaurado
       const { data, error } = await supabase.rpc('reset_project_data', {
         p_reset_terminals: resetTerminals,
         p_reset_transactions: resetTransactions,

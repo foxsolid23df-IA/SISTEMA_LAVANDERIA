@@ -1,52 +1,80 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { scaleService } from '../services/scaleService';
 
-// Palabras clave que indican que el dispositivo se desconectó y hay que limpiar el estado
-const DISCONNECT_KEYWORDS = ['break', 'closed', 'disconnect', 'locked', 'lost', 'detach'];
-
+/**
+ * Hook para conectarse a la báscula serial.
+ * 
+ * ARQUITECTURA: Este hook es un "suscriptor ligero" del scaleService singleton.
+ * - Al montarse: se suscribe para recibir lecturas de peso.
+ * - Al desmontarse: se desuscribe SIN detener la lectura ni cerrar el puerto.
+ * - La lectura serial y la reconexión viven en el servicio, NO en el hook.
+ * 
+ * Esto permite que el KgQuantityModal se abra y cierre múltiples veces
+ * sin perder la conexión con la báscula.
+ */
 export const useScale = () => {
     const [weight, setWeight] = useState(0);
-    const [isConnected, setIsConnected] = useState(false);
+    const [isConnected, setIsConnected] = useState(scaleService.isConnected);
     const [error, setError] = useState(null);
-    const [isReading, setIsReading] = useState(false);
+    const [isReading, setIsReading] = useState(scaleService._isReading);
     const [lastDataTime, setLastDataTime] = useState(null);
+    const callbackRef = useRef(null);
+    const autoConnectAttempted = useRef(false);
 
-    const readingActive = useRef(false);
-    const autoConnectAttempted = useRef(false); // Solo intentar auto-connect UNA VEZ
+    // Crear callback estable que siempre apunta al estado actual
+    useEffect(() => {
+        const weightCallback = (newWeight) => {
+            setWeight(newWeight);
+            setLastDataTime(Date.now());
+            setError(null);
+        };
+        callbackRef.current = weightCallback;
 
-    const startReading = useCallback(async () => {
-        if (readingActive.current) {
-            console.warn("⚠️ Lectura ya activa, ignorando duplicado.");
-            return;
+        // Suscribirse al servicio
+        scaleService.subscribe(weightCallback);
+
+        // Sincronizar estado inicial
+        setIsConnected(scaleService.isConnected);
+        setIsReading(scaleService._isReading);
+        if (scaleService._lastWeight > 0) {
+            setWeight(scaleService._lastWeight);
         }
 
-        readingActive.current = true;
-        setIsReading(true);
-        try {
-            await scaleService.readWeight((newWeight) => {
-                setWeight(newWeight);
-                setLastDataTime(Date.now());
-                setError(null); // Limpiar error si hay datos
-            });
-        } catch (err) {
-            console.error("Scale reading stopped:", err);
-            const msg = (err.message || '').toLowerCase();
-            const isDeviceLost = DISCONNECT_KEYWORDS.some(keyword => msg.includes(keyword));
+        return () => {
+            // Al desmontar: desuscribir pero NO desconectar
+            scaleService.unsubscribe(weightCallback);
+            callbackRef.current = null;
+        };
+    }, []);
 
-            if (isDeviceLost) {
-                console.warn("🔌 Dispositivo perdido. Limpiando estado para permitir reconexión...");
-                // Limpiar estado interno del servicio para que la reconexión funcione
-                scaleService.isConnected = false;
-                scaleService.port = null;
-                scaleService._failCount = 0;
-                setIsConnected(false);
-                setWeight(0);
-                setLastDataTime(null);
+    // Sincronizar isConnected e isReading con el servicio (polling ligero)
+    useEffect(() => {
+        const syncInterval = setInterval(() => {
+            setIsConnected(scaleService.isConnected);
+            setIsReading(scaleService._isReading);
+        }, 500);
+
+        return () => clearInterval(syncInterval);
+    }, []);
+
+    // Auto-connect UNA SOLA VEZ al montar
+    useEffect(() => {
+        if (autoConnectAttempted.current) return;
+        autoConnectAttempted.current = true;
+
+        const autoConnect = async () => {
+            try {
+                const connected = await scaleService.checkPreviousConnection();
+                if (connected) {
+                    setIsConnected(true);
+                    setIsReading(true);
+                }
+            } catch (err) {
+                console.warn("Auto-connect failed (normal si no hay báscula):", err);
             }
-        } finally {
-            setIsReading(false);
-            readingActive.current = false;
-        }
+        };
+
+        autoConnect();
     }, []);
 
     const connect = useCallback(async () => {
@@ -55,26 +83,23 @@ export const useScale = () => {
             const connected = await scaleService.connect();
             if (connected) {
                 setIsConnected(true);
+                setIsReading(true);
                 setLastDataTime(Date.now());
-                startReading();
             }
         } catch (err) {
             console.error("Manual connection error:", err);
             setError(err.message || 'Error al conectar con la báscula');
             setIsConnected(false);
         }
-    }, [startReading]);
+    }, []);
 
     const connectSimulation = useCallback(async () => {
         try {
             setError(null);
-            await scaleService.connectSimulation((newWeight) => {
-                setWeight(newWeight);
-                setLastDataTime(Date.now());
-            });
+            await scaleService.connectSimulation();
             setIsConnected(true);
-            setLastDataTime(Date.now());
             setIsReading(true);
+            setLastDataTime(Date.now());
         } catch (err) {
             setError(err.message);
         }
@@ -85,7 +110,6 @@ export const useScale = () => {
             await scaleService.disconnect();
             setIsConnected(false);
             setIsReading(false);
-            readingActive.current = false;
             setLastDataTime(null);
             setWeight(0);
             setError(null);
@@ -93,33 +117,6 @@ export const useScale = () => {
             console.error(err);
         }
     }, []);
-
-    // Auto-connect UNA SOLA VEZ al montar el componente
-    useEffect(() => {
-        // SOLO intentar una vez por sesión
-        if (autoConnectAttempted.current) return;
-        autoConnectAttempted.current = true;
-
-        let mounted = true;
-        const autoConnect = async () => {
-            try {
-                const autoConnected = await scaleService.checkPreviousConnection();
-                if (mounted && autoConnected) {
-                    setIsConnected(true);
-                    startReading();
-                }
-            } catch (err) {
-                console.warn("Auto-connect failed (normal si no hay báscula):", err);
-                // NO mostrar error al usuario por auto-connect fallido
-            }
-        };
-
-        autoConnect();
-
-        return () => {
-            mounted = false;
-        };
-    }, [startReading]);
 
     return {
         weight,
