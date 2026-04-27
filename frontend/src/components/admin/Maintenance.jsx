@@ -361,8 +361,14 @@ const Maintenance = () => {
                                             <td>
                                                 <button className="btn-icon delete" onClick={async () => {
                                                     if (window.confirm(`¿Eliminar "${t.name}"?`)) {
-                                                        await terminalService.deleteTerminal(t.id);
-                                                        fetchTerminals();
+                                                        try {
+                                                            await terminalService.deleteTerminal(t.id);
+                                                            fetchTerminals();
+                                                            setMessage({ text: `Terminal "${t.name}" eliminada.`, type: 'success' });
+                                                        } catch (error) {
+                                                            console.error('Error deleting terminal:', error);
+                                                            setMessage({ text: 'Error al eliminar terminal: ' + error.message, type: 'error' });
+                                                        }
                                                     }
                                                 }}><span className="material-icons-outlined">delete_forever</span></button>
                                             </td>

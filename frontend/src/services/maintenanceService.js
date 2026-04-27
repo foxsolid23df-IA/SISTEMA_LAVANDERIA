@@ -54,7 +54,7 @@ export const maintenanceService = {
    */
   async getAdminLogs(masterPin) {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocalhost) throw new Error('Logs locales solo disponibles en entorno local');
+    if (!isLocalhost) return { logs: [] };
 
     try {
       const response = await fetch(`${ADMIN_API_URL}/logs?masterPin=${masterPin}`);
@@ -62,7 +62,7 @@ export const maintenanceService = {
       return await response.json();
     } catch (error) {
       console.error('Error in maintenanceService.getAdminLogs:', error);
-      throw error;
+      return { logs: [] };
     }
   },
 
