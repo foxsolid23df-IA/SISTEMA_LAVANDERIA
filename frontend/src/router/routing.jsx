@@ -3,7 +3,6 @@ import {
   Routes,
   Route,
   HashRouter,
-  BrowserRouter,
   Link,
   Navigate,
   useLocation,
@@ -342,10 +341,8 @@ const DriverDesktopGate = ({ onGoToPos, onContinuePreview }) => (
 );
 
 export const Routing = () => {
-  const Router = window?.electron?.isElectron ? HashRouter : BrowserRouter;
-
   return (
-    <Router>
+    <HashRouter>
       <ScrollToTop />
       <Routes>
         {/* Pantalla Cliente: Independiente de AuthProvider y ProductProvider */}
@@ -643,6 +640,6 @@ export const Routing = () => {
           }
         />
       </Routes>
-    </Router>
+    </HashRouter>
   );
 };

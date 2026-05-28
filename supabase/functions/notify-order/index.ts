@@ -241,8 +241,8 @@ serve(async (req) => {
     }
 
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://sistema-ventas-topaz.vercel.app";
-    const trackingUrl = `${appBaseUrl}/tracking/${tracking_token}`;
-    const driverPortalUrl = `${appBaseUrl}/chofer`;
+    const trackingUrl = `${appBaseUrl}/#/tracking/${tracking_token}`;
+    const driverPortalUrl = `${appBaseUrl}/#/chofer`;
     const mapsUrl = customer_address
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer_address)}`
       : "";

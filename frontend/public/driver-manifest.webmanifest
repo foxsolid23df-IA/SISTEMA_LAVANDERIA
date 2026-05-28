@@ -2,7 +2,7 @@
   "name": "Portal Repartidor",
   "short_name": "Repartidor",
   "description": "Portal movil para repartidores de lavanderia.",
-  "start_url": "/chofer",
+  "start_url": "/#/chofer",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

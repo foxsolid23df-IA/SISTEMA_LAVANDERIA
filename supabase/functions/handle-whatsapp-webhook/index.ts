@@ -328,7 +328,7 @@ serve(async (req) => {
       console.log(`[Webhook] Orden creada con éxito. ID de orden: ${order.id}, tracking_token: ${order.tracking_token}`);
 
       // 3. Responder con el enlace de seguimiento
-      const trackingUrl = `https://sistema-ventas-topaz.vercel.app/tracking/${order.tracking_token}`;
+      const trackingUrl = `https://sistema-ventas-topaz.vercel.app/#/tracking/${order.tracking_token}`;
       const replyText = `¡Gracias ${customerPushName}! 👋 Hemos recibido tu solicitud para recoger tu ropa en *${storeName}*.\n\n📍 *Dirección:* ${address}\n🚚 *Estatus:* Pendiente de asignación de repartidor.\n\nSigue el estatus en vivo de tu ropa en este enlace: ${trackingUrl}`;
 
       console.log(`[Webhook] Enviando confirmación con link de rastreo a ${customerPhone}...`);

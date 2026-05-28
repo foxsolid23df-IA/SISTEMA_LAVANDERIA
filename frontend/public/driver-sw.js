@@ -1,5 +1,5 @@
 const DRIVER_CACHE = "driver-portal-shell-v1";
-const DRIVER_SHELL = ["/chofer", "/logo_nexum.png", "/driver-manifest.webmanifest"];
+const DRIVER_SHELL = ["/", "/logo_nexum.png", "/driver-manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -28,9 +28,9 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    if (url.pathname === "/chofer") {
+    if (url.pathname === "/" && url.hash === "#/chofer") {
       event.respondWith(
-        fetch(request).catch(() => caches.match("/chofer").then((cached) => cached || caches.match("/index.html")))
+        fetch(request).catch(() => caches.match("/").then((cached) => cached || caches.match("/index.html")))
       );
     }
     return;
