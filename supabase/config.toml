@@ -1,0 +1,8 @@
+[functions.handle-whatsapp-webhook]
+verify_jwt = false
+
+[functions.get-delivery-tracking]
+verify_jwt = false
+
+[functions.update-delivery-request]
+verify_jwt = false

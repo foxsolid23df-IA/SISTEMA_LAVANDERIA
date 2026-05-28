@@ -147,6 +147,44 @@ export const MasterLicenseManager = () => {
     }
   };
 
+  const handleToggleDelivery = async (profile) => {
+    const willEnable = !profile.delivery_enabled;
+    const result = await Swal.fire({
+      title: willEnable ? "Activar Delivery" : "Desactivar Delivery",
+      html: `Tienda: <b>${profile.store_name || "Sin nombre"}</b><br/>${
+        willEnable
+          ? "Se mostraran Delivery y Portal Repartidor para este cliente."
+          : "Se ocultara el modulo sin borrar pedidos historicos."
+      }`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: willEnable ? "#0891b2" : "#64748b",
+      confirmButtonText: willEnable ? "Activar" : "Desactivar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setLoading(true);
+    const response = await adminLicenseService.toggleDeliveryModule(
+      profile.id,
+      willEnable,
+      masterPin,
+    );
+    setLoading(false);
+
+    if (response.success) {
+      Swal.fire(
+        "Actualizado",
+        willEnable ? "Delivery fue activado para esta tienda." : "Delivery fue desactivado para esta tienda.",
+        "success",
+      );
+      refreshProfiles();
+    } else {
+      Swal.fire("Error", response.error || "No se pudo actualizar el modulo.", "error");
+    }
+  };
+
   const handleSuspend = async (profile) => {
     const result = await Swal.fire({
       title: "¿Suspender Servicio?",
@@ -680,6 +718,15 @@ export const MasterLicenseManager = () => {
                             SUPER ADMIN
                           </span>
                         )}
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full border ${
+                            profile.delivery_enabled
+                              ? "bg-cyan-100 text-cyan-800 border-cyan-200"
+                              : "bg-slate-100 text-slate-700 border-slate-200"
+                          }`}
+                        >
+                          {profile.delivery_enabled ? "DELIVERY ACTIVO" : "DELIVERY OFF"}
+                        </span>
                       </div>
                     </div>
                     <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
@@ -706,6 +753,16 @@ export const MasterLicenseManager = () => {
                         {profile.role === "super_admin"
                           ? "Degradar"
                           : "Hacer Admin"}
+                      </button>
+                      <button
+                        onClick={() => handleToggleDelivery(profile)}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white shadow-sm ${
+                          profile.delivery_enabled
+                            ? "bg-slate-600 hover:bg-slate-700"
+                            : "bg-cyan-600 hover:bg-cyan-700"
+                        }`}
+                      >
+                        {profile.delivery_enabled ? "Desactivar Delivery" : "Activar Delivery"}
                       </button>
                       <button
                         onClick={() => handleSuspend(profile)}

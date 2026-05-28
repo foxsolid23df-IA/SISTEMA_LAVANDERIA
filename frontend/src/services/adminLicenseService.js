@@ -110,6 +110,24 @@ export const adminLicenseService = {
      * Crea un nuevo código de invitación para registrar nuevos negocios.
      * Usa RPC para bypasear políticas RLS.
      */
+    toggleDeliveryModule: async (userId, enableDelivery, masterPin) => {
+        try {
+            const { data, error } = await supabase.rpc('toggle_delivery_module', {
+                target_user_id: userId,
+                enable_delivery: enableDelivery,
+                master_pin: masterPin
+            });
+
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'No se pudo actualizar el modulo delivery');
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error toggling delivery module:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     createInvitationCode: async (code, notes, masterPin) => {
         try {
             const { data, error } = await supabase.rpc('create_invitation_code', {

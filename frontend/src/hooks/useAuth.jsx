@@ -431,6 +431,8 @@ export const AuthProvider = ({ children }) => {
       activeRole === "repartidor" ||
       activeRole === "cajero");
 
+  const hasDeliveryModule = profile?.delivery_enabled === true;
+
   // Memoizar el objeto de usuario para evitar cambios de referencia innecesarios
   const memoizedUser = React.useMemo(
     () => (user ? { ...user, ...profile } : null),
@@ -476,6 +478,7 @@ export const AuthProvider = ({ children }) => {
       canVoidSales,
       canViewCashReports,
       canViewCancellations,
+      hasDeliveryModule,
       activeRole,
 
       // Sistema de empleados
@@ -545,6 +548,7 @@ export const AuthProvider = ({ children }) => {
       canVoidSales,
       canViewCashReports,
       canViewCancellations,
+      hasDeliveryModule,
       activeRole,
       activeStaff,
       isLocked,

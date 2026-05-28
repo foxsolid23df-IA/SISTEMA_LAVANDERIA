@@ -170,6 +170,11 @@ const ROLES = {
   },
 };
 
+const DELIVERY_DRIVER_ROLES = ["repartidor", "chofer"];
+
+const isDeliveryDriverRole = (role) =>
+  DELIVERY_DRIVER_ROLES.includes(role?.toLowerCase());
+
 const PERMISSION_LABELS = {
   can_access_sales: {
     label: "Ventas",
@@ -268,6 +273,7 @@ export const UserManager = () => {
     name: "",
     role: "cajero",
     pin: "",
+    phone: "",
     permissions: ROLES.cajero.permissions,
   });
 
@@ -293,6 +299,7 @@ export const UserManager = () => {
       name: "",
       role: "cajero",
       pin: "",
+      phone: "",
       permissions: ROLES.cajero.permissions,
     });
     setEditingStaff(null);
@@ -305,6 +312,7 @@ export const UserManager = () => {
         name: staffMember.name,
         role: staffMember.role,
         pin: staffMember.pin,
+        phone: staffMember.phone || "",
         permissions: {
           ...(ROLES[staffMember.role]?.permissions || ROLES.cajero.permissions),
           ...staffMember.permissions,
@@ -349,6 +357,11 @@ export const UserManager = () => {
 
     if (formData.pin.length < 4 || formData.pin.length > 6) {
       Swal.fire("Error", "El PIN debe tener entre 4 y 6 dígitos", "warning");
+      return;
+    }
+
+    if (isDeliveryDriverRole(formData.role) && !formData.phone?.trim()) {
+      Swal.fire("Error", "El telefono es obligatorio para repartidores.", "warning");
       return;
     }
 
@@ -477,6 +490,7 @@ export const UserManager = () => {
               <tr>
                 <th>Nombre</th>
                 <th>Rol</th>
+                <th>Telefono</th>
                 <th>PIN</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -493,6 +507,7 @@ export const UserManager = () => {
                         {roleInfo.label}
                       </UiBadge>
                     </td>
+                    <td>{s.phone || "-"}</td>
                     <td>
                       <code className="um-code-pin">****</code>
                     </td>
@@ -546,6 +561,24 @@ export const UserManager = () => {
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="ui-input"
+                />
+              </div>
+
+              <div className="form-group mb-1-5">
+                <label className="ui-label">
+                  Telefono {isDeliveryDriverRole(formData.role) ? "*" : ""}
+                </label>
+                <input
+                  type="tel"
+                  placeholder="Ej: 5512345678"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: e.target.value.replace(/[^\d+]/g, ""),
+                    })
                   }
                   className="ui-input"
                 />

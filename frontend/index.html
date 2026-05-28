@@ -39,11 +39,11 @@
     <!-- Safari específicos -->
     <meta name="apple-touch-fullscreen" content="yes" />
 
-    <!-- Descripción para SEO y compartir -->
-    <meta
-      name="description"
-      content="Sistema de Punto de Venta profesional con gestión de inventario, ventas y cortes de caja"
-    />
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SISTEMA VENTAS | LAVANDERÍA PRO" />
+    <meta property="og:description" content="Sistema de Punto de Venta profesional con gestión de inventario, ventas y cortes de caja" />
+    <meta property="og:image" content="/vite.svg" />
 
     <title>SISTEMA VENTAS | LAVANDERÍA PRO</title>
 
@@ -68,6 +68,42 @@
           document.documentElement.classList.add("dark");
         } else {
           document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var hash = window.location.hash || "";
+        var isDriverRoute = path === "/chofer" || hash === "#/chofer" || hash.indexOf("#/chofer?") === 0;
+
+        if (!isDriverRoute) return;
+
+        document.title = "Portal Repartidor";
+
+        var manifest = document.createElement("link");
+        manifest.id = "driver-pwa-manifest";
+        manifest.rel = "manifest";
+        manifest.href = "/driver-manifest.webmanifest";
+        document.head.appendChild(manifest);
+
+        var appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+        if (appleTitle) appleTitle.setAttribute("content", "Repartidor");
+
+        var themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.setAttribute("content", "#0891b2");
+
+        var appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        appleIcon.href = "/logo_nexum.png";
+        document.head.appendChild(appleIcon);
+
+        if ("serviceWorker" in navigator) {
+          window.addEventListener("load", function () {
+            navigator.serviceWorker.register("/driver-sw.js").catch(function (err) {
+              console.warn("[Driver PWA] No se pudo registrar service worker:", err);
+            });
+          });
         }
       })();
     </script>

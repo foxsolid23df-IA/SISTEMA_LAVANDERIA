@@ -110,7 +110,11 @@ describe('salesService', () => {
 
             const result = await salesService.createSale(mockSaleData);
 
-            expect(result).toEqual(mockSaleCreated);
+            expect(result).toEqual({
+                ...mockSaleCreated,
+                pin_facturacion: expect.any(String),
+                ticket_uuid: expect.any(String)
+            });
             expect(supabase.from).toHaveBeenCalledWith('sales');
             expect(mockQuery.insert).toHaveBeenCalled();
             expect(mockQuery.single).toHaveBeenCalled();

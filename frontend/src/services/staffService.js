@@ -37,6 +37,7 @@ export const staffService = {
                 name: staff.name,
                 role: staff.role || 'cajero',
                 pin: staff.pin,
+                phone: staff.phone || null,
                 permissions: staff.permissions || {},
                 active: true,
                 user_id: userData.user.id
@@ -56,6 +57,7 @@ export const staffService = {
                 name: updates.name,
                 role: updates.role,
                 pin: updates.pin,
+                phone: updates.phone || null,
                 permissions: updates.permissions,
                 active: updates.active
             })

@@ -19,12 +19,15 @@ vi.mock('../supabase', () => {
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(),
-        single: vi.fn()
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: null, error: null })
     };
     return {
         supabase: {
-            from: vi.fn(() => mockQuery)
+            from: vi.fn(() => mockQuery),
+            auth: {
+                getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-123' } } })
+            }
         }
     };
 });
@@ -35,6 +38,8 @@ describe('cashSessionService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockQuery = supabase.from(); // Obtener la referencia al objeto mockQuery
+        mockQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
+        mockQuery.single.mockResolvedValue({ data: null, error: null });
     });
 
     describe('getActiveSession', () => {
@@ -54,7 +59,7 @@ describe('cashSessionService', () => {
             expect(session).toEqual(mockSession);
             expect(supabase.from).toHaveBeenCalledWith('cash_sessions');
             expect(mockQuery.eq).toHaveBeenCalledWith('status', 'open');
-            expect(mockQuery.eq).toHaveBeenCalledWith('terminal_id', 'term-1');
+            expect(mockQuery.eq).toHaveBeenCalledWith('user_id', 'user-123');
         });
     });
 

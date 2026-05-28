@@ -3,9 +3,11 @@ import {
   Routes,
   Route,
   HashRouter,
+  BrowserRouter,
   Link,
   Navigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { Sidebar } from "../components/sidebar/Sidebar";
 import { Sales } from "../components/sales/Sales";
@@ -34,6 +36,9 @@ import Maintenance from "../components/admin/Maintenance";
 import BillingIssuers from "../components/config/BillingIssuers";
 import { InvoiceCancellation } from "../components/config/InvoiceCancellation";
 import { ServiciosExpressSettings } from "../components/config/ServiciosExpressSettings";
+import { DeliveryDashboard } from "../components/delivery/DeliveryDashboard";
+import { DriverPortal } from "../components/delivery/DriverPortal";
+import { OrderTracking } from "../components/delivery/OrderTracking";
 
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
@@ -50,7 +55,7 @@ import { LatencyIndicator } from "../components/common/LatencyIndicator";
 import { SuperAdminLogin } from "../components/auth/SuperAdminLogin";
 import { SuperAdminLayout } from "../components/common/SuperAdminLayout";
 
-const PrivateLayout = ({ children }) => {
+const PrivateLayout = ({ children, chrome = true }) => {
   const {
     user,
     loading,
@@ -165,6 +170,10 @@ const PrivateLayout = ({ children }) => {
         );
     } */
 
+  if (!chrome) {
+    return <LicenseGuard>{children}</LicenseGuard>;
+  }
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -205,14 +214,144 @@ const DefaultRoute = () => {
   return <Sales />;
 };
 
-export const Routing = () => {
+const isDriverStandalone = () =>
+  window.matchMedia?.("(display-mode: standalone)")?.matches ||
+  window.navigator?.standalone === true;
+
+const isDriverMobileViewport = () =>
+  window.matchMedia?.("(pointer: coarse)")?.matches || window.innerWidth <= 768;
+
+const getDriverPosPath = () => (window?.electron?.isElectron ? "/ventas" : "/estadisticas");
+
+const ModuleUnavailable = ({ title = "Modulo no disponible para esta tienda" }) => {
+  const navigate = useNavigate();
   return (
-    <HashRouter>
+    <main className="driver-desktop-gate">
+      <section className="driver-desktop-card">
+        <div className="driver-desktop-icon">
+          <span className="material-icons-outlined">block</span>
+        </div>
+        <span className="driver-desktop-kicker">Modulo opcional</span>
+        <h1>{title}</h1>
+        <p>
+          Delivery y portal repartidor estan apagados para esta tienda.
+          Contacta al administrador para activarlo desde el Portal Maestro.
+        </p>
+        <div className="driver-desktop-actions">
+          <button type="button" className="driver-desktop-primary" onClick={() => navigate(getDriverPosPath(), { replace: true })}>
+            Volver al POS
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+};
+
+const DeliveryModuleRoute = () => {
+  const { hasDeliveryModule } = useAuth();
+  if (!hasDeliveryModule) return <ModuleUnavailable />;
+  return <DeliveryDashboard />;
+};
+
+const DriverPortalRoute = () => {
+  const { hasDeliveryModule } = useAuth();
+  const navigate = useNavigate();
+  const [desktopPreview, setDesktopPreview] = useState(
+    sessionStorage.getItem("driver_portal_desktop_preview") === "true",
+  );
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = "Portal Repartidor";
+
+    let manifest = document.getElementById("driver-pwa-manifest");
+    if (!manifest) {
+      manifest = document.createElement("link");
+      manifest.id = "driver-pwa-manifest";
+      manifest.rel = "manifest";
+      document.head.appendChild(manifest);
+    }
+    manifest.href = "/driver-manifest.webmanifest";
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/driver-sw.js").catch((err) => {
+        console.warn("[Driver PWA] No se pudo registrar service worker:", err);
+      });
+    }
+
+    return () => {
+      document.title =
+        previousTitle === "Portal Repartidor"
+          ? "SISTEMA VENTAS | LAVANDERIA PRO"
+          : previousTitle;
+      document.getElementById("driver-pwa-manifest")?.remove();
+    };
+  }, []);
+
+  const shouldGateDesktop =
+    !desktopPreview && !isDriverStandalone() && !isDriverMobileViewport();
+
+  if (!hasDeliveryModule) {
+    return <ModuleUnavailable />;
+  }
+
+  const goToPos = () => {
+    sessionStorage.removeItem("driver_portal_desktop_preview");
+    navigate(getDriverPosPath(), { replace: true });
+  };
+
+  const continuePreview = () => {
+    sessionStorage.setItem("driver_portal_desktop_preview", "true");
+    setDesktopPreview(true);
+  };
+
+  if (shouldGateDesktop) {
+    return (
+      <DriverDesktopGate
+        onGoToPos={goToPos}
+        onContinuePreview={continuePreview}
+      />
+    );
+  }
+
+  return <DriverPortal desktopPreview={desktopPreview} onExitPreview={goToPos} />;
+};
+
+const DriverDesktopGate = ({ onGoToPos, onContinuePreview }) => (
+  <main className="driver-desktop-gate">
+    <section className="driver-desktop-card">
+      <div className="driver-desktop-icon">
+        <span className="material-icons-outlined">install_mobile</span>
+      </div>
+      <span className="driver-desktop-kicker">Modulo movil</span>
+      <h1>Portal repartidor</h1>
+      <p>
+        Esta pantalla esta pensada para instalarse en el celular del repartidor como app.
+        En esta computadora puedes volver al POS o abrirla solo para pruebas.
+      </p>
+      <div className="driver-desktop-actions">
+        <button type="button" className="driver-desktop-primary" onClick={onGoToPos}>
+          Ir al POS
+        </button>
+        <button type="button" className="driver-desktop-secondary" onClick={onContinuePreview}>
+          Continuar en modo prueba
+        </button>
+      </div>
+    </section>
+  </main>
+);
+
+export const Routing = () => {
+  const Router = window?.electron?.isElectron ? HashRouter : BrowserRouter;
+
+  return (
+    <Router>
       <ScrollToTop />
       <Routes>
         {/* Pantalla Cliente: Independiente de AuthProvider y ProductProvider */}
         <Route path="/customer-display" element={<CustomerDisplay />} />
         <Route path="/mobile-capture/:sessionId" element={<MobileCapture />} />
+        <Route path="/tracking/:token" element={<OrderTracking />} />
 
         {/* Rutas Exclusivas SuperAdmin */}
         <Route path="/portal-maestro" element={<SuperAdminLogin />} />
@@ -318,6 +457,22 @@ export const Routing = () => {
                       element={
                         <PrivateLayout>
                           <ClientManager />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/delivery"
+                      element={
+                        <PrivateLayout>
+                          <DeliveryModuleRoute />
+                        </PrivateLayout>
+                      }
+                    />
+                    <Route
+                      path="/chofer"
+                      element={
+                        <PrivateLayout chrome={false}>
+                          <DriverPortalRoute />
                         </PrivateLayout>
                       }
                     />
@@ -488,6 +643,6 @@ export const Routing = () => {
           }
         />
       </Routes>
-    </HashRouter>
+    </Router>
   );
 };

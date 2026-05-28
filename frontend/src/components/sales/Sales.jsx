@@ -10,6 +10,7 @@ import { businessSettingsService } from "../../services/businessSettingsService"
 import { exchangeRateService } from "../../services/exchangeRateService";
 import { printService } from "../../services/printService";
 import { expressServicesService } from "../../services/expressServicesService";
+import { deliveryService } from "../../services/deliveryService";
 
 import { useSettings } from "../../contexts/SettingsContext";
 import { formatearDinero } from "../../utils";
@@ -64,6 +65,7 @@ export const Sales = () => {
   });
   const [notas, setNotas] = useState("");
   const [anticipo, setAnticipo] = useState(0);
+  const [deliveryContext, setDeliveryContext] = useState(null);
 
   // Estados de Pago
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -108,6 +110,88 @@ export const Sales = () => {
       })
       .catch(err => console.error("Error loading express services:", err));
   }, []);
+
+  // Efecto para precargar carrito desde delivery
+  useEffect(() => {
+    const deliveryPreload = sessionStorage.getItem("delivery_preload_cart");
+    if (deliveryPreload) {
+      try {
+        const data = JSON.parse(deliveryPreload);
+        setDeliveryContext(data);
+        
+        // 1. Limpiar carrito existente para evitar mezclas
+        vaciarCarrito();
+        
+        // 2. Crear item ficticio para representar el servicio de lavanderia del pedido delivery.
+        const garmentDetail = data.garment_summary || data.customer_item_description || 'PRENDAS';
+        const deliveryItem = {
+          id: `delivery-service-${data.delivery_order_id}`,
+          name: `SERVICIO DE LAVANDERIA: ${garmentDetail.toUpperCase()}`,
+          price: parseFloat(data.service_cost) || 0,
+          type: "SERVICE",
+          pricing_type: "unit",
+          is_common: true,
+          stock: 999999
+        };
+        
+        // Agregar el servicio de ropa al carrito
+        agregarProducto(deliveryItem, 1);
+        
+        // Si hay una tarifa de envío, agregarla como ítem
+        if (parseFloat(data.delivery_fee) > 0) {
+          const feeItem = {
+            id: `delivery-fee-${data.delivery_order_id}`,
+            name: "TARIFA DE RECOGIDA / DELIVERY",
+            price: parseFloat(data.delivery_fee),
+            type: "PRODUCT",
+            pricing_type: "unit",
+            is_common: true,
+            stock: 999999
+          };
+          agregarProducto(feeItem, 1);
+        }
+        
+        // 3. Cargar datos del cliente
+        customerService.searchCustomers(data.customer_phone)
+          .then(results => {
+            if (results && results.length > 0) {
+              setClienteSeleccionado(results[0]);
+              setBusquedaCliente(results[0].name);
+            } else {
+              const tempClient = { id: null, name: data.customer_name, phone: data.customer_phone };
+              setClienteSeleccionado(tempClient);
+              setBusquedaCliente(data.customer_name);
+            }
+          })
+          .catch(err => {
+            console.error("Error buscando cliente de delivery:", err);
+            const tempClient = { id: null, name: data.customer_name, phone: data.customer_phone };
+            setClienteSeleccionado(tempClient);
+            setBusquedaCliente(data.customer_name);
+          });
+          
+        // 4. Copiar notas e inyectar ID del delivery en las notas
+        setNotas(`[Delivery #${data.delivery_order_id}] ${data.customer_item_description ? `Cliente entrego: ${data.customer_item_description}. ` : ''}${data.notes || ''}`);
+        setAnticipo(Number(data.paid_amount) || 0);
+        
+        // 5. Mostrar confirmación de carga
+        Swal.fire({
+          icon: "success",
+          title: "Datos de Delivery Cargados",
+          text: `Pedido #${data.delivery_order_id} cargado con éxito en caja.`,
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end"
+        });
+        
+      } catch (err) {
+        console.error("Error al parsear preload de delivery:", err);
+      } finally {
+        sessionStorage.removeItem("delivery_preload_cart");
+      }
+    }
+  }, [productos]);
 
   // Mobile Cart State
   const [showMobileCart, setShowMobileCart] = useState(false);
@@ -364,6 +448,14 @@ export const Sales = () => {
 
       const result = await orderService.createOrder(orderData);
 
+      if (deliveryContext?.delivery_order_id) {
+        try {
+          await deliveryService.linkDeliveryToPosOrder(deliveryContext.delivery_order_id, result.id);
+        } catch (deliveryLinkError) {
+          console.warn("No se pudo vincular delivery con orden POS:", deliveryLinkError);
+        }
+      }
+
       const recibidoMXN = activeCurrencies.reduce((acc, curr) => {
         return acc + (parseFloat(cashPayments[curr.currency_code]) || 0) * curr.rate;
       }, 0);
@@ -384,6 +476,7 @@ export const Sales = () => {
       setClienteSeleccionado(null);
       setBusquedaCliente("");
       setNotas("");
+      setDeliveryContext(null);
       setAnticipo(0);
       setCashPayments({});
     } catch (error) {

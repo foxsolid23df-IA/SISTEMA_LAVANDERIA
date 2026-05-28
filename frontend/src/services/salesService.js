@@ -357,7 +357,22 @@ export const salesService = {
         if (!user) throw new Error("No authenticated user");
 
         const ahora = new Date();
-        // ... (resto del código de fechas igual)
+        const inicioDelDia = new Date(ahora);
+        inicioDelDia.setHours(0, 0, 0, 0);
+
+        const finDelDia = new Date(ahora);
+        finDelDia.setHours(23, 59, 59, 999);
+
+        const diaActual = ahora.getDay();
+        const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1;
+        const inicioSemana = new Date(ahora);
+        inicioSemana.setDate(ahora.getDate() - diasHastaLunes);
+        inicioSemana.setHours(0, 0, 0, 0);
+
+        const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0, 0);
+
+        const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1, 0, 0, 0, 0);
+        const finMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59, 999);
 
         console.log('[salesService] Consultando ventas desde Supabase...')
 

@@ -43,6 +43,7 @@ export const Sidebar = () => {
     canViewCancellations,
     canViewSupplies,
     canManageInventory,
+    hasDeliveryModule,
   } = useAuth();
 
   const [showCashCut, setShowCashCut] = useState(false);
@@ -56,6 +57,12 @@ export const Sidebar = () => {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const isOnline = useConnectivity();
   const isDesktop = !!window?.electron?.isElectron;
+  const deliveryDriverRoles = ["repartidor", "chofer"];
+  const canAccessDriverPortal =
+    hasDeliveryModule &&
+    (isAdmin ||
+      deliveryDriverRoles.includes(activeStaff?.role?.toLowerCase()) ||
+      deliveryDriverRoles.includes(activeRole?.toLowerCase()));
 
   useEffect(() => {
     if (window.electron?.onUpdaterMessage) {
@@ -331,6 +338,46 @@ export const Sidebar = () => {
                 assignment
               </span>
               <span className="text-sm font-bold">Gestión de Órdenes</span>
+            </NavLink>
+          )}
+
+          {hasDeliveryModule && canManageOrders && (
+            <NavLink
+              to="/delivery"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                local_shipping
+              </span>
+              <span className="text-sm font-bold">Delivery y Recogida</span>
+            </NavLink>
+          )}
+
+          {canAccessDriverPortal && (
+            <NavLink
+              to="/chofer"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                directions_car
+              </span>
+              <span className="text-sm font-bold">Mi Portal Repartidor</span>
             </NavLink>
           )}
 

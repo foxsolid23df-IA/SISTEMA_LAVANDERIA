@@ -59,7 +59,7 @@ const HOST = '127.0.0.1'; // Localhost puro
 
 async function startServer() {
     try {
-        await sequelize.sync(); // Sincroniza modelos con la base de datos
+        await sequelize.sync({ alter: true }); // Sincroniza modelos con la base de datos
 
         // Crear administrador inicial si no existe
         const adminExists = await User.findOne({ where: { profile: 'admin' } });
