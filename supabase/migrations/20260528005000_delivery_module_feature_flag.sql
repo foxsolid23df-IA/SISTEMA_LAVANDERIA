@@ -23,17 +23,23 @@ security definer
 set search_path = public
 as $$
 declare
-  v_caller_role text;
+  v_is_super_admin boolean;
 begin
   if master_pin is null or master_pin <> '2026SOP' then
     raise exception 'PIN Maestro incorrecto';
   end if;
 
-  select p.role into v_caller_role
-  from public.profiles p
-  where p.id = auth.uid();
+  select
+    public.is_super_admin()
+    or exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.role = 'super_admin'
+    )
+  into v_is_super_admin;
 
-  if v_caller_role is null or v_caller_role <> 'super_admin' then
+  if coalesce(v_is_super_admin, false) is not true then
     raise exception 'Se requiere rol super_admin';
   end if;
 
@@ -66,17 +72,23 @@ security definer
 set search_path = public
 as $$
 declare
-  v_caller_role text;
+  v_is_super_admin boolean;
 begin
   if master_pin is null or master_pin <> '2026SOP' then
     return jsonb_build_object('success', false, 'error', 'PIN Maestro incorrecto');
   end if;
 
-  select p.role into v_caller_role
-  from public.profiles p
-  where p.id = auth.uid();
+  select
+    public.is_super_admin()
+    or exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.role = 'super_admin'
+    )
+  into v_is_super_admin;
 
-  if v_caller_role is null or v_caller_role <> 'super_admin' then
+  if coalesce(v_is_super_admin, false) is not true then
     return jsonb_build_object('success', false, 'error', 'Se requiere rol super_admin');
   end if;
 
