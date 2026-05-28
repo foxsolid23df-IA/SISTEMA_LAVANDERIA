@@ -60,11 +60,45 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    const { data: existingOrder, error: lookupError } = await supabase
+      .from("delivery_orders")
+      .select("id, user_id, status, payment_preference_confirmed_at")
+      .eq("tracking_token", token)
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error("[update-delivery-request] Error consultando pedido:", lookupError);
+      return jsonResponse({ error: "No se pudo consultar la solicitud." }, 500);
+    }
+
+    if (!existingOrder) {
+      return jsonResponse({ error: "Pedido no encontrado." }, 404);
+    }
+
+    if (!["requested"].includes(existingOrder.status)) {
+      return jsonResponse({ error: "La solicitud ya fue asignada o cerrada y no se puede modificar." }, 409);
+    }
+
+    if (existingOrder.payment_preference_confirmed_at) {
+      return jsonResponse({ error: "La preferencia de pago ya fue confirmada." }, 409);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("delivery_enabled")
+      .eq("id", existingOrder.user_id)
+      .maybeSingle();
+
+    if (profile?.delivery_enabled !== true) {
+      return jsonResponse({ error: "Pedido no encontrado." }, 404);
+    }
+
     const { data: order, error } = await supabase
       .from("delivery_orders")
       .update(updatePayload)
-      .eq("tracking_token", token)
-      .not("status", "in", '("completed","cancelled")')
+      .eq("id", existingOrder.id)
+      .eq("status", "requested")
+      .is("payment_preference_confirmed_at", null)
       .select("id")
       .maybeSingle();
 

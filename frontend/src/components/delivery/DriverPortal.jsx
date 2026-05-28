@@ -18,7 +18,6 @@ import {
 } from "react-icons/fi";
 import Swal from "sweetalert2";
 import { DELIVERY_PAYMENT_METHODS, DELIVERY_PAYMENT_PREFERENCES, deliveryService } from "../../services/deliveryService";
-import { staffService } from "../../services/staffService";
 import { supabase } from "../../supabase";
 import "./DriverPortal.css";
 
@@ -67,10 +66,10 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         [orders, selectedOrderId]
     );
 
-    const loadDriverOrders = async (driverId) => {
+    const loadDriverOrders = async (driverId, sessionToken = driver?.session_token) => {
         try {
             setLoading(true);
-            const data = await deliveryService.getDriverOrders(driverId);
+            const data = await deliveryService.getDriverOrders(driverId, sessionToken);
             setOrders(data);
             setSelectedOrderId((currentId) => {
                 if (!currentId) return null;
@@ -93,24 +92,18 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
         setLoading(true);
         try {
-            const staffList = await staffService.getStaff();
-            const matchingStaff = staffList.find((staffMember) =>
-                isDeliveryDriver(staffMember) &&
-                staffMember.pin &&
-                staffMember.pin.trim() !== "" &&
-                staffMember.pin === pin
-            );
+            const verifiedDriver = await deliveryService.verifyDriverPin(pin);
 
-            if (!matchingStaff) {
+            if (!verifiedDriver || !isDeliveryDriver({ ...verifiedDriver, active: true })) {
                 Swal.fire("Acceso denegado", "PIN incorrecto o empleado no registrado como repartidor activo.", "error");
                 setPin("");
                 return;
             }
 
-            setDriver(matchingStaff);
+            setDriver(verifiedDriver);
             setAuthenticated(true);
-            localStorage.setItem("driver_session", JSON.stringify(matchingStaff));
-            await loadDriverOrders(matchingStaff.id);
+            localStorage.setItem("driver_session", JSON.stringify(verifiedDriver));
+            await loadDriverOrders(verifiedDriver.id, verifiedDriver.session_token);
             setPin("");
         } catch (err) {
             console.error("Error al validar PIN:", err);
@@ -124,9 +117,13 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         const savedSession = localStorage.getItem("driver_session");
         if (savedSession) {
             const parsedDriver = JSON.parse(savedSession);
+            if (!parsedDriver?.session_token) {
+                localStorage.removeItem("driver_session");
+                return;
+            }
             setDriver(parsedDriver);
             setAuthenticated(true);
-            loadDriverOrders(parsedDriver.id);
+            loadDriverOrders(parsedDriver.id, parsedDriver.session_token);
         }
     }, []);
 
@@ -138,7 +135,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "delivery_orders", filter: `driver_id=eq.${driver.id}` },
-                () => loadDriverOrders(driver.id)
+                () => loadDriverOrders(driver.id, driver.session_token)
             )
             .subscribe();
 
@@ -204,13 +201,15 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                 : order.pickup_evidence_path || null;
 
             await deliveryService.updateOrderStatus(order.id, "picked_up", {
+                driver_id: driver.id,
+                driver_session_token: driver.session_token,
                 driver_name: driver.name,
                 garment_summary: value.summary,
                 pickup_evidence_path: evidencePath
             });
 
             Swal.fire("Recogida registrada", "La ruta se actualizo correctamente.", "success");
-            await loadDriverOrders(driver.id);
+            await loadDriverOrders(driver.id, driver.session_token);
         } catch (err) {
             console.error("Error registrando recogida:", err);
             Swal.fire("Error", err.message || "No se pudo registrar la recogida.", "error");
@@ -235,10 +234,12 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         try {
             setLoading(true);
             await deliveryService.updateOrderStatus(order.id, "delivered_to_store", {
+                driver_id: driver.id,
+                driver_session_token: driver.session_token,
                 driver_name: driver.name
             });
             Swal.fire("Entregado", "Pedido marcado como entregado en lavanderia.", "success");
-            await loadDriverOrders(driver.id);
+            await loadDriverOrders(driver.id, driver.session_token);
         } catch (err) {
             console.error("Error entregando en sucursal:", err);
             Swal.fire("Error", "No se pudo actualizar el estatus.", "error");
@@ -302,7 +303,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             setLoading(true);
             await deliveryService.createDriverPayment(order, formValues, driver);
             Swal.fire("Pago registrado", "El pago quedo pendiente de conciliacion en sucursal.", "success");
-            await loadDriverOrders(driver.id);
+            await loadDriverOrders(driver.id, driver.session_token);
         } catch (err) {
             console.error("Error registrando pago del chofer:", err);
             Swal.fire("Error", err.message || "No se pudo registrar el pago.", "error");
@@ -366,7 +367,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                             POS
                         </button>
                     )}
-                    <button className="driver-icon-button" onClick={() => loadDriverOrders(driver.id)} title="Actualizar">
+                        <button className="driver-icon-button" onClick={() => loadDriverOrders(driver.id, driver.session_token)} title="Actualizar">
                         <FiRefreshCw />
                     </button>
                     <button className="driver-icon-button" onClick={handleLogout} title="Salir">
@@ -397,7 +398,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                             <FiCheckSquare size={44} />
                             <h2>Todo al dia</h2>
                             <p>No tienes rutas asignadas por el momento.</p>
-                            <button className="btn-driver-refresh" onClick={() => loadDriverOrders(driver.id)}>
+                            <button className="btn-driver-refresh" onClick={() => loadDriverOrders(driver.id, driver.session_token)}>
                                 Actualizar
                             </button>
                         </div>

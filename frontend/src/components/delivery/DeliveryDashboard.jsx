@@ -457,7 +457,7 @@ export const DeliveryDashboard = () => {
         if (!order.pickup_evidence_path) return;
 
         try {
-            const signedUrl = await deliveryService.getPickupEvidenceSignedUrl(order.pickup_evidence_path);
+            const signedUrl = await deliveryService.getPickupEvidenceSignedUrl(order);
             if (!signedUrl) throw new Error("No se pudo generar el enlace de evidencia.");
 
             Swal.fire({

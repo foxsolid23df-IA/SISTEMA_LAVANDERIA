@@ -76,6 +76,16 @@ const getOrderByTrackingTokenDevFallback = async (trackingToken) => {
     };
 };
 
+const runDeliveryAction = async (action, payload = {}) => {
+    const { data, error } = await supabase.functions.invoke('delivery-actions', {
+        body: { action, payload }
+    });
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+};
+
 export const deliveryService = {
     // ─── GESTIÓN DE DIRECTORIO DE CLIENTES ─────────────────────────────
     
@@ -136,20 +146,13 @@ export const deliveryService = {
     },
 
     // Obtener pedidos asignados a un repartidor específico
-    getDriverOrders: async (driverId) => {
-        const { data, error } = await supabase
-            .from('delivery_orders')
-            .select(`
-                *,
-                customers:customer_id (*),
-                delivery_payments (*)
-            `)
-            .eq('driver_id', driverId)
-            .not('status', 'in', '("completed","cancelled")')
-            .order('created_at', { ascending: true });
+    getDriverOrders: async (driverId, driverSessionToken) => {
+        const data = await runDeliveryAction('get_driver_orders', {
+            driver_id: driverId,
+            driver_session_token: driverSessionToken
+        });
 
-        if (error) throw error;
-        return data || [];
+        return data?.orders || [];
     },
 
     // Crear un nuevo pedido de recogida
@@ -536,6 +539,156 @@ export const deliveryService = {
         return true;
     },
 
+    // Overrides de produccion: las acciones criticas se ejecutan en Edge Function.
+    assignDriver: async (orderId, driverId, driverName, driverPhone) => {
+        const result = await runDeliveryAction('assign_driver', {
+            order_id: orderId,
+            driver_id: driverId
+        });
+        const order = result.order;
+        const driver = result.driver || { name: driverName, phone: driverPhone };
+
+        let notificationResult = null;
+        try {
+            notificationResult = await deliveryService.triggerNotification(order, {
+                status: 'assigned',
+                driver_name: driver.name || driverName,
+                driver_phone: driver.phone || driverPhone
+            });
+        } catch (e) {
+            console.error('[DeliveryService] Error al disparar notificacion:', e);
+        }
+
+        return {
+            ...order,
+            _notificationResult: notificationResult || { success: false, error: "No se pudo enviar la notificacion." }
+        };
+    },
+
+    updateOrderStatus: async (orderId, newStatus, extraData = {}) => {
+        const actionByStatus = {
+            picked_up: 'mark_picked_up',
+            delivered_to_store: 'deliver_to_store',
+            completed: 'complete_order',
+            cancelled: 'cancel_order'
+        };
+        const action = actionByStatus[newStatus];
+        if (!action) {
+            throw new Error(`Accion de delivery no soportada para estatus ${newStatus}.`);
+        }
+
+        const result = await runDeliveryAction(action, {
+            order_id: orderId,
+            driver_id: extraData.driver_id,
+            driver_session_token: extraData.driver_session_token,
+            garment_summary: extraData.garment_summary,
+            pickup_evidence_path: extraData.pickup_evidence_path,
+            service_cost: extraData.service_cost,
+            allow_balance: extraData.allow_balance === true
+        });
+        const order = result.order;
+
+        try {
+            await deliveryService.triggerNotification(order, {
+                status: newStatus,
+                driver_name: extraData.driver_name
+            });
+        } catch (e) {
+            console.error('[DeliveryService] Error al disparar notificacion:', e);
+        }
+
+        return order;
+    },
+
+    updatePickupQuote: async (orderId, deliveryFee, quoteNotes = '') => {
+        const fee = Number(deliveryFee);
+        if (!Number.isFinite(fee) || fee < 0) {
+            throw new Error("Captura una tarifa de recogida valida. Puede ser $0.00 si no se cobrara delivery.");
+        }
+
+        const result = await runDeliveryAction('quote_pickup', {
+            order_id: orderId,
+            delivery_fee: fee,
+            quote_notes: quoteNotes
+        });
+        const order = result.order;
+
+        let notificationResult = null;
+        try {
+            notificationResult = await deliveryService.triggerNotification(order, {
+                status: 'quoted'
+            });
+        } catch (err) {
+            console.warn('[DeliveryService] Tarifa guardada, pero no se pudo notificar al cliente:', err);
+        }
+
+        return {
+            ...order,
+            _notificationResult: notificationResult
+        };
+    },
+
+    getPickupEvidenceSignedUrl: async (order) => {
+        if (!order?.id || !order?.pickup_evidence_path) return null;
+        const data = await runDeliveryAction('get_pickup_evidence_url', {
+            order_id: order.id
+        });
+
+        return data?.signedUrl || null;
+    },
+
+    verifyDriverPin: async (pin) => {
+        const { data, error } = await supabase.functions.invoke('verify-driver-pin', {
+            body: { pin }
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        return data?.driver;
+    },
+
+    createDriverPayment: async (order, paymentData, driver) => {
+        const amount = Number(paymentData.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new Error("Ingresa un monto valido.");
+        }
+
+        if (['transferencia', 'tarjeta'].includes(paymentData.payment_method) && !paymentData.reference?.trim()) {
+            throw new Error("La referencia es obligatoria para transferencia o tarjeta.");
+        }
+
+        const result = await runDeliveryAction('register_driver_payment', {
+            order_id: order.id,
+            driver_id: driver?.id,
+            driver_session_token: driver?.session_token,
+            amount,
+            payment_method: paymentData.payment_method,
+            reference: paymentData.reference || ''
+        });
+        const payment = result.payment;
+
+        try {
+            await deliveryService.triggerNotification(order, {
+                status: 'payment_received',
+                payment_amount: amount,
+                payment_method: paymentData.payment_method,
+                payment_reference: paymentData.reference || ''
+            });
+        } catch (err) {
+            console.warn('[DeliveryService] Pago registrado, pero no se pudo enviar comprobante:', err);
+        }
+
+        return payment;
+    },
+
+    reconcileDriverPayment: async (paymentId) => {
+        const result = await runDeliveryAction('reconcile_payment', {
+            payment_id: paymentId
+        });
+
+        return result.payment;
+    },
+
     // ─── NOTIFICACIONES AUTOMÁTICAS E INTEGRACIÓN DE APIS ──────────────
 
     // Llama a la Edge Function notify-order para enviar el WhatsApp/SMS transaccional
@@ -548,6 +701,7 @@ export const deliveryService = {
             .single();
 
         const payload = {
+            user_id: order.user_id,
             customer_name: order.customer_name,
             customer_phone: order.customer_phone,
             customer_address: order.customer_address,

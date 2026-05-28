@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,25 @@ type DispatchResult = {
   gateway: string;
   error: string | null;
   sentTo?: string;
+};
+
+const logNotification = async (entry: Record<string, unknown>) => {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    if (!supabaseUrl || !serviceRoleKey || !entry.user_id) return;
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const { error } = await supabase
+      .from("delivery_notification_logs")
+      .insert([entry]);
+
+    if (error) {
+      console.warn("[notify-order] No se pudo guardar log de notificacion:", error);
+    }
+  } catch (err) {
+    console.warn("[notify-order] Error registrando log de notificacion:", err);
+  }
 };
 
 const getPhoneCandidates = (phone: string) => {
@@ -212,6 +232,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       order_id,
+      user_id,
       customer_name,
       customer_phone,
       customer_address,
@@ -290,6 +311,19 @@ serve(async (req) => {
     const customerResult = await sendMessage(customer_phone, customerMessage, config);
     let driverResult: DispatchResult | null = null;
 
+    await logNotification({
+      user_id,
+      delivery_order_id: order_id || null,
+      recipient_type: "customer",
+      recipient_phone: customer_phone,
+      event_type: status,
+      gateway: customerResult.gateway,
+      success: customerResult.success,
+      error: customerResult.error,
+      sent_to: customerResult.sentTo || null,
+      payload: { status },
+    });
+
     if (status === "assigned" && driver_phone) {
       const driverMessage = [
         `Nueva ruta asignada en *${store_name}*.`,
@@ -303,6 +337,18 @@ serve(async (req) => {
       ].filter(Boolean).join("\n");
 
       driverResult = await sendMessage(driver_phone, driverMessage, config);
+      await logNotification({
+        user_id,
+        delivery_order_id: order_id || null,
+        recipient_type: "driver",
+        recipient_phone: driver_phone,
+        event_type: status,
+        gateway: driverResult.gateway,
+        success: driverResult.success,
+        error: driverResult.error,
+        sent_to: driverResult.sentTo || null,
+        payload: { status },
+      });
     }
 
     return new Response(

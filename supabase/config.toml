@@ -6,3 +6,9 @@ verify_jwt = false
 
 [functions.update-delivery-request]
 verify_jwt = false
+
+[functions.verify-driver-pin]
+verify_jwt = true
+
+[functions.delivery-actions]
+verify_jwt = true

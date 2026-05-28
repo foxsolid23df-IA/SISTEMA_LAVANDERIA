@@ -102,7 +102,7 @@ serve(async (req) => {
 
     const { data: payments, error: paymentsError } = await supabase
       .from("delivery_payments")
-      .select("amount, payment_method, reference, status, receipt_token, created_at, reconciled_at")
+      .select("amount, payment_method, status, receipt_token, created_at, reconciled_at")
       .eq("delivery_order_id", order.id)
       .neq("status", "voided")
       .order("created_at", { ascending: true });
@@ -140,7 +140,6 @@ serve(async (req) => {
         payments: (payments || []).map((payment: any) => ({
           amount: payment.amount,
           payment_method: payment.payment_method,
-          reference: payment.reference,
           status: payment.status,
           receipt_token: payment.receipt_token,
           created_at: payment.created_at,
