@@ -37,6 +37,15 @@ export const noticeService = {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) return [];
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_active_remote_notices', { p_event: eventName });
+
+      if (!rpcError) {
+        return Array.isArray(rpcData) ? rpcData : [];
+      }
+
+      console.warn('[NoticeService] RPC de avisos no disponible, usando consulta directa:', rpcError);
+
       const { data, error } = await supabase
         .from('remote_notices')
         .select('id,title,message,button_text,button_url')

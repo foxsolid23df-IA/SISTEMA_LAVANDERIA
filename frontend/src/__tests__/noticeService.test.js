@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { noticeService, NOTICE_EVENTS } from '../services/noticeService';
 
-const { mockQuery, mockFrom, mockGetSession, mockGetUser, mockSwalFire } = vi.hoisted(() => {
+const { mockQuery, mockFrom, mockRpc, mockGetSession, mockGetUser, mockSwalFire } = vi.hoisted(() => {
   const query = {
     select: vi.fn(),
     eq: vi.fn(),
@@ -17,6 +17,7 @@ const { mockQuery, mockFrom, mockGetSession, mockGetUser, mockSwalFire } = vi.ho
   return {
     mockQuery: query,
     mockFrom: vi.fn(() => query),
+    mockRpc: vi.fn(),
     mockGetSession: vi.fn(),
     mockGetUser: vi.fn(),
     mockSwalFire: vi.fn(),
@@ -26,6 +27,7 @@ const { mockQuery, mockFrom, mockGetSession, mockGetUser, mockSwalFire } = vi.ho
 vi.mock('../supabase', () => ({
   supabase: {
     from: mockFrom,
+    rpc: mockRpc,
     auth: {
       getSession: mockGetSession,
       getUser: mockGetUser,
@@ -46,6 +48,7 @@ describe('noticeService', () => {
       mockQuery[key].mockReturnValue(mockQuery);
     });
     mockQuery.order.mockResolvedValue({ data: [], error: null });
+    mockRpc.mockResolvedValue({ data: [], error: null });
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'store-123' } } } });
     mockGetUser.mockResolvedValue({ data: { user: { id: 'store-123' } } });
     Object.defineProperty(navigator, 'onLine', {
@@ -58,21 +61,20 @@ describe('noticeService', () => {
 
   it('consulta avisos activos para el usuario y evento solicitado', async () => {
     const notice = { id: 1, title: 'Aviso', message: 'Mensaje' };
-    mockQuery.order.mockResolvedValue({ data: [notice], error: null });
+    mockRpc.mockResolvedValue({ data: [notice], error: null });
 
     const result = await noticeService.getActiveNotices(NOTICE_EVENTS.OPEN_CASH);
 
     expect(result).toEqual([notice]);
-    expect(mockFrom).toHaveBeenCalledWith('remote_notices');
-    expect(mockQuery.eq).toHaveBeenCalledWith('user_id', 'store-123');
-    expect(mockQuery.eq).toHaveBeenCalledWith('active', true);
-    expect(mockQuery.contains).toHaveBeenCalledWith('events', [NOTICE_EVENTS.OPEN_CASH]);
-    expect(mockQuery.or).not.toHaveBeenCalled();
+    expect(mockRpc).toHaveBeenCalledWith('get_active_remote_notices', { p_event: NOTICE_EVENTS.OPEN_CASH });
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 
   it('usa getUser como respaldo si no hay sesion local', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null } });
     mockGetUser.mockResolvedValue({ data: { user: { id: 'fallback-user' } } });
+
+    mockRpc.mockResolvedValue({ data: null, error: new Error('RPC missing') });
 
     await noticeService.getActiveNotices(NOTICE_EVENTS.OPEN_CASH);
 
@@ -88,7 +90,7 @@ describe('noticeService', () => {
 
     await noticeService.getActiveNotices(NOTICE_EVENTS.OPEN_CASH);
 
-    expect(mockFrom).toHaveBeenCalledWith('remote_notices');
+    expect(mockRpc).toHaveBeenCalledWith('get_active_remote_notices', { p_event: NOTICE_EVENTS.OPEN_CASH });
   });
 
   it('no consulta Supabase si el evento no es soportado', async () => {
@@ -99,6 +101,7 @@ describe('noticeService', () => {
   });
 
   it('no bloquea la operacion si Supabase falla', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: new Error('RPC down') });
     mockQuery.order.mockResolvedValue({ data: null, error: new Error('DB down') });
 
     const result = await noticeService.showNoticesForEvent(NOTICE_EVENTS.CLOSE_CASH);
