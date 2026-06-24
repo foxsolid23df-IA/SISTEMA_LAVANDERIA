@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { noticeService, NOTICE_EVENTS } from '../services/noticeService';
 
-const { mockQuery, mockFrom, mockGetUser, mockSwalFire } = vi.hoisted(() => {
+const { mockQuery, mockFrom, mockGetSession, mockGetUser, mockSwalFire } = vi.hoisted(() => {
   const query = {
     select: vi.fn(),
     eq: vi.fn(),
@@ -17,6 +17,7 @@ const { mockQuery, mockFrom, mockGetUser, mockSwalFire } = vi.hoisted(() => {
   return {
     mockQuery: query,
     mockFrom: vi.fn(() => query),
+    mockGetSession: vi.fn(),
     mockGetUser: vi.fn(),
     mockSwalFire: vi.fn(),
   };
@@ -26,6 +27,7 @@ vi.mock('../supabase', () => ({
   supabase: {
     from: mockFrom,
     auth: {
+      getSession: mockGetSession,
       getUser: mockGetUser,
     },
   },
@@ -44,6 +46,7 @@ describe('noticeService', () => {
       mockQuery[key].mockReturnValue(mockQuery);
     });
     mockQuery.order.mockResolvedValue({ data: [], error: null });
+    mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'store-123' } } } });
     mockGetUser.mockResolvedValue({ data: { user: { id: 'store-123' } } });
     Object.defineProperty(navigator, 'onLine', {
       configurable: true,
@@ -64,8 +67,16 @@ describe('noticeService', () => {
     expect(mockQuery.eq).toHaveBeenCalledWith('user_id', 'store-123');
     expect(mockQuery.eq).toHaveBeenCalledWith('active', true);
     expect(mockQuery.contains).toHaveBeenCalledWith('events', [NOTICE_EVENTS.OPEN_CASH]);
-    expect(mockQuery.or).toHaveBeenCalledWith(expect.stringContaining('starts_at.is.null'));
-    expect(mockQuery.or).toHaveBeenCalledWith(expect.stringContaining('ends_at.is.null'));
+    expect(mockQuery.or).not.toHaveBeenCalled();
+  });
+
+  it('usa getUser como respaldo si no hay sesion local', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'fallback-user' } } });
+
+    await noticeService.getActiveNotices(NOTICE_EVENTS.OPEN_CASH);
+
+    expect(mockQuery.eq).toHaveBeenCalledWith('user_id', 'fallback-user');
   });
 
   it('consulta Supabase aunque el navegador reporte offline', async () => {

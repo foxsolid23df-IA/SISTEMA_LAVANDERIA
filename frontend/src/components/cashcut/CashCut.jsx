@@ -305,7 +305,7 @@ export const CashCut = ({ onClose }) => {
       return;
     }
 
-    Swal.fire({
+    await Swal.fire({
       title: "¡Corte realizado!",
       text:
         cutType === "dia"

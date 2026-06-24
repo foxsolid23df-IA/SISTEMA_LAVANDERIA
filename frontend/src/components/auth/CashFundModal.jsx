@@ -144,7 +144,7 @@ export const CashFundModal = ({ staffName, staffId, onSessionCreated, onClose })
 
             const session = await openCashSession(openingFund);
 
-            Swal.fire({
+            await Swal.fire({
                 title: '¡Caja Abierta!',
                 html: `<p>Fondo inicial: <strong>${formatMoney(openingFund)}</strong></p>`,
                 icon: 'success',
