@@ -9,6 +9,7 @@ import { printService } from "../../services/printService";
 import TicketCorte from "./TicketCorte";
 import CashWithdrawalModal from "./CashWithdrawalModal"; // Import Modal
 import Swal from "sweetalert2";
+import { noticeService, NOTICE_EVENTS } from "../../services/noticeService";
 import { CashFundModal } from "../auth/CashFundModal";
 
 export const CashCut = ({ onClose }) => {
@@ -316,6 +317,7 @@ export const CashCut = ({ onClose }) => {
     });
 
     await closeCashSession();
+    await noticeService.showNoticesForEvent(NOTICE_EVENTS.CLOSE_CASH);
     lockScreen();
     if (onClose) onClose();
   };

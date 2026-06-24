@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../hooks/useAuth';
 import { exchangeRateService } from '../../services/exchangeRateService';
+import { noticeService, NOTICE_EVENTS } from '../../services/noticeService';
 import './CashFundModal.css';
 
 export const CashFundModal = ({ staffName, staffId, onSessionCreated, onClose }) => {
@@ -151,6 +152,7 @@ export const CashFundModal = ({ staffName, staffId, onSessionCreated, onClose })
                 showConfirmButton: false
             });
 
+            await noticeService.showNoticesForEvent(NOTICE_EVENTS.OPEN_CASH);
             onSessionCreated(session);
         } catch (error) {
             console.error('Error abriendo caja:', error);
