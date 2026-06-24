@@ -195,5 +195,93 @@ export const adminLicenseService = {
             console.error('Error clearing catalog:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    /**
+     * Obtiene los avisos remotos configurados para los clientes.
+     */
+    getRemoteNotices: async () => {
+        try {
+            const { data, error } = await supabase
+                .from('remote_notices')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            console.error('Error fetching remote notices:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Crea o actualiza un aviso remoto.
+     */
+    saveRemoteNotice: async (notice) => {
+        try {
+            const payload = {
+                user_id: notice.user_id,
+                notice_key: notice.notice_key,
+                title: notice.title,
+                message: notice.message,
+                events: notice.events,
+                active: notice.active,
+                starts_at: notice.starts_at || null,
+                ends_at: notice.ends_at || null,
+                button_text: notice.button_text || null,
+                button_url: notice.button_url || null,
+                updated_at: new Date().toISOString(),
+            };
+
+            const query = notice.id
+                ? supabase.from('remote_notices').update(payload).eq('id', notice.id).select().single()
+                : supabase.from('remote_notices').insert([{ ...payload, created_at: new Date().toISOString() }]).select().single();
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error saving remote notice:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Cambia el estado activo/inactivo de un aviso remoto.
+     */
+    toggleRemoteNotice: async (noticeId, active) => {
+        try {
+            const { data, error } = await supabase
+                .from('remote_notices')
+                .update({ active, updated_at: new Date().toISOString() })
+                .eq('id', noticeId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error toggling remote notice:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Elimina un aviso remoto.
+     */
+    deleteRemoteNotice: async (noticeId) => {
+        try {
+            const { error } = await supabase
+                .from('remote_notices')
+                .delete()
+                .eq('id', noticeId);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting remote notice:', error);
+            return { success: false, error: error.message };
+        }
     }
 };

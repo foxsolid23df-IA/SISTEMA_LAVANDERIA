@@ -3,13 +3,14 @@ import { adminLicenseService } from "../../services/adminLicenseService";
 import { invitationService } from "../../services/invitationService";
 import { supabase } from "../../supabase";
 import Swal from "sweetalert2";
+import { RemoteNoticesManager } from "./RemoteNoticesManager";
 
 export const MasterLicenseManager = () => {
   const [masterPin, setMasterPin] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("licenses"); // 'licenses' | 'invitations' | 'admins' | 'preferences'
+  const [activeTab, setActiveTab] = useState("licenses"); // 'licenses' | 'invitations' | 'admins' | 'notices' | 'preferences'
 
   // Estado para nueva invitación
   const [invitationNote, setInvitationNote] = useState("");
@@ -620,6 +621,12 @@ export const MasterLicenseManager = () => {
               Administradores
             </button>
             <button
+              onClick={() => setActiveTab("notices")}
+              className={`${activeTab === "notices" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Avisos
+            </button>
+            <button
               onClick={() => setActiveTab("preferences")}
               className={`${activeTab === "preferences" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
@@ -861,6 +868,10 @@ export const MasterLicenseManager = () => {
             )}
           </ul>
         </div>
+      )}
+
+      {activeTab === "notices" && (
+        <RemoteNoticesManager profiles={profiles} />
       )}
 
       {activeTab === "preferences" && (
