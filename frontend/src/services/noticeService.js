@@ -22,7 +22,7 @@ const openNoticeUrl = (url) => {
 
 export const noticeService = {
   async getActiveNotices(eventName) {
-    if (!isValidNoticeEvent(eventName) || !navigator.onLine) {
+    if (!isValidNoticeEvent(eventName)) {
       return [];
     }
 

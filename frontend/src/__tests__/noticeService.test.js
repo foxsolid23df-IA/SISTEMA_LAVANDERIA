@@ -68,6 +68,18 @@ describe('noticeService', () => {
     expect(mockQuery.or).toHaveBeenCalledWith(expect.stringContaining('ends_at.is.null'));
   });
 
+  it('consulta Supabase aunque el navegador reporte offline', async () => {
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      writable: true,
+      value: false,
+    });
+
+    await noticeService.getActiveNotices(NOTICE_EVENTS.OPEN_CASH);
+
+    expect(mockFrom).toHaveBeenCalledWith('remote_notices');
+  });
+
   it('no consulta Supabase si el evento no es soportado', async () => {
     const result = await noticeService.getActiveNotices('otro_evento');
 
