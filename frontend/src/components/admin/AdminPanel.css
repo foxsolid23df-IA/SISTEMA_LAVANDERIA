@@ -167,7 +167,7 @@
 
 .admin-panel {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--admin-bg);
   color: var(--admin-text-main);
   font-family: 'Inter', -apple-system, sans-serif;
@@ -183,6 +183,7 @@
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   transition: background 0.3s, border-color 0.3s;
 }
@@ -665,7 +666,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--admin-bg);
   color: var(--admin-text-main);
   text-align: center;

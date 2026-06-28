@@ -1,5 +1,11 @@
 # Changelog
 
+## [Comercial] - 2026-06-16
+
+### Added
+
+- **Estrategia de diferenciacion frente a Aspel:** Se agrego un documento comercial con posicionamiento vertical para lavanderias, paquetes sugeridos, respuesta a objeciones, roadmap de captacion y guion de demo.
+
 ## [1.4.43] - 2026-04-05
 
 ### Fixed

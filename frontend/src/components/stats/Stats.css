@@ -9,7 +9,7 @@
 .stats-view {
     position: relative;
     width: 100%;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: var(--admin-bg);
     color: var(--admin-text-main);
     font-family: 'Inter', -apple-system, sans-serif;
@@ -621,7 +621,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    min-height: 100dvh;
     font-size: 0.875rem;
     color: var(--admin-text-muted);
 }

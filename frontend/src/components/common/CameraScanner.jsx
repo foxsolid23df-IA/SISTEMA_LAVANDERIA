@@ -1,7 +1,10 @@
 // Componente de Scanner de Cámara para códigos de barras y QR
 import React, { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
+import { useNativeScanner } from '../../hooks/useNativeScanner'
 import './CameraScanner.css'
+
+const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()
 
 const CameraScanner = ({ isOpen, onClose, onScan }) => {
     const [isScanning, setIsScanning] = useState(false)
@@ -12,9 +15,41 @@ const CameraScanner = ({ isOpen, onClose, onScan }) => {
     const scannerRef = useRef(null)
     const html5QrcodeRef = useRef(null)
 
-    // Obtener cámaras disponibles
+    const nativeScanner = useNativeScanner({
+        onScan: (code) => {
+            if (navigator.vibrate) navigator.vibrate(100)
+            onScan(code)
+            onClose()
+        },
+        onError: (err) => {
+            setError('Error en escáner nativo: ' + err.message)
+        }
+    })
+
+    // Native scanner path
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && isNative) {
+            nativeScanner.requestPermission().then(granted => {
+                setHasPermission(granted)
+                if (granted) {
+                    nativeScanner.startScan()
+                    setIsScanning(true)
+                } else {
+                    setError('Permiso de cámara denegado')
+                }
+            })
+        }
+        return () => {
+            if (isNative) {
+                nativeScanner.stopScan()
+                setIsScanning(false)
+            }
+        }
+    }, [isOpen])
+
+    // Web scanner path (fallback)
+    useEffect(() => {
+        if (isOpen && !isNative) {
             Html5Qrcode.getCameras()
                 .then((devices) => {
                     if (devices && devices.length > 0) {
@@ -42,9 +77,9 @@ const CameraScanner = ({ isOpen, onClose, onScan }) => {
         }
     }, [isOpen])
 
-    // Iniciar/detener scanner cuando cambia la cámara seleccionada
+    // Web scanner: iniciar/detener cuando cambia la cámara seleccionada
     useEffect(() => {
-        if (isOpen && selectedCamera && hasPermission) {
+        if (isOpen && !isNative && selectedCamera && hasPermission) {
             startScanner()
         }
 
@@ -154,7 +189,11 @@ const CameraScanner = ({ isOpen, onClose, onScan }) => {
     }
 
     const handleClose = async () => {
-        await stopScanner()
+        if (isNative) {
+            await nativeScanner.stopScan()
+        } else {
+            await stopScanner()
+        }
         setError(null)
         setCameras([])
         setSelectedCamera(null)

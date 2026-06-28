@@ -1,6 +1,6 @@
-// ===== COMPONENTE HISTORIAL DE VENTAS =====
+﻿// ===== COMPONENTE HISTORIAL DE VENTAS =====
 // Este componente muestra todas las ventas realizadas con filtros y detalles
-// Rediseñado con un estilo minimalista y moderno usando Tailwind CSS
+// RediseÃ±ado con un estilo minimalista y moderno usando Tailwind CSS
 
 import React, { useState, useEffect, useCallback } from "react";
 import "./Historial.css";
@@ -17,10 +17,10 @@ import { salesService } from "../../services/salesService";
 import { orderService } from "../../services/orderService";
 import { productService } from "../../services/productService";
 import { staffService } from "../../services/staffService";
-import { printService } from "../../services/printService"; // Importado para reimpresión
-import { businessSettingsService } from "../../services/businessSettingsService"; // Importado para configuración
+import { printService } from "../../services/printService"; // Importado para reimpresiÃ³n
+import { businessSettingsService } from "../../services/businessSettingsService"; // Importado para configuraciÃ³n
 import { cashCutService } from "../../services/cashCutService"; // Importado para historial de cortes
-import TicketCorte from "../cashcut/TicketCorte"; // Importado para reimpresión de cortes
+import TicketCorte from "../cashcut/TicketCorte"; // Importado para reimpresiÃ³n de cortes
 import Modal from "../common/Modal";
 import Swal from "sweetalert2";
 
@@ -30,8 +30,8 @@ export const Historial = () => {
 
   // 1. ESTADOS PRINCIPALES
   const [productos, setProductos] = useState([]); // Lista de productos para mostrar en el modal
-  const [ventas, setVentas] = useState([]); // Lista de todas las ventas/órdenes
-  const [ventasFiltradas, setVentasFiltradas] = useState([]); // Ventas después de filtrar
+  const [ventas, setVentas] = useState([]); // Lista de todas las ventas/Ã³rdenes
+  const [ventasFiltradas, setVentasFiltradas] = useState([]); // Ventas despuÃ©s de filtrar
 
   const [empleados, setEmpleados] = useState([]);
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
@@ -43,7 +43,7 @@ export const Historial = () => {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
 
-  // Estado para configuración de negocio (necesario para el ticket)
+  // Estado para configuraciÃ³n de negocio (necesario para el ticket)
   const [businessSettings, setBusinessSettings] = useState(null);
 
   // 4. HOOK PARA FILTRADO POR FECHAS
@@ -77,7 +77,7 @@ export const Historial = () => {
     };
   }, []);
 
-  // Ref para verificar si el componente está montado
+  // Ref para verificar si el componente estÃ¡ montado
   const isMountedRef = React.useRef(true);
 
   useEffect(() => {
@@ -87,7 +87,7 @@ export const Historial = () => {
     };
   }, []);
 
-  // Cargar empleados y configuración al montar
+  // Cargar empleados y configuraciÃ³n al montar
   useEffect(() => {
     const loadStaff = async () => {
       try {
@@ -109,7 +109,7 @@ export const Historial = () => {
     loadSettings();
   }, []);
 
-  // 7. FUNCIÓN PARA CARGAR TODAS LAS VENTAS/ÓRDENES DESDE SUPABASE
+  // 7. FUNCIÃ“N PARA CARGAR TODAS LAS VENTAS/Ã“RDENES DESDE SUPABASE
   const cargarVentasYProductos = async () => {
     setLoadingData(true);
     setErrorData(null);
@@ -121,7 +121,7 @@ export const Historial = () => {
         setTimeout(() => reject(new Error("Tiempo de espera agotado")), 15000),
       );
 
-      // Cargar datos según el modo
+      // Cargar datos segÃºn el modo
       let serviceCall;
       if (reportMode === "SERVICES") {
         serviceCall = orderService.getOrders();
@@ -144,7 +144,7 @@ export const Historial = () => {
         ? transaccionesData
         : [];
 
-      // Transformación unificada para el resto del componente
+      // TransformaciÃ³n unificada para el resto del componente
       const transaccionesTransformadas = dataSegura.map((t) => {
         if (reportMode === "CASH_CUTS") {
           return {
@@ -155,7 +155,7 @@ export const Historial = () => {
             difference: t.difference,
             createdAt: t.created_at,
             employeeName: t.staff_name || "Desconocido",
-            paymentMethod: t.cut_type === "dia" ? "Cierre Día" : "Corte Turno",
+            paymentMethod: t.cut_type === "dia" ? "Cierre DÃ­a" : "Corte Turno",
             status: "completed",
             isCut: true,
             opening_fund: t.opening_fund,
@@ -177,7 +177,7 @@ export const Historial = () => {
           total: t.total,
           paidAmount: t.paid_amount || t.total,
           createdAt: t.created_at,
-          customerName: t.customers?.name || "Público General",
+          customerName: t.customers?.name || "PÃºblico General",
           customerPhone: t.customers?.phone,
           employeeName: t.staff?.name || "Sistema",
           paymentMethod: t.payment_method || "efectivo",
@@ -207,7 +207,7 @@ export const Historial = () => {
     } catch (error) {
       if (!isMountedRef.current) return;
       console.error("Error cargando datos:", error);
-      setErrorData("No se pudieron cargar los datos. Verifica tu conexión.");
+      setErrorData("No se pudieron cargar los datos. Verifica tu conexiÃ³n.");
     } finally {
       if (isMountedRef.current) setLoadingData(false);
     }
@@ -221,7 +221,7 @@ export const Historial = () => {
     cargarVentasYProductos();
   }, [reportMode]);
 
-  // 8. FUNCIÓN PARA LIMPIAR FILTROS
+  // 8. FUNCIÃ“N PARA LIMPIAR FILTROS
   const limpiarFiltros = () => {
     dateFilter.limpiarFiltros();
     setFiltroEmpleado("");
@@ -229,7 +229,7 @@ export const Historial = () => {
     setVentasFiltradas(ventas);
   };
 
-  // 9. FUNCIÓN PARA ABRIR EL MODAL DE DETALLES
+  // 9. FUNCIÃ“N PARA ABRIR EL MODAL DE DETALLES
   const verDetalles = (venta) => {
     if (venta.isCut) {
       setVentaSeleccionada(venta);
@@ -255,19 +255,19 @@ export const Historial = () => {
     setMostrarModal(true);
   };
 
-  // 10. FUNCIÓN PARA CERRAR EL MODAL
+  // 10. FUNCIÃ“N PARA CERRAR EL MODAL
   const cerrarModal = () => {
     setMostrarModal(false);
     setVentaSeleccionada(null);
   };
 
-  // 10.b FUNCIÓN PARA ELIMINAR VENTA (Solo Admin/Dueño con Contraseña)
+  // 10.b FUNCIÃ“N PARA ELIMINAR VENTA (Solo Admin/DueÃ±o con ContraseÃ±a)
   const eliminarVenta = async (saleId) => {
     const { value: password } = await Swal.fire({
       title: "Seguridad de Administrador",
-      text: "Para eliminar este reporte, ingresa el código de seguridad:",
+      text: "Para eliminar este reporte, ingresa el cÃ³digo de seguridad:",
       input: "password",
-      inputPlaceholder: "Código de Seguridad",
+      inputPlaceholder: "CÃ³digo de Seguridad",
       showCancelButton: true,
       confirmButtonText: "Eliminar Registro",
       cancelButtonText: "Cancelar",
@@ -283,15 +283,15 @@ export const Historial = () => {
 
       if (isValidAdmin) {
         const confirm = await Swal.fire({
-          title: "¿Estás seguro?",
+          title: "Â¿EstÃ¡s seguro?",
           text: reportMode === "SERVICES"
-            ? "La orden será removida de la vista activa y el stock se restaurará."
-            : "Esta acción no se puede deshacer y el registro se borrará permanentemente de la base de datos.",
+            ? "La orden serÃ¡ removida de la vista activa y el stock se restaurarÃ¡."
+            : "Esta acciÃ³n no se puede deshacer y el registro se borrarÃ¡ permanentemente de la base de datos.",
           icon: "warning",
           showCancelButton: true,
           confirmButtonColor: "#d33",
           cancelButtonColor: "#000000",
-          confirmButtonText: "Sí, eliminar",
+          confirmButtonText: "SÃ­, eliminar",
           cancelButtonText: "No, cancelar",
         });
 
@@ -324,14 +324,14 @@ export const Historial = () => {
       } else {
         Swal.fire(
           "Error",
-          "PIN de administrador incorrecto. Solo el dueño o administrador puede realizar esta acción.",
+          "PIN de administrador incorrecto. Solo el dueÃ±o o administrador puede realizar esta acciÃ³n.",
           "error",
         );
       }
     }
   };
 
-  // 11. FUNCIÓN PARA FILTRAR LAS VENTAS (Fechas + Empleado/Cliente + Método Pago)
+  // 11. FUNCIÃ“N PARA FILTRAR LAS VENTAS (Fechas + Empleado/Cliente + Método Pago)
   const filtrarVentas = useCallback(() => {
     let filtradas = dateFilter.filtrarPorFecha(ventas);
 
@@ -361,24 +361,24 @@ export const Historial = () => {
     reportMode,
   ]);
 
-  // 12. CALCULAR VENTAS PARA LA PÁGINA ACTUAL
+  // 12. CALCULAR VENTAS PARA LA PÃGINA ACTUAL
   const calcularVentasPaginadas = () => {
     const indiceInicio = (paginaActual - 1) * ventasPorPagina;
     const indiceFin = indiceInicio + ventasPorPagina;
     return ventasFiltradas.slice(indiceInicio, indiceFin);
   };
 
-  // 13. CALCULAR TOTAL DE PÁGINAS
+  // 13. CALCULAR TOTAL DE PÃGINAS
   const totalPaginas = Math.ceil(ventasFiltradas.length / ventasPorPagina);
 
-  // 14. FUNCIÓN PARA CAMBIAR DE PÁGINA
+  // 14. FUNCIÃ“N PARA CAMBIAR DE PÃGINA
   const cambiarPagina = (nuevaPagina) => {
     if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
       setPaginaActual(nuevaPagina);
     }
   };
 
-  // 15. FUNCIÓN PARA EXPORTAR A EXCEL
+  // 15. FUNCIÃ“N PARA EXPORTAR A EXCEL
   const exportarHistorialExcel = () => {
     if (ventasFiltradas.length === 0) return;
 
@@ -392,7 +392,7 @@ export const Historial = () => {
         .join(", ");
 
       return {
-        "N°": index + 1,
+        "NÂ°": index + 1,
         Fecha: formatearFechaHora(venta.createdAt),
         Empleado: venta.employeeName,
         "Método Pago": venta.paymentMethod,
@@ -432,13 +432,13 @@ export const Historial = () => {
     filtroMetodoPago,
   ]);
 
-  // FUNCIÓN PARA REIMPRIMIR TICKET DESDE HISTORIAL
+  // FUNCIÃ“N PARA REIMPRIMIR TICKET DESDE HISTORIAL
   const handleReprint = async () => {
     if (!ventaSeleccionada || !businessSettings || isPrinting) {
       if (!isPrinting)
         Swal.fire(
           "Error",
-          "No se puede imprimir: Falta información de venta o configuración.",
+          "No se puede imprimir: Falta informaciÃ³n de venta o configuraciÃ³n.",
           "error",
         );
       return;
@@ -447,7 +447,7 @@ export const Historial = () => {
     setIsPrinting(true);
     try {
       if (ventaSeleccionada.isCut) {
-        // Lógica específica para reimprimir cortes de caja
+        // LÃ³gica especÃ­fica para reimprimir cortes de caja
         const width = businessSettings?.printer_width || 80;
         const fontSize = businessSettings?.printer_font_size || 12;
         const fontFamily =
@@ -482,7 +482,7 @@ export const Historial = () => {
     <div class="text-center">
         <div class="bold" style="font-size: 1.2em;">${businessSettings?.name || "LAVANDERIA"}</div>
         <div>${ventaSeleccionada.paymentMethod.toUpperCase()}</div>
-        <div style="font-size: 0.8em;">Reimpresión: ${formatearFechaHora(new Date())}</div>
+        <div style="font-size: 0.8em;">ReimpresiÃ³n: ${formatearFechaHora(new Date())}</div>
     </div>
     <hr />
     <div>Fecha Original: ${formatearFechaHora(ventaSeleccionada.createdAt)}</div>
@@ -498,9 +498,17 @@ export const Historial = () => {
 </body>
 </html>`;
 
-        await printService.print(ticketHtml, businessSettings?.printer_name);
+        await printService.print(ticketHtml, businessSettings?.printer_name, {
+          copies: 1,
+          settings: businessSettings,
+          ticketData: {
+            type: "cashCut",
+            cutResult: ventaSeleccionada,
+            settings: businessSettings,
+          },
+        });
       } else {
-        // Lógica existente para ventas/servicios
+        // LÃ³gica existente para ventas/servicios
         const itemsParaTicket = ventaSeleccionada.items.map((item) => ({
           quantity: item.quantity,
           name: item.productName || item.name || "Producto",
@@ -519,7 +527,7 @@ export const Historial = () => {
       }
 
       Swal.fire({
-        title: "¡Reimpreso!",
+        title: "Â¡Reimpreso!",
         text: "El ticket ha sido enviado a la impresora.",
         icon: "success",
         timer: 1500,
@@ -534,7 +542,7 @@ export const Historial = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark h-full overflow-hidden">
+    <div className="historial-page flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark h-full overflow-hidden">
       {/* Header */}
       <header className="p-8 pb-4 flex-shrink-0">
         <div className="max-w-5xl mx-auto w-full flex justify-between items-start">
@@ -550,13 +558,13 @@ export const Historial = () => {
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
               {reportMode === "SERVICES"
-                ? "Revision de órdenes y servicios de lavandería realizados"
-                : "Revision de ventas directas de productos y artículos realizados"}
+                ? "Revisión de órdenes y servicios de lavandería realizados"
+                : "Revisión de ventas directas de productos y artículos realizados"}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="historial-header-actions flex items-center gap-4">
             {/* TOGGLE DE MODO (Reportes Separados) */}
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="historial-mode-tabs flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <button
                 onClick={() => setReportMode("SERVICES")}
                 className={`px-4 py-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${reportMode === "SERVICES" ? "bg-white dark:bg-slate-700 shadow-md text-slate-900 dark:text-white border-none" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
@@ -612,7 +620,7 @@ export const Historial = () => {
       {/* Filters Section */}
       <section className="px-8 py-4 flex-shrink-0">
         <div className="max-w-5xl mx-auto w-full">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex flex-wrap items-end gap-6 shadow-sm">
+          <div className="historial-filters bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex flex-wrap items-end gap-6 shadow-sm">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">
                 Desde:
@@ -694,7 +702,7 @@ export const Historial = () => {
                 </select>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="historial-filter-actions flex gap-2">
               {canAccessReports && (
                 <button
                   className="px-6 py-2.5 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
@@ -727,10 +735,10 @@ export const Historial = () => {
       </section>
 
       {/* Content Section */}
-      <section className="px-8 pb-4 flex-1 min-h-0 overflow-hidden flex flex-col">
+      <section className="historial-results px-8 pb-4 flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="max-w-5xl mx-auto w-full h-full flex flex-col space-y-1">
           {/* Table Header */}
-          <div className="flex-shrink-0 flex justify-between items-center px-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+          <div className="historial-list-header flex-shrink-0 flex justify-between items-center px-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
             <div className="flex-1">Fecha y Hora</div>
             <div className="flex-1 text-center">
               {reportMode === "SERVICES" ? "Cliente" : "Empleado"}
@@ -956,7 +964,7 @@ export const Historial = () => {
                 Detalle de Transacción
               </p>
               <h2 className="text-xl font-black text-primary dark:text-white">
-                Información de Venta
+                InformaciÃ³n de Venta
               </h2>
             </div>
             <button
@@ -1013,7 +1021,7 @@ export const Historial = () => {
                   }}
                   settings={businessSettings}
                   cutType={
-                    ventaSeleccionada.paymentMethod === "Cierre Día"
+                    ventaSeleccionada.paymentMethod === "Cierre DÃ­a"
                       ? "dia"
                       : "turno"
                   }
@@ -1101,3 +1109,5 @@ export const Historial = () => {
     </div>
   );
 };
+
+

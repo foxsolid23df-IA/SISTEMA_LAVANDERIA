@@ -1,0 +1,15 @@
+{
+  "name": "laundry-commercial-90s",
+  "version": "1.0.0",
+  "description": "High-conversion commercial for laundry management system",
+  "main": "main.js",
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "hyperframes": "latest"
+  },
+  "scripts": {
+    "preview": "hyperframes preview",
+    "render": "hyperframes render",
+    "validate": "hyperframes validate"
+  }
+}

@@ -51,9 +51,9 @@ const AdminPanel = lazy(() => import("../components/admin/AdminPanel").then(m =>
 const CashReportsView = lazy(() => import("../components/reports/CashReportsView").then(m => ({ default: m.CashReportsView })));
 const CancellationsReport = lazy(() => import("../components/reports/CancellationsReport"));
 const CuentasPorCobrar = lazy(() => import("../components/accounts/CuentasPorCobrar").then(m => ({ default: m.CuentasPorCobrar })));
-const MasterLicenseManager = lazy(() => import("../components/admin/MasterLicenseManager"));
-const SuperAdminLogin = lazy(() => import("../components/auth/SuperAdminLogin"));
-const SuperAdminLayout = lazy(() => import("../components/common/SuperAdminLayout"));
+const MasterLicenseManager = lazy(() => import("../components/admin/MasterLicenseManager").then(m => ({ default: m.MasterLicenseManager })));
+const SuperAdminLogin = lazy(() => import("../components/auth/SuperAdminLogin").then(m => ({ default: m.SuperAdminLogin })));
+const SuperAdminLayout = lazy(() => import("../components/common/SuperAdminLayout").then(m => ({ default: m.SuperAdminLayout })));
 
 const ModuleFallback = () => (
   <div className="flex items-center justify-center min-h-[60dvh] text-slate-400 text-sm font-medium">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './Inventory.css';
 import { productService } from '../../services/productService';
 import Swal from 'sweetalert2';
@@ -489,23 +489,30 @@ const Inventory = ({ mode = 'SERVICE' }) => {
     };
 
     // Aplicar filtros, búsqueda y MODO (Service vs Product)
-    const filteredProducts = products.filter(product => {
-        // 1. Filtrar por tipo (si es nulo, asumimos SERVICE por compatibilidad con datos viejos)
-        const productType = product.type || 'SERVICE';
-        if (productType !== mode) return false;
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => {
+            const productType = product.type || 'SERVICE';
+            if (productType !== mode) return false;
 
-        const matchesSearch = (product.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        if (!matchesSearch) return false;
+            const matchesSearch = (product.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+            if (!matchesSearch) return false;
 
-        if (filters.category !== 'all') {
-            if (product.category !== filters.category) return false;
-        }
+            if (filters.category !== 'all') {
+                if (product.category !== filters.category) return false;
+            }
 
-        if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
-        if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
+            if (filters.minPrice && product.price < parseFloat(filters.minPrice)) return false;
+            if (filters.maxPrice && product.price > parseFloat(filters.maxPrice)) return false;
 
-        return true;
-    });
+            return true;
+        });
+    }, [products, mode, searchTerm, filters]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+    const paginatedProducts = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredProducts.slice(start, start + itemsPerPage);
+    }, [filteredProducts, currentPage, itemsPerPage]);
 
 
     // Obtener categorías únicas
@@ -739,8 +746,8 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredProducts.length > 0 ? (
-                                    filteredProducts.map(product => {
+                                {paginatedProducts.length > 0 ? (
+                                    paginatedProducts.map(product => {
                                         const isMenuOpen = activeMenuId === product.id;
                                         return (
                                             <tr key={product.id} className="table-row">
@@ -837,6 +844,41 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                )}
+                {!loading && filteredProducts.length > itemsPerPage && (
+                    <div className="pagination-controls">
+                        <button
+                            className="pagination-btn"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Anterior
+                        </button>
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                            const startPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                            const page = startPage + i;
+                            if (page > totalPages) return null;
+                            return (
+                                <button
+                                    key={page}
+                                    className={`pagination-btn ${currentPage === page ? 'pagination-active' : ''}`}
+                                    onClick={() => setCurrentPage(page)}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        })}
+                        <button
+                            className="pagination-btn"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            Siguiente
+                        </button>
+                        <span className="pagination-info">
+                            {filteredProducts.length} registros
+                        </span>
                     </div>
                 )}
             </div>

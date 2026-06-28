@@ -14,7 +14,7 @@
 
 .driver-auth-wrapper,
 .driver-portal-wrapper {
-    min-height: 100vh;
+    min-height: 100dvh;
     background:
         linear-gradient(180deg, #e8f6fb 0%, #f8fafc 48%, #eef4f8 100%);
     color: var(--driver-ink);
@@ -216,7 +216,7 @@
 }
 
 .driver-desktop-gate {
-    min-height: 100vh;
+    min-height: 100dvh;
     background:
         radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 34%),
         linear-gradient(180deg, #eef8fb 0%, #f8fafc 100%);

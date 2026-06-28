@@ -1,0 +1,174 @@
+:root {
+    --brand-blue: #1363DF;
+    --brand-dark: #06080A;
+    --brand-white: #FFFFFF;
+    --accent-red: #FF4B2B; /* Para resaltar pérdida de dinero */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--brand-dark);
+    color: var(--brand-white);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    width: 1920px;
+    height: 1080px;
+}
+
+#stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.clip {
+    visibility: hidden;
+}
+
+/* Backgrounds */
+.bg-gradient {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, #1a2a44 0%, #06080a 100%);
+}
+
+.grid-overlay {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(19, 99, 223, 0.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(19, 99, 223, 0.05) 1px, transparent 1px);
+    background-size: 100px 100px;
+}
+
+/* Media (Screenshots) */
+.media-layer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 2000px;
+}
+
+.screenshot {
+    position: absolute;
+    max-width: 1400px;
+    height: auto;
+    border-radius: 20px;
+    box-shadow: 0 50px 100px rgba(0,0,0,0.8), 0 0 50px rgba(19, 99, 223, 0.3);
+    border: 2px solid rgba(255,255,255,0.1);
+    opacity: 0;
+}
+
+/* Typography */
+.scene-group {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+}
+
+.giant-text {
+    font-size: 160px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 0.9;
+    letter-spacing: -6px;
+    text-transform: uppercase;
+}
+
+.highlight {
+    color: var(--brand-blue);
+    text-shadow: 0 0 30px rgba(19, 99, 223, 0.5);
+}
+
+.section-title {
+    font-size: 120px;
+    font-weight: 900;
+    background: linear-gradient(to bottom, #fff, #888);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.feature-tag {
+    font-size: 40px;
+    letter-spacing: 10px;
+    margin-top: 20px;
+    color: var(--brand-blue);
+}
+
+/* Money Leak Animation */
+.money-anim {
+    position: relative;
+    height: 200px;
+    width: 200px;
+    margin-top: 40px;
+}
+
+.dollar-sign {
+    position: absolute;
+    font-size: 80px;
+    color: var(--accent-red);
+    font-weight: 900;
+    opacity: 0;
+}
+
+/* Pain words */
+.pain-word {
+    font-size: 180px;
+    font-weight: 900;
+    color: var(--accent-red);
+    position: absolute;
+    opacity: 0;
+}
+
+/* Benefits */
+.benefit-item {
+    font-size: 80px;
+    font-weight: 900;
+    margin: 20px 0;
+    padding: 20px 60px;
+    background: var(--brand-blue);
+    color: white;
+    transform: skewX(-10deg);
+}
+
+/* CTA */
+.final-text {
+    font-size: 110px;
+    font-weight: 900;
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.cta-button {
+    background: var(--brand-blue);
+    padding: 40px 100px;
+    font-size: 60px;
+    font-weight: 900;
+    border-radius: 100px;
+    box-shadow: 0 20px 50px rgba(19, 99, 223, 0.4);
+}
+
+.contact-info {
+    font-size: 36px;
+    margin-top: 40px;
+    opacity: 0.8;
+}

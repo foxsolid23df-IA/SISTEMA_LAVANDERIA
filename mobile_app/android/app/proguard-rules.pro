@@ -1,21 +1,17 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Capacitor web app - ProGuard/R8 rules
+# Keep all web content and Capacitor bridge classes
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keepclassmembers class * extends android.webkit.WebView {
+    *** addJavascriptInterface(***);
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep Capacitor plugins
+-keep class com.getcapacitor.** { *; }
+-keep class com.foxsolid.lavanderia.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep ML Kit barcode scanning
+-keep class com.google.mlkit.** { *; }
+
+# Keep all plugin classes
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keep class * extends com.getcapacitor.PluginCall { *; }

@@ -2,7 +2,7 @@
   padding: 1.5rem;
   background: var(--admin-bg);
   color: var(--admin-text-main);
-  min-height: 100vh;
+  min-height: 100dvh;
   box-sizing: border-box;
   font-family: 'Inter', system-ui, sans-serif;
 }

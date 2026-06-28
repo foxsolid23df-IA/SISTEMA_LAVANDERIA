@@ -5,7 +5,7 @@
 .delivery-dashboard-container {
     padding: 2rem;
     background-color: transparent;
-    min-height: calc(100vh - 4rem);
+    min-height: calc(100dvh - 4rem);
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -159,7 +159,7 @@
     flex-direction: column;
     gap: 1rem;
     overflow-y: auto;
-    max-height: calc(100vh - 16rem);
+    max-height: calc(100dvh - 16rem);
 }
 
 /* Tarjetas de Pedido */
@@ -503,7 +503,7 @@
     justify-content: center;
     align-items: center;
     gap: 1.25rem;
-    min-height: calc(100vh - 10rem);
+    min-height: calc(100dvh - 10rem);
 }
 
 .spinner {

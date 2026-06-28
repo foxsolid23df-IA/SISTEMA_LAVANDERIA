@@ -1,12 +1,17 @@
-// Configuración centralizada de la aplicación
+﻿import { platform } from "../utils/platform";
+
+// ConfiguraciÃ³n centralizada de la aplicaciÃ³n
 
 export const config = {
-    isElectron: navigator.userAgent.toLowerCase().includes('electron') || !!window.electron,
+    isElectron: platform.isElectron,
+    isCapacitor: platform.isCapacitor,
+    isAndroid: platform.isAndroid,
+    isNativePos: platform.isNativePos,
     api: {
         baseUrl: import.meta.env.VITE_API_URL || (() => {
             const userAgent = navigator.userAgent.toLowerCase();
-            const isElectron = userAgent.includes('electron') || !!window.electron;
-            const isCapacitor = !!window.Capacitor;
+            const isElectron = userAgent.includes('electron') || platform.isElectron;
+            const isCapacitor = platform.isCapacitor;
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
             if (isElectron) return 'http://127.0.0.1:3001';
@@ -35,3 +40,4 @@ export const devLog = (...args) => {
         console.log('[DEV]', ...args)
     }
 }
+
