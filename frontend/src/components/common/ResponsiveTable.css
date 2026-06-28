@@ -1,0 +1,120 @@
+.rtable-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.rtable {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+.rtable th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  border-bottom: 2px solid var(--admin-card-border, #e2e8f0);
+  white-space: nowrap;
+}
+
+.rtable td {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--admin-card-border, #f1f5f9);
+  white-space: nowrap;
+}
+
+.rtable-row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.rtable-row-clickable:hover {
+  background-color: var(--admin-hover-bg, #f8fafc);
+}
+
+.rtable-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.rtable-card {
+  background: var(--admin-card-bg, #fff);
+  border: 1px solid var(--admin-card-border, #e2e8f0);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+}
+
+.rtable-card-expanded {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.rtable-card-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  min-height: 48px;
+}
+
+.rtable-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 80px;
+  flex: 1;
+}
+
+.rtable-card-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+}
+
+.rtable-card-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.rtable-expand-icon {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  padding: 0.25rem;
+  align-self: center;
+}
+
+.rtable-card-details {
+  border-top: 1px solid var(--admin-card-border, #e2e8f0);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--admin-hover-bg, #f8fafc);
+}
+
+body.dark .rtable-card {
+  background: var(--admin-card-bg, #1e293b);
+  border-color: var(--admin-card-border, #334155);
+}
+
+body.dark .rtable-card-details {
+  background: var(--admin-hover-bg, #0f172a);
+}
+
+body.dark .rtable td {
+  border-bottom-color: #334155;
+}
