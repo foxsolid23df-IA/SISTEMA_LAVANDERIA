@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState, lazy, Suspense } from "react";
 import {
   Routes,
   Route,
@@ -9,50 +9,60 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { Sidebar } from "../components/sidebar/Sidebar";
-import { Sales } from "../components/sales/Sales";
-import { Inventory } from "../components/inventory/Inventory";
-import { Historial } from "../components/historial/Historial";
-import { Stats } from "../components/stats/Stats";
-import { Login } from "../components/auth/Login";
-import { LockScreen } from "../components/auth/LockScreen";
-import { CashFundModal } from "../components/auth/CashFundModal";
-import { UserManager } from "../components/admin/UserManager";
-import { SupplyInventory } from "../components/supplies/SupplyInventory";
+import { terminalService } from "../services/terminalService";
 
 import { AuthProvider, useAuth } from "../hooks/useAuth";
-import { TerminalSetup } from "../components/config/TerminalSetup";
-import { ConfiguracionPortal } from "../components/config/ConfiguracionPortal";
-import { Orders } from "../components/sales/Orders";
-import { ClientManager } from "../components/admin/ClientManager";
-import CustomerDisplay from "../components/customer/CustomerDisplay";
-import ExchangeRateSettings from "../components/admin/ExchangeRateSettings";
-import TaxSettings from "../components/admin/TaxSettings";
-import PaymentMethodsSettings from "../components/admin/PaymentMethodsSettings";
-import { PriceConfiguration } from "../components/admin/PriceConfiguration";
-import { TicketConfiguration } from "../components/admin/TicketConfiguration";
-import { terminalService } from "../services/terminalService";
-import Maintenance from "../components/admin/Maintenance";
-import BillingIssuers from "../components/config/BillingIssuers";
-import { InvoiceCancellation } from "../components/config/InvoiceCancellation";
-import { ServiciosExpressSettings } from "../components/config/ServiciosExpressSettings";
-import { DeliveryDashboard } from "../components/delivery/DeliveryDashboard";
-import { DriverPortal } from "../components/delivery/DriverPortal";
-import { OrderTracking } from "../components/delivery/OrderTracking";
+import { ProductProvider } from "../contexts/ProductContext";
+import { SettingsProvider } from "../contexts/SettingsContext";
+import { platform } from "../utils/platform";
 
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
-import { ProductProvider } from "../contexts/ProductContext";
-import { SettingsProvider } from "../contexts/SettingsContext";
 import { LicenseGuard } from "../components/common/LicenseGuard";
-import MobileCapture from "../components/ai/MobileCapture";
-import { AdminPanel } from "../components/admin/AdminPanel";
-import { CashReportsView } from "../components/reports/CashReportsView";
-import CancellationsReport from "../components/reports/CancellationsReport";
-import { SuperAdminRoute } from "../components/common/SuperAdminRoute";
-import { MasterLicenseManager } from "../components/admin/MasterLicenseManager";
 import { LatencyIndicator } from "../components/common/LatencyIndicator";
-import { SuperAdminLogin } from "../components/auth/SuperAdminLogin";
-import { SuperAdminLayout } from "../components/common/SuperAdminLayout";
+
+const Sales = lazy(() => import("../components/sales/Sales").then(m => ({ default: m.Sales })));
+const Inventory = lazy(() => import("../components/inventory/Inventory").then(m => ({ default: m.Inventory })));
+const Historial = lazy(() => import("../components/historial/Historial").then(m => ({ default: m.Historial })));
+const Stats = lazy(() => import("../components/stats/Stats").then(m => ({ default: m.Stats })));
+const Login = lazy(() => import("../components/auth/Login").then(m => ({ default: m.Login })));
+const LockScreen = lazy(() => import("../components/auth/LockScreen").then(m => ({ default: m.LockScreen })));
+const UserManager = lazy(() => import("../components/admin/UserManager").then(m => ({ default: m.UserManager })));
+const SupplyInventory = lazy(() => import("../components/supplies/SupplyInventory").then(m => ({ default: m.SupplyInventory })));
+const TerminalSetup = lazy(() => import("../components/config/TerminalSetup").then(m => ({ default: m.TerminalSetup })));
+const ConfiguracionPortal = lazy(() => import("../components/config/ConfiguracionPortal").then(m => ({ default: m.ConfiguracionPortal })));
+const Orders = lazy(() => import("../components/sales/Orders").then(m => ({ default: m.Orders })));
+const ClientManager = lazy(() => import("../components/admin/ClientManager").then(m => ({ default: m.ClientManager })));
+const CustomerDisplay = lazy(() => import("../components/customer/CustomerDisplay"));
+const ExchangeRateSettings = lazy(() => import("../components/admin/ExchangeRateSettings"));
+const TaxSettings = lazy(() => import("../components/admin/TaxSettings"));
+const PaymentMethodsSettings = lazy(() => import("../components/admin/PaymentMethodsSettings"));
+const PriceConfiguration = lazy(() => import("../components/admin/PriceConfiguration").then(m => ({ default: m.PriceConfiguration })));
+const TicketConfiguration = lazy(() => import("../components/admin/TicketConfiguration").then(m => ({ default: m.TicketConfiguration })));
+const Maintenance = lazy(() => import("../components/admin/Maintenance"));
+const BillingIssuers = lazy(() => import("../components/config/BillingIssuers"));
+const InvoiceCancellation = lazy(() => import("../components/config/InvoiceCancellation").then(m => ({ default: m.InvoiceCancellation })));
+const ServiciosExpressSettings = lazy(() => import("../components/config/ServiciosExpressSettings").then(m => ({ default: m.ServiciosExpressSettings })));
+const DeliveryDashboard = lazy(() => import("../components/delivery/DeliveryDashboard").then(m => ({ default: m.DeliveryDashboard })));
+const DriverPortal = lazy(() => import("../components/delivery/DriverPortal").then(m => ({ default: m.DriverPortal })));
+const OrderTracking = lazy(() => import("../components/delivery/OrderTracking").then(m => ({ default: m.OrderTracking })));
+const MobileCapture = lazy(() => import("../components/ai/MobileCapture"));
+const AdminPanel = lazy(() => import("../components/admin/AdminPanel").then(m => ({ default: m.AdminPanel })));
+const CashReportsView = lazy(() => import("../components/reports/CashReportsView").then(m => ({ default: m.CashReportsView })));
+const CancellationsReport = lazy(() => import("../components/reports/CancellationsReport"));
+const CuentasPorCobrar = lazy(() => import("../components/accounts/CuentasPorCobrar").then(m => ({ default: m.CuentasPorCobrar })));
+const MasterLicenseManager = lazy(() => import("../components/admin/MasterLicenseManager"));
+const SuperAdminLogin = lazy(() => import("../components/auth/SuperAdminLogin"));
+const SuperAdminLayout = lazy(() => import("../components/common/SuperAdminLayout"));
+
+const ModuleFallback = () => (
+  <div className="flex items-center justify-center min-h-[60dvh] text-slate-400 text-sm font-medium">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+      <span>Cargando m\u00f3dulo...</span>
+    </div>
+  </div>
+);
 
 const PrivateLayout = ({ children, chrome = true }) => {
   const {
@@ -77,15 +87,12 @@ const PrivateLayout = ({ children, chrome = true }) => {
   );
   const [isValidating, setIsValidating] = useState(false);
 
-  // Validar existencia de terminal solo una vez al cargar la app
   useEffect(() => {
     if (!user || isValidating) return;
 
-    // Flag para evitar múltiples ejecuciones durante la misma sesión de carga
     const terminalValidatedSession =
       sessionStorage.getItem("terminal_validated");
     if (terminalValidatedSession === "true") {
-      console.log("[Routing] Terminal ya validada en esta pestaña.");
       return;
     }
 
@@ -106,9 +113,8 @@ const PrivateLayout = ({ children, chrome = true }) => {
     };
 
     validateTerminal();
-  }, [user?.id]); // Solo re-validar si cambia el usuario (login/logout)
+  }, [user?.id]);
 
-  // Verificar sesión de caja por separado (solo si no está en modo admin)
   useEffect(() => {
     if (
       user &&
@@ -129,45 +135,26 @@ const PrivateLayout = ({ children, chrome = true }) => {
     adminMode,
   ]);
 
-  // Auto-apertura de caja para el Propietario (DESACTIVADO por solicitud de apertura obligatoria)
-  /* useEffect(() => {
-        if (needsCashFund && activeStaff?.isOwner) {
-            console.log('[PrivateLayout] Auto-iniciando caja para Propietario...');
-            openCashSession(0).catch(err => console.error('Error auto-opening session:', err));
-        }
-    }, [needsCashFund, activeStaff]); */
-
   if (loading || isValidating)
-    return <div className="loading-screen">Verificando configuración...</div>;
+    return <div className="loading-screen">Verificando configuraci\u00f3n...</div>;
   if (!user) return <Navigate to="/login" />;
 
-  // Verificación de Terminal (Fundamental para operar)
-  // En modo admin, el administrador puede acceder sin terminal configurada
   if (!isTerminalConfigured && !adminMode) {
     return (
-      <TerminalSetup
-        onTerminalConfigured={() => setIsTerminalConfigured(true)}
-        isAdmin={isAdmin}
-      />
+      <Suspense fallback={<ModuleFallback />}>
+        <TerminalSetup
+          onTerminalConfigured={() => setIsTerminalConfigured(true)}
+          isAdmin={isAdmin}
+        />
+      </Suspense>
     );
   }
 
-  // Si la pantalla está bloqueada, mostrar pantalla de PIN
-  if (isLocked) return <LockScreen />;
-
-  // 3. Si necesita ingresar fondo de caja (DESACTIVADO DE LA RUTA PRINCIPAL)
-  // Se ha movido la lógica para que el manual sea desde dentro del sistema (Sidebar > Abrir Caja)
-  /* if (needsCashFund && isPOSRoute) {
-        return (
-            <CashFundModal
-                staffName={activeStaff?.name || storeName || 'Operador'}
-                staffId={activeStaff?.id}
-                onSessionCreated={(session) => {
-                    checkCashSession();
-                }}
-            />
-        );
-    } */
+  if (isLocked) return (
+    <Suspense fallback={<ModuleFallback />}>
+      <LockScreen />
+    </Suspense>
+  );
 
   if (!chrome) {
     return <LicenseGuard>{children}</LicenseGuard>;
@@ -200,17 +187,25 @@ const CancellationsRoute = ({ children }) => {
   return canViewCancellations ? children : <Navigate to="/" />;
 };
 
+const PendingAccountsRoute = ({ children }) => {
+  const { canViewPendingAccounts } = useAuth();
+  return canViewPendingAccounts ? children : <Navigate to="/" />;
+};
+
 const InventoryRoute = ({ children }) => {
   const { canManageInventory, canViewSupplies } = useAuth();
   return canManageInventory || canViewSupplies ? children : <Navigate to="/" />;
 };
 
 const DefaultRoute = () => {
-  const isDesktop = !!window?.electron?.isElectron;
-  if (!isDesktop) {
+  if (!platform.isNativePos) {
     return <Navigate to="/estadisticas" replace />;
   }
-  return <Sales />;
+  return (
+    <Suspense fallback={<ModuleFallback />}>
+      <Sales />
+    </Suspense>
+  );
 };
 
 const isDriverStandalone = () =>
@@ -220,7 +215,7 @@ const isDriverStandalone = () =>
 const isDriverMobileViewport = () =>
   window.matchMedia?.("(pointer: coarse)")?.matches || window.innerWidth <= 768;
 
-const getDriverPosPath = () => (window?.electron?.isElectron ? "/ventas" : "/estadisticas");
+const getDriverPosPath = () => (platform.isNativePos ? "/ventas" : "/estadisticas");
 
 const ModuleUnavailable = ({ title = "Modulo no disponible para esta tienda" }) => {
   const navigate = useNavigate();
@@ -249,7 +244,11 @@ const ModuleUnavailable = ({ title = "Modulo no disponible para esta tienda" }) 
 const DeliveryModuleRoute = () => {
   const { hasDeliveryModule } = useAuth();
   if (!hasDeliveryModule) return <ModuleUnavailable />;
-  return <DeliveryDashboard />;
+  return (
+    <Suspense fallback={<ModuleFallback />}>
+      <DeliveryDashboard />
+    </Suspense>
+  );
 };
 
 const DriverPortalRoute = () => {
@@ -262,28 +261,8 @@ const DriverPortalRoute = () => {
   useEffect(() => {
     const previousTitle = document.title;
     document.title = "Portal Repartidor";
-
-    let manifest = document.getElementById("driver-pwa-manifest");
-    if (!manifest) {
-      manifest = document.createElement("link");
-      manifest.id = "driver-pwa-manifest";
-      manifest.rel = "manifest";
-      document.head.appendChild(manifest);
-    }
-    manifest.href = "/driver-manifest.webmanifest";
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/driver-sw.js").catch((err) => {
-        console.warn("[Driver PWA] No se pudo registrar service worker:", err);
-      });
-    }
-
     return () => {
-      document.title =
-        previousTitle === "Portal Repartidor"
-          ? "SISTEMA VENTAS | LAVANDERIA PRO"
-          : previousTitle;
-      document.getElementById("driver-pwa-manifest")?.remove();
+      document.title = previousTitle === "Portal Repartidor" ? "SISTEMA VENTAS | LAVANDERIA PRO" : previousTitle;
     };
   }, []);
 
@@ -313,7 +292,11 @@ const DriverPortalRoute = () => {
     );
   }
 
-  return <DriverPortal desktopPreview={desktopPreview} onExitPreview={goToPos} />;
+  return (
+    <Suspense fallback={<ModuleFallback />}>
+      <DriverPortal desktopPreview={desktopPreview} onExitPreview={goToPos} />
+    </Suspense>
+  );
 };
 
 const DriverDesktopGate = ({ onGoToPos, onContinuePreview }) => (
@@ -340,30 +323,35 @@ const DriverDesktopGate = ({ onGoToPos, onContinuePreview }) => (
   </main>
 );
 
+const wrapLazy = (Component) => (
+  <Suspense fallback={<ModuleFallback />}>
+    <Component />
+  </Suspense>
+);
+
 export const Routing = () => {
   return (
     <HashRouter>
       <ScrollToTop />
       <Routes>
-        {/* Pantalla Cliente: Independiente de AuthProvider y ProductProvider */}
-        <Route path="/customer-display" element={<CustomerDisplay />} />
-        <Route path="/mobile-capture/:sessionId" element={<MobileCapture />} />
-        <Route path="/tracking/:token" element={<OrderTracking />} />
+        <Route path="/customer-display" element={wrapLazy(CustomerDisplay)} />
+        <Route path="/mobile-capture/:sessionId" element={wrapLazy(MobileCapture)} />
+        <Route path="/tracking/:token" element={wrapLazy(OrderTracking)} />
 
-        {/* Rutas Exclusivas SuperAdmin */}
-        <Route path="/portal-maestro" element={<SuperAdminLogin />} />
+        <Route path="/portal-maestro" element={wrapLazy(SuperAdminLogin)} />
         <Route
           path="/super-admin/*"
           element={
-            <SuperAdminLayout>
-              <Routes>
-                <Route path="licencias" element={<MasterLicenseManager />} />
-              </Routes>
-            </SuperAdminLayout>
+            <Suspense fallback={<ModuleFallback />}>
+              <SuperAdminLayout>
+                <Routes>
+                  <Route path="licencias" element={wrapLazy(MasterLicenseManager)} />
+                </Routes>
+              </SuperAdminLayout>
+            </Suspense>
           }
         />
 
-        {/* Rutas de la Aplicación Principal */}
         <Route
           path="/*"
           element={
@@ -371,268 +359,43 @@ export const Routing = () => {
               <SettingsProvider>
                 <ProductProvider>
                   <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route
-                      path="/register/:invitationCode?"
-                      element={<Login />}
-                    />
+                    <Route path="/login" element={wrapLazy(Login)} />
+                    <Route path="/register/:invitationCode?" element={wrapLazy(Login)} />
 
-                    <Route
-                      path="/"
-                      element={
-                        <PrivateLayout>
-                          <DefaultRoute />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/ventas"
-                      element={
-                        <PrivateLayout>
-                          <Sales />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/servicios"
-                      element={
-                        <PrivateLayout>
-                          <InventoryRoute>
-                            <Inventory mode="SERVICE" />
-                          </InventoryRoute>
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/productos"
-                      element={
-                        <PrivateLayout>
-                          <InventoryRoute>
-                            <Inventory mode="PRODUCT" />
-                          </InventoryRoute>
-                        </PrivateLayout>
-                      }
-                    />
+                    <Route path="/" element={<PrivateLayout><DefaultRoute /></PrivateLayout>} />
+                    <Route path="/ventas" element={<PrivateLayout>{wrapLazy(Sales)}</PrivateLayout>} />
+                    <Route path="/servicios" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="SERVICE" />)}</InventoryRoute></PrivateLayout>} />
+                    <Route path="/productos" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="PRODUCT" />)}</InventoryRoute></PrivateLayout>} />
+                    <Route path="/insumos" element={<PrivateLayout><InventoryRoute>{wrapLazy(SupplyInventory)}</InventoryRoute></PrivateLayout>} />
+                    <Route path="/historial" element={<PrivateLayout>{wrapLazy(Historial)}</PrivateLayout>} />
+                    <Route path="/ordenes" element={<PrivateLayout>{wrapLazy(Orders)}</PrivateLayout>} />
+                    <Route path="/estadisticas" element={<PrivateLayout>{wrapLazy(Stats)}</PrivateLayout>} />
+                    <Route path="/clientes" element={<PrivateLayout>{wrapLazy(ClientManager)}</PrivateLayout>} />
+                    <Route path="/delivery" element={<PrivateLayout><DeliveryModuleRoute /></PrivateLayout>} />
+                    <Route path="/chofer" element={<PrivateLayout chrome={false}><DriverPortalRoute /></PrivateLayout>} />
+                    <Route path="/configuracion" element={<PrivateLayout>{wrapLazy(ConfiguracionPortal)}</PrivateLayout>} />
+                    <Route path="/reportes-caja" element={<PrivateLayout><CashReportsRoute>{wrapLazy(CashReportsView)}</CashReportsRoute></PrivateLayout>} />
+                    <Route path="/reporte-cancelaciones" element={<PrivateLayout><CancellationsRoute>{wrapLazy(CancellationsReport)}</CancellationsRoute></PrivateLayout>} />
+                    <Route path="/cuentas-por-cobrar" element={<PrivateLayout><PendingAccountsRoute>{wrapLazy(CuentasPorCobrar)}</PendingAccountsRoute></PrivateLayout>} />
+                    <Route path="/admin" element={<PrivateLayout><AdminRoute>{wrapLazy(AdminPanel)}</AdminRoute></PrivateLayout>} />
+                    <Route path="/usuarios" element={<PrivateLayout><AdminRoute>{wrapLazy(UserManager)}</AdminRoute></PrivateLayout>} />
+                    <Route path="/configuracion-dolares" element={<PrivateLayout>{wrapLazy(ExchangeRateSettings)}</PrivateLayout>} />
+                    <Route path="/configuracion-impuestos" element={<PrivateLayout>{wrapLazy(TaxSettings)}</PrivateLayout>} />
+                    <Route path="/configuracion-pagos" element={<PrivateLayout>{wrapLazy(PaymentMethodsSettings)}</PrivateLayout>} />
+                    <Route path="/configuracion-servicios-express" element={<PrivateLayout>{wrapLazy(ServiciosExpressSettings)}</PrivateLayout>} />
+                    <Route path="/precios" element={<PrivateLayout>{wrapLazy(PriceConfiguration)}</PrivateLayout>} />
+                    <Route path="/configuracion-ticket" element={<PrivateLayout>{wrapLazy(TicketConfiguration)}</PrivateLayout>} />
+                    <Route path="/config-emisores" element={<PrivateLayout><AdminRoute>{wrapLazy(BillingIssuers)}</AdminRoute></PrivateLayout>} />
+                    <Route path="/cancelar-factura" element={<PrivateLayout><AdminRoute>{wrapLazy(InvoiceCancellation)}</AdminRoute></PrivateLayout>} />
+                    <Route path="/soporte-tecnico-especializado-nexusprolavanderia" element={<PrivateLayout><AdminRoute>{wrapLazy(Maintenance)}</AdminRoute></PrivateLayout>} />
 
-                    <Route
-                      path="/insumos"
-                      element={
-                        <PrivateLayout>
-                          <InventoryRoute>
-                            <SupplyInventory />
-                          </InventoryRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/historial"
-                      element={
-                        <PrivateLayout>
-                          <Historial />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/ordenes"
-                      element={
-                        <PrivateLayout>
-                          <Orders />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/estadisticas"
-                      element={
-                        <PrivateLayout>
-                          <Stats />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/clientes"
-                      element={
-                        <PrivateLayout>
-                          <ClientManager />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/delivery"
-                      element={
-                        <PrivateLayout>
-                          <DeliveryModuleRoute />
-                        </PrivateLayout>
-                      }
-                    />
-                    <Route
-                      path="/chofer"
-                      element={
-                        <PrivateLayout chrome={false}>
-                          <DriverPortalRoute />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Portal de Configuración Principal */}
-                    <Route
-                      path="/configuracion"
-                      element={
-                        <PrivateLayout>
-                          <ConfiguracionPortal />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Reportes de Caja — Solo Admin/Web */}
-                    <Route
-                      path="/reportes-caja"
-                      element={
-                        <PrivateLayout>
-                          <CashReportsRoute>
-                            <CashReportsView />
-                          </CashReportsRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Reporte de Cancelaciones */}
-                    <Route
-                      path="/reporte-cancelaciones"
-                      element={
-                        <PrivateLayout>
-                          <CancellationsRoute>
-                            <CancellationsReport />
-                          </CancellationsRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Panel de Administración solo para Admin */}
-                    <Route
-                      path="/admin"
-                      element={
-                        <PrivateLayout>
-                          <AdminRoute>
-                            <AdminPanel />
-                          </AdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Gestión de Usuarios solo para Admin */}
-                    <Route
-                      path="/usuarios"
-                      element={
-                        <PrivateLayout>
-                          <AdminRoute>
-                            <UserManager />
-                          </AdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/configuracion-dolares"
-                      element={
-                        <PrivateLayout>
-                          <ExchangeRateSettings />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/configuracion-impuestos"
-                      element={
-                        <PrivateLayout>
-                          <TaxSettings />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/configuracion-pagos"
-                      element={
-                        <PrivateLayout>
-                          <PaymentMethodsSettings />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/configuracion-servicios-express"
-                      element={
-                        <PrivateLayout>
-                          <ServiciosExpressSettings />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/precios"
-                      element={
-                        <PrivateLayout>
-                          <PriceConfiguration />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/configuracion-ticket"
-                      element={
-                        <PrivateLayout>
-                          <TicketConfiguration />
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Emisores Fiscales (CSD / Facturama) — Solo Admin */}
-                    <Route
-                      path="/config-emisores"
-                      element={
-                        <PrivateLayout>
-                          <AdminRoute>
-                            <BillingIssuers />
-                          </AdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Cancelación de Facturas — Solo Admin */}
-                    <Route
-                      path="/cancelar-factura"
-                      element={
-                        <PrivateLayout>
-                          <AdminRoute>
-                            <InvoiceCancellation />
-                          </AdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    <Route
-                      path="/soporte-tecnico-especializado-nexusprolavanderia"
-                      element={
-                        <PrivateLayout>
-                          <AdminRoute>
-                            <Maintenance />
-                          </AdminRoute>
-                        </PrivateLayout>
-                      }
-                    />
-
-                    {/* Rutas eliminadas de SuperAdmin (movidas fuera de PrivateLayout) */}
-
-                    <Route
-                      path="*"
-                      element={
-                        <div style={{ padding: "2rem", textAlign: "center" }}>
-                          <h1>Error 404</h1>
-                          <p>Página no encontrada</p>
-                          <Link to="/">Volver al Inicio</Link>
-                        </div>
-                      }
-                    />
+                    <Route path="*" element={
+                      <div style={{ padding: "2rem", textAlign: "center" }}>
+                        <h1>Error 404</h1>
+                        <p>P\u00e1gina no encontrada</p>
+                        <Link to="/">Volver al Inicio</Link>
+                      </div>
+                    } />
                   </Routes>
                 </ProductProvider>
               </SettingsProvider>

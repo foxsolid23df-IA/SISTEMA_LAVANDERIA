@@ -10,6 +10,7 @@ import { CashCut } from "../cashcut/CashCut";
 import { cashSessionService } from "../../services/cashSessionService";
 import Swal from "sweetalert2";
 import { config } from "../../config";
+import { platform } from "../../utils/platform";
 import "./Sidebar.css";
 import VisionAIModal from "../ai/VisionAIModal";
 
@@ -41,6 +42,7 @@ export const Sidebar = () => {
     // Compatibilidad
     canViewCashReports,
     canViewCancellations,
+    canViewPendingAccounts,
     canViewSupplies,
     canManageInventory,
     hasDeliveryModule,
@@ -56,7 +58,7 @@ export const Sidebar = () => {
   const [updaterMessage, setUpdaterMessage] = useState("");
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const isOnline = useConnectivity();
-  const isDesktop = !!window?.electron?.isElectron;
+  const isNativePos = platform.isNativePos;
   const deliveryDriverRoles = ["repartidor", "chofer"];
   const canAccessDriverPortal =
     hasDeliveryModule &&
@@ -114,7 +116,7 @@ export const Sidebar = () => {
   const handleCheckUpdates = async () => {
     if (!window.electron?.checkForUpdates) return;
     setIsCheckingUpdate(true);
-    setUpdaterMessage("Iniciando búsqueda...");
+    setUpdaterMessage("Iniciando busqueda...");
     try {
       await window.electron.checkForUpdates();
     } finally {
@@ -140,7 +142,7 @@ export const Sidebar = () => {
   const handleManualSync = async () => {
     if (!isOnline) {
       Swal.fire(
-        "Sin Conexión",
+        "Sin Conexion",
         "Por favor conecte el equipo a internet para sincronizar.",
         "warning",
       );
@@ -156,7 +158,7 @@ export const Sidebar = () => {
       const salesResult = await salesService.syncPendingSales();
 
       Swal.fire({
-        title: "Sincronización Exitosa",
+        title: "Exitosa",
         html: `
           <ul style="text-align: left;">
             <li>Inventario: ${invResult.created} nuevos, ${invResult.updated} actualizados.</li>
@@ -166,10 +168,10 @@ export const Sidebar = () => {
         icon: "success",
       });
     } catch (error) {
-      console.error("[Sidebar] Error en sincronización:", error);
+      console.error("[Sidebar] Error en sincronizacion:", error);
       Swal.fire(
         "Error",
-        "Ocurrió un fallo durante la sincronización.",
+        "Ocurrio un fallo durante la sincronizacion.",
         "error",
       );
     } finally {
@@ -235,7 +237,7 @@ export const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={`
-                fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-[1002] w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 
+                app-sidebar fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-[1002] w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 
                 flex flex-col transition-transform duration-300 ease-in-out
                 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
             `}
@@ -299,8 +301,8 @@ export const Sidebar = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-          {isDesktop && canAccessSales && (
+        <nav className="app-sidebar-nav flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+          {isNativePos && canAccessSales && (
             <NavLink
               to="/"
               className={({ isActive }) => `
@@ -337,7 +339,7 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 assignment
               </span>
-              <span className="text-sm font-bold">Gestión de Órdenes</span>
+              <span className="text-sm font-bold">Gestion de Ordenes</span>
             </NavLink>
           )}
 
@@ -397,7 +399,7 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 local_laundry_service
               </span>
-              <span className="text-sm font-bold">Catálogo de Servicios</span>
+              <span className="text-sm font-bold">Catalogo de Servicios</span>
             </NavLink>
           )}
 
@@ -417,7 +419,7 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 shopping_bag
               </span>
-              <span className="text-sm font-bold">Catálogo de Productos</span>
+              <span className="text-sm font-bold">Catalogo de Productos</span>
             </NavLink>
           )}
 
@@ -482,7 +484,7 @@ export const Sidebar = () => {
               <span className="material-icons-outlined text-[20px]">
                 history
               </span>
-              <span className="text-sm font-bold">Auditoría</span>
+              <span className="text-sm font-bold">Auditoria</span>
             </NavLink>
           )}
 
@@ -554,6 +556,26 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
+          {canViewPendingAccounts && (
+            <NavLink
+              to="/cuentas-por-cobrar"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                account_balance_wallet
+              </span>
+              <span className="text-sm font-bold">Cuentas por Cobrar</span>
+            </NavLink>
+          )}
+
           {canAccessSettings && (
             <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
               <NavLink
@@ -571,7 +593,7 @@ export const Sidebar = () => {
                 <span className="material-icons-outlined text-[20px]">
                   settings
                 </span>
-                <span className="text-sm font-bold">Configuración</span>
+                <span className="text-sm font-bold">Configuracion</span>
               </NavLink>
             </div>
           )}
@@ -597,7 +619,7 @@ export const Sidebar = () => {
           )}
 
           <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-            {isDesktop && (canManageCash || isAdmin) && (
+            {isNativePos && (canManageCash || isAdmin) && (
               <button
                 onClick={() => {
                   setShowCashCut(true);
@@ -623,7 +645,7 @@ export const Sidebar = () => {
               </button>
             )}
 
-            {isDesktop && canLockTerminal && (
+            {isNativePos && canLockTerminal && (
               <button
                 onClick={() => {
                   lockScreen();
@@ -639,14 +661,14 @@ export const Sidebar = () => {
             )}
 
             <div className="space-y-1">
-              {isDesktop && canRestartCash && (
+              {isNativePos && canRestartCash && (
                 <button
                   onClick={async () => {
                     const { value: password } = await Swal.fire({
-                      title: "Código de Seguridad",
-                      text: "Ingrese el código para reiniciar la caja:",
+                      title: "Codigo de Seguridad",
+                      text: "Ingrese el codigo para reiniciar la caja:",
                       input: "password",
-                      inputPlaceholder: "Código...",
+                      inputPlaceholder: "Codigo...",
                       inputAttributes: {
                         autocapitalize: "off",
                         autocorrect: "off",
@@ -662,16 +684,16 @@ export const Sidebar = () => {
                       logout();
                       setIsOpen(false);
                       Swal.fire(
-                        "Éxito",
+                        "Exito",
                         "Caja reiniciada correctamente",
                         "success",
                       );
                     } else if (password !== undefined) {
-                      Swal.fire("Error", "Código incorrecto", "error");
+                      Swal.fire("Error", "Codigo incorrecto", "error");
                     }
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
-                  title="Reiniciar configuración de terminal"
+                  title="Reiniciar configuracion de terminal"
                 >
                   <span className="material-icons-outlined text-[20px]">
                     restart_alt
@@ -691,7 +713,7 @@ export const Sidebar = () => {
                   <span className="material-icons-outlined text-[20px]">
                     logout
                   </span>
-                  <span className="text-sm font-bold">Cerrar Sesión</span>
+                  <span className="text-sm font-bold">Cerrar Sesion</span>
                 </button>
               )}
             </div>
@@ -699,7 +721,7 @@ export const Sidebar = () => {
         </nav>
 
         {/* Footer Controls */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-black/20 space-y-2">
+        <div className="app-sidebar-footer p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-black/20 space-y-2">
           {/* Sync Status & Action */}
           <div
             className={`p-3 rounded-xl border flex flex-col gap-2 transition-all ${
@@ -714,7 +736,7 @@ export const Sidebar = () => {
                   className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                 ></span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                  {isOnline ? "En Línea" : "Sin Conexión"}
+                  {isOnline ? "En Linea" : "Sin Conexion"}
                 </span>
               </div>
               {isOnline && config.isElectron && (
@@ -732,8 +754,8 @@ export const Sidebar = () => {
             </div>
             {!isOnline && (
               <p className="text-[9px] text-rose-600 dark:text-rose-400 font-medium leading-tight">
-                Las ventas se guardarán localmente y se sincronizarán al
-                recuperar conexión.
+                Las ventas se guardaran localmente y se sincronizaran al
+                recuperar conexion.
               </p>
             )}
           </div>
@@ -799,3 +821,5 @@ export const Sidebar = () => {
     </>
   );
 };
+
+

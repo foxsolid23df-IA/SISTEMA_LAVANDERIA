@@ -1,7 +1,7 @@
 {
   "name": "pos-multicajas-pro",
-  "version": "1.4.51",
-  "description": "Sistema completo de punto de venta con escaneo de códigos de barras, gestión de inventario y estadísticas en tiempo real",
+  "version": "1.4.55",
+  "description": "Sistema completo de punto de venta con escaneo de cÃ³digos de barras, gestiÃ³n de inventario y estadÃ­sticas en tiempo real",
   "main": "electron-main.js",
   "scripts": {
     "electron:dev": "cross-env NODE_ENV=development electron .",
@@ -10,7 +10,11 @@
     "build:frontend": "cd frontend && npm run build && cd ..",
     "prepare:backend": "node scripts/prepare-backend.js",
     "dist": "npm run build:all && electron-builder --win --x64",
-    "build": "npm run build:frontend"
+    "build": "npm run build:frontend",
+    "sync:android": "npm run build && cd mobile_app && npx cap sync android",
+    "apk:debug": "npm run sync:android && cd mobile_app/android && gradlew.bat assembleDebug",
+    "apk:release": "npm run sync:android && cd mobile_app/android && gradlew.bat assembleRelease",
+    "build:android": "npm run sync:android"
   },
   "keywords": [
     "pos",

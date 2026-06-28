@@ -11,6 +11,7 @@ import { exchangeRateService } from "../../services/exchangeRateService";
 import { printService } from "../../services/printService";
 import { expressServicesService } from "../../services/expressServicesService";
 import { deliveryService } from "../../services/deliveryService";
+import { useKeepAwake } from "../../hooks/useKeepAwake";
 
 import { useSettings } from "../../contexts/SettingsContext";
 import { formatearDinero } from "../../utils";
@@ -23,8 +24,10 @@ import VisionAIModal from "../ai/VisionAIModal";
 import "./Sales.css";
 import KgQuantityModal from "./KgQuantityModal";
 
-// Componente de Punto de Venta específico para Lavandería
+// Componente de Punto de Venta especifico para Lavanderia
 export const Sales = () => {
+  useKeepAwake(true)
+
   const {
     user,
     cashSession,
@@ -35,7 +38,7 @@ export const Sales = () => {
   } = useAuth();
   const [showCashFundModal, setShowCashFundModal] = useState(false);
 
-  // Estado para el modal de cantidad KG (reemplazo de báscula)
+  // Estado para el modal de cantidad KG (reemplazo de bascula)
   const [kgModalProduct, setKgModalProduct] = useState(null);
 
   const { productos, loading: loadingProducts, loadProducts } = useProducts();
@@ -48,7 +51,7 @@ export const Sales = () => {
     total,
   } = useCart((msg) => Swal.fire("Error", msg, "error"));
 
-  // Estados de búsqueda
+  // Estados de busqueda
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
 
@@ -86,7 +89,7 @@ export const Sales = () => {
   // Modo de Venta (Filtro Principal)
   const [saleMode, setSaleMode] = useState("SERVICE"); // 'SERVICE', 'PRODUCT', 'COMMON' o 'EXPRESS'
 
-  // Estado para Producto Común
+  // Estado para Producto Comun
   const [commonProductForm, setCommonProductForm] = useState({
     description: "",
     quantity: 1,
@@ -137,7 +140,7 @@ export const Sales = () => {
         // Agregar el servicio de ropa al carrito
         agregarProducto(deliveryItem, 1);
         
-        // Si hay una tarifa de envío, agregarla como ítem
+        // Si hay una tarifa de envio, agregarla como item
         if (parseFloat(data.delivery_fee) > 0) {
           const feeItem = {
             id: `delivery-fee-${data.delivery_order_id}`,
@@ -174,11 +177,11 @@ export const Sales = () => {
         setNotas(`[Delivery #${data.delivery_order_id}] ${data.customer_item_description ? `Cliente entrego: ${data.customer_item_description}. ` : ''}${data.notes || ''}`);
         setAnticipo(Number(data.paid_amount) || 0);
         
-        // 5. Mostrar confirmación de carga
+        // 5. Mostrar confirmacion de carga
         Swal.fire({
           icon: "success",
           title: "Datos de Delivery Cargados",
-          text: `Pedido #${data.delivery_order_id} cargado con éxito en caja.`,
+          text: `Pedido #${data.delivery_order_id} cargado con exito en caja.`,
           timer: 2000,
           showConfirmButton: false,
           toast: true,
@@ -209,7 +212,7 @@ export const Sales = () => {
     }
     const price = parseFloat(expressForm.price);
     if (isNaN(price) || price <= 0) {
-      Swal.fire("Precio Inválido", "El precio debe ser un número mayor a 0", "error");
+      Swal.fire("Precio Invalido", "El precio debe ser un numero mayor a 0", "error");
       return;
     }
 
@@ -240,7 +243,7 @@ export const Sales = () => {
     Swal.fire({
       icon: "success",
       title: "Servicio Express Agregado",
-      text: `${expressForm.name.trim().toUpperCase()} añadido a la orden`,
+      text: `${expressForm.name.trim().toUpperCase()} anadido a la orden`,
       timer: 1500,
       showConfirmButton: false,
       position: "top-end",
@@ -267,7 +270,7 @@ export const Sales = () => {
     });
   }, [productos, searchTerm, filterCategory, saleMode]);
 
-  // Estados de configuración (Settings vaticano desde Context)
+  // Estados de configuracion (Settings vaticano desde Context)
   const { settings: businessSettings, loading: loadingSettings } =
     useSettings();
   // Cargar monedas activas al iniciar
@@ -284,14 +287,14 @@ export const Sales = () => {
       .catch((err) => console.error("Error loading exchange rates:", err));
   }, []);
 
-  // Efecto para auto-impresión
+  // Efecto para auto-impresion
   useEffect(() => {
     if (ventaCompletada && businessSettings?.ticket_preview === false && !isPrinting) {
       if (!autoPrintStarted.current) {
         autoPrintStarted.current = true;
         const autoPrint = async () => {
           setTimeout(async () => {
-             // Solo llamamos imprimir si aún está activo el ref
+             // Solo llamamos imprimir si aun esta activo el ref
              if (ticketRef.current) {
                 await imprimirTicket();
              }
@@ -305,7 +308,7 @@ export const Sales = () => {
     }
   }, [ventaCompletada, businessSettings, isPrinting]);
 
-  // Búsqueda de clientes
+  // Busqueda de clientes
   useEffect(() => {
     if (busquedaCliente.length >= 2) {
       customerService
@@ -334,8 +337,8 @@ export const Sales = () => {
 
     if (isNaN(price) || price <= 0) {
       Swal.fire(
-        "Precio Inválido",
-        "El precio debe ser un número mayor a 0",
+        "Precio Invalido",
+        "El precio debe ser un numero mayor a 0",
         "error",
       );
       return;
@@ -357,7 +360,7 @@ export const Sales = () => {
     Swal.fire({
       icon: "success",
       title: "Agregado",
-      text: "Producto añadido a la orden",
+      text: "Producto anadido a la orden",
       timer: 1500,
       showConfirmButton: false,
       position: "top-end",
@@ -365,7 +368,7 @@ export const Sales = () => {
     });
   };
 
-  // Cálculo de totales con impuestos
+  // Calculo de totales con impuestos
   const globalTaxRate =
     businessSettings?.tax_percentage !== undefined &&
     businessSettings?.tax_percentage !== null
@@ -374,19 +377,12 @@ export const Sales = () => {
   const taxAmount = wantsInvoice ? total * (globalTaxRate / 100) : 0;
   const finalTotal = total + taxAmount;
 
-  // Sincronizar anticipo con el total de la orden cuando el modal de pago está abierto
-  useEffect(() => {
-    if (isPaymentModalOpen) {
-      setAnticipo(finalTotal);
-    }
-  }, [finalTotal, isPaymentModalOpen]);
-
   // Procesar Orden
   const handleProcessOrder = async () => {
     if (!cashSession) {
       Swal.fire({
         title: "Caja Cerrada",
-        text: "No puedes realizar esta acción, primero debes de abrir caja",
+        text: "No puedes realizar esta accion, primero debes de abrir caja",
         icon: "warning",
         confirmButtonColor: "#0f172a",
       });
@@ -395,7 +391,7 @@ export const Sales = () => {
 
     if (carrito.length === 0) {
       Swal.fire(
-        "Carrito vacío",
+        "Carrito vacio",
         "Agrega al menos un servicio o producto",
         "warning",
       );
@@ -412,6 +408,9 @@ export const Sales = () => {
 
     setCashPayments({}); // Reset change calculator
     setWantsInvoice(false);
+    if (!deliveryContext) {
+      setAnticipo(finalTotal);
+    }
     setIsPaymentModalOpen(true);
   };
 
@@ -442,7 +441,7 @@ export const Sales = () => {
         notes: notas,
         status: "processing", // Auto-send to washing
         cash_session_id: cashSession?.id,
-        // Registrar qué empleado creó la orden
+        // Registrar que empleado creo la orden
         created_by_staff_id: activeStaff?.id || null,
       };
 
@@ -469,7 +468,7 @@ export const Sales = () => {
         metodo_pago: metodoPago,
       });
 
-      Swal.fire("¡Éxito!", "Orden registrada correctamente", "success");
+      Swal.fire("Exito!", "Orden registrada correctamente", "success");
       loadProducts(true); // Refrescar stock
       setIsPaymentModalOpen(false);
       vaciarCarrito();
@@ -495,7 +494,7 @@ export const Sales = () => {
       if (ticketRef.current) {
         const copies = businessSettings.ticket_double_print ? 2 : 1;
 
-        // Modo imagen: Envía el elemento DOM directamente para captura pixel-perfect
+        // Modo imagen: Envia el elemento DOM directamente para captura pixel-perfect
         await printService.print(ticketRef.current, businessSettings.printer_name, {
           copies,
           settings: businessSettings,
@@ -509,7 +508,7 @@ export const Sales = () => {
   };
 
   return (
-    <div className="pos-container flex flex-col h-[calc(100vh-64px)] lg:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950">
+    <div className="pos-container flex flex-col h-[calc(100dvh-64px)] lg:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* PANEL IZQUIERDO: PRODUCTOS Y SERVICIOS */}
       <div className="flex-1 flex flex-col p-4 overflow-hidden">
         {/* Cash Session / Admin Mode Banner */}
@@ -526,7 +525,7 @@ export const Sales = () => {
                   Modo Administrador
                 </p>
                 <h4 className="text-sm font-bold dark:text-white">
-                  Acceso de gestión — sin caja configurada
+                  Acceso de gestion - sin caja configurada
                 </h4>
               </div>
             </div>
@@ -565,7 +564,7 @@ export const Sales = () => {
                     cashSession ? "text-emerald-600" : "text-amber-600"
                   }`}
                 >
-                  {cashSession ? "Sesión Iniciada" : "Sesión Cerrada"}
+                  {cashSession ? "Sesion Iniciada" : "Sesion Cerrada"}
                 </p>
                 <h4 className="text-sm font-bold dark:text-white">
                   {cashSession
@@ -596,7 +595,7 @@ export const Sales = () => {
         )}
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-          <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div className="mobile-sale-tabs flex bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setSaleMode("SERVICE")}
               className={`flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-black transition-all ${
@@ -632,7 +631,7 @@ export const Sales = () => {
               }`}
             >
               <span className="material-symbols-outlined text-sm">add_box</span>
-              COMÚN
+              COMUN
             </button>
             <button
               onClick={() => setIsExpressModalOpen(true)}
@@ -660,7 +659,7 @@ export const Sales = () => {
                 placeholder={
                   saleMode === "SERVICE"
                     ? "Buscar servicio (Lavado, Secado, Planchado)..."
-                    : "Buscar producto por nombre o código..."
+                    : "Buscar producto por nombre o codigo..."
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -669,7 +668,7 @@ export const Sales = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-24 lg:pb-0 custom-scrollbar">
+        <div className="mobile-sales-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-24 lg:pb-0 custom-scrollbar">
           {saleMode === "COMMON" ? (
             <div className="col-span-full bg-white dark:bg-slate-900 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
               <div className="w-full max-w-md space-y-6">
@@ -680,22 +679,22 @@ export const Sales = () => {
                     </span>
                   </div>
                   <h3 className="text-xl font-black text-slate-800 dark:text-white">
-                    Agregar Producto Común
+                    Agregar Producto Comun
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-tight">
-                    Ítem que no figura en el catálogo
+                    Item que no figura en el catalogo
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                      Descripción del Producto
+                      Descripcion del Producto
                     </label>
                     <input
                       type="text"
                       className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white font-bold transition-all transition-all"
-                      placeholder="Ej. Jabón extra, Suavizante especial..."
+                      placeholder="Ej. Jabon extra, Suavizante especial..."
                       value={commonProductForm.description}
                       onChange={(e) =>
                         setCommonProductForm((prev) => ({
@@ -780,7 +779,7 @@ export const Sales = () => {
             </div>
           ) : (
             filteredProducts.map((p) => {
-              // Detección Inteligente de Servicio (Incluso si la DB aún dice PRODUCT)
+              // Deteccion Inteligente de Servicio (Incluso si la DB aun dice PRODUCT)
               const isService =
                 p.type === "SERVICE" ||
                 p.type === "EXPRESS" ||
@@ -802,13 +801,13 @@ export const Sales = () => {
                       return;
                     }
 
-                    // Servicios unitarios: permitir seleccionar múltiples veces (incrementa cantidad)
+                    // Servicios unitarios: permitir seleccionar multiples veces (incrementa cantidad)
                     if (isService) {
                       agregarProducto(p);
                       return;
                     }
 
-                    // Productos físicos: si ya está en carrito, guiar al usuario a usar +/-
+                    // Productos fisicos: si ya esta en carrito, guiar al usuario a usar +/-
                     const itemExistente = carrito.find(
                       (item) => item.id === p.id,
                     );
@@ -898,9 +897,9 @@ export const Sales = () => {
         </div>
       </div>
 
-      {/* Botón Flotante para Carrito en Móviles */}
+      {/* Boton Flotante para Carrito en Moviles */}
       {!showMobileCart && (
-        <div className="lg:hidden fixed bottom-4 left-4 right-4 z-[90]">
+        <div className="mobile-cart-toggle lg:hidden fixed bottom-4 left-4 right-4 z-[90]">
           <button
             onClick={() => setShowMobileCart(true)}
             className="w-full bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between font-black active:scale-[0.98] transition-all"
@@ -919,7 +918,7 @@ export const Sales = () => {
         </div>
       )}
 
-      {/* OVERLAY PARA MÓVILES */}
+      {/* OVERLAY PARA MOVILES */}
       {showMobileCart && (
         <div
           className="fixed inset-0 bg-black/60 z-[95] lg:hidden backdrop-blur-sm transition-opacity"
@@ -930,13 +929,13 @@ export const Sales = () => {
       {/* PANEL DERECHO: CARRITO Y ORDEN */}
       <div
         className={`
-        fixed inset-x-0 bottom-0 z-[100] bg-white dark:bg-slate-900 flex-col h-[85vh] rounded-t-3xl shadow-2xl
+        mobile-cart-drawer fixed inset-x-0 bottom-0 z-[100] bg-white dark:bg-slate-900 flex-col h-[85vh] rounded-t-3xl shadow-2xl
         transition-transform duration-300 ease-in-out
         ${showMobileCart ? "translate-y-0" : "translate-y-full"}
         lg:static lg:translate-y-0 lg:w-[450px] lg:h-full lg:border-l lg:border-slate-200 dark:border-slate-800 lg:flex lg:rounded-none lg:shadow-none lg:z-10
       `}
       >
-        {/* Agarradera para móviles */}
+        {/* Agarradera para moviles */}
         <div
           className="lg:hidden flex justify-center py-3 cursor-pointer"
           onClick={() => setShowMobileCart(false)}
@@ -959,7 +958,7 @@ export const Sales = () => {
           </button>
         </div>
 
-        {/* SECCIÓN CLIENTE (Movido arriba) */}
+        {/* SECCION CLIENTE (Movido arriba) */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-20">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-black dark:text-slate-400 uppercase tracking-widest">
@@ -970,7 +969,7 @@ export const Sales = () => {
                 <input
                   type="text"
                   className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-black dark:text-white font-bold placeholder:text-slate-400"
-                  placeholder="Nombre o teléfono..."
+                  placeholder="Nombre o telefono..."
                   value={
                     clienteSeleccionado
                       ? clienteSeleccionado.name
@@ -1022,7 +1021,7 @@ export const Sales = () => {
               <span className="material-symbols-outlined text-6xl">
                 add_shopping_cart
               </span>
-              <p className="font-medium">El carrito está vacío</p>
+              <p className="font-medium">El carrito esta vacio</p>
             </div>
           ) : (
             carrito.map((item) => (
@@ -1167,14 +1166,14 @@ export const Sales = () => {
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl mb-6">
                   <div>
                     <p className="text-sm font-bold text-slate-800 dark:text-white">
-                      ¿Desea Facturar?
+                      Desea Facturar?
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       El impuesto configurado es de <span className="font-bold text-slate-700 dark:text-slate-300">{globalTaxRate}%</span>.
                       <br/>
                       {wantsInvoice
                         ? "Este cargo ha sido sumado al total."
-                        : "Active el botón para aplicar el cargo."}
+                        : "Active el boton para aplicar el cargo."}
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -1188,7 +1187,7 @@ export const Sales = () => {
                   </label>
                 </div>
 
-                {/* Desglose de impuestos siempre visible para evitar confusión */}
+                {/* Desglose de impuestos siempre visible para evitar confusion */}
                 <div className="flex flex-col gap-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl mb-4 text-left">
                   <div className="flex justify-between font-bold text-slate-600 dark:text-slate-400">
                     <span>Subtotal:</span>
@@ -1267,7 +1266,7 @@ export const Sales = () => {
                       <>
                         {activeCurrencies.map((currency) => {
                           const isMXN = currency.currency_code === 'MXN';
-                          const symbol = isMXN ? "$" : currency.currency_code === 'USD' ? "U$" : currency.currency_code === 'EUR' ? "€" : currency.currency_code;
+                          const symbol = isMXN ? "$" : currency.currency_code === 'USD' ? "U$" : currency.currency_code === 'EUR' ? "EUR" : currency.currency_code;
                           const rate = currency.rate;
                           const sugerido = faltanteMXN > 0 ? (faltanteMXN / rate).toFixed(2) : "0.00";
                           const isBlocked = faltanteMXN === 0 && !cashPayments[currency.currency_code];
@@ -1276,7 +1275,7 @@ export const Sales = () => {
                             <div key={currency.currency_code} className="flex justify-between items-center text-sm mb-2">
                               <div className="flex flex-col">
                                 <span className="text-black font-bold">
-                                  Pagó Con {currency.currency_code}:
+                                  Pago Con {currency.currency_code}:
                                 </span>
                                 {!isMXN && (
                                   <span className="text-[10px] text-slate-500">Tipo de cambio: ${rate}</span>
@@ -1319,21 +1318,55 @@ export const Sales = () => {
                 </div>
               )}
 
-              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-black font-bold">
-                    Anticipo recibido:
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Monto a pagar ahora
                   </span>
-                  <span className="font-bold text-emerald-600">
-                    {formatearDinero(anticipo || 0)}
-                  </span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setAnticipo(finalTotal)}
+                      className="text-[10px] px-2 py-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+                    >
+                      Completo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnticipo(Math.round(finalTotal * 0.5 * 100) / 100)}
+                      className="text-[10px] px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnticipo(0)}
+                      className="text-[10px] px-2 py-1 rounded bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 font-bold hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
+                    >
+                      Dejar todo
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-black font-bold">Saldo pendiente:</span>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={finalTotal}
+                    step="0.01"
+                    className="w-full pl-8 pr-3 py-2 text-lg font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={anticipo}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      setAnticipo(!isNaN(val) && val >= 0 ? Math.min(val, finalTotal) : 0);
+                    }}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500">Saldo pendiente:</span>
                   <span className="font-bold text-rose-500">
-                    {formatearDinero(
-                      Math.max(0, finalTotal - (parseFloat(anticipo) || 0)),
-                    )}
+                    {formatearDinero(Math.max(0, finalTotal - (parseFloat(anticipo) || 0)))}
                   </span>
                 </div>
               </div>
@@ -1433,7 +1466,7 @@ export const Sales = () => {
                   Agregar Servicio Express
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-tight">
-                  Servicio libre — ingresa nombre, costo y notas
+                  Servicio libre - ingresa nombre, costo y notas
                 </p>
               </div>
 
@@ -1574,10 +1607,10 @@ export const Sales = () => {
           onAccept={(quantity) => {
             const existente = carrito.find(item => item.id === kgModalProduct.id);
             if (existente) {
-              // Ya existe en el carrito → SUMAR la nueva pesada al peso anterior
+              // Ya existe en el carrito -> SUMAR la nueva pesada al peso anterior
               cambiarCantidad(kgModalProduct.id, existente.quantity + quantity);
             } else {
-              // Primera vez → agregar con cantidad inicial del peso
+              // Primera vez -> agregar con cantidad inicial del peso
               agregarProducto(kgModalProduct, quantity);
             }
             setKgModalProduct(null);
@@ -1588,3 +1621,4 @@ export const Sales = () => {
     </div>
   );
 };
+

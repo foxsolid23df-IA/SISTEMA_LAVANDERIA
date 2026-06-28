@@ -536,5 +536,71 @@ export const orderService = {
       week: calculateStats(weekCancelled),
       month: calculateStats(monthCancelled)
     };
+  },
+
+  // Obtener órdenes con saldo pendiente (cuentas por cobrar)
+  async getPendingOrders(signal) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    let query = supabase
+      .from('orders')
+      .select(`
+        id, folio, total, paid_amount, payment_status, status,
+        promised_at, created_at, notes, payment_method,
+        customer:customers(id, name, phone)
+      `)
+      .eq('user_id', user.id)
+      .neq('payment_status', 'paid')
+      .not('status', 'in', '("cancelled","deleted")')
+      .order('created_at', { ascending: false });
+
+    if (signal) query = query.abortSignal(signal);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Filtrar en JS donde balance > 0 (por si hay inconsistencias)
+    const pendientes = (data || []).filter(o => {
+      const balance = (parseFloat(o.total) || 0) - (parseFloat(o.paid_amount) || 0);
+      return balance > 0;
+    });
+
+    return pendientes.map(o => ({
+      ...o,
+      balance: (parseFloat(o.total) || 0) - (parseFloat(o.paid_amount) || 0)
+    }));
+  },
+
+  // Obtener resumen agrupado por cliente
+  async getPendingAccountsSummary(signal) {
+    const orders = await this.getPendingOrders(signal);
+    const map = new Map();
+
+    orders.forEach(o => {
+      const cust = o.customer;
+      const cid = cust?.id || 'sin-cliente';
+      if (!map.has(cid)) {
+        map.set(cid, {
+          customer_id: cid,
+          customer_name: cust?.name || 'SIN CLIENTE',
+          customer_phone: cust?.phone || '',
+          orders: [],
+          total_debt: 0,
+          order_count: 0,
+          last_order_date: null
+        });
+      }
+      const entry = map.get(cid);
+      entry.orders.push(o);
+      entry.total_debt += o.balance;
+      entry.order_count++;
+      if (!entry.last_order_date || new Date(o.created_at) > new Date(entry.last_order_date)) {
+        entry.last_order_date = o.created_at;
+      }
+    });
+
+    return Array.from(map.values())
+      .sort((a, b) => b.total_debt - a.total_debt);
   }
 };
