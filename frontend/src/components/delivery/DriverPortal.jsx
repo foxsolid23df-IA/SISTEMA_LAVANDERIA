@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { storage } from "../../utils/storage";
 import {
     FiArrowLeft,
     FiArrowRight,
@@ -102,7 +103,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
             setDriver(verifiedDriver);
             setAuthenticated(true);
-            localStorage.setItem("driver_session", JSON.stringify(verifiedDriver));
+            await storage.setObject("driver_session", verifiedDriver);
             await loadDriverOrders(verifiedDriver.id, verifiedDriver.session_token);
             setPin("");
         } catch (err) {
@@ -114,17 +115,17 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
     };
 
     useEffect(() => {
-        const savedSession = localStorage.getItem("driver_session");
-        if (savedSession) {
-            const parsedDriver = JSON.parse(savedSession);
-            if (!parsedDriver?.session_token) {
-                localStorage.removeItem("driver_session");
-                return;
+        storage.getObject("driver_session").then((savedSession) => {
+            if (savedSession) {
+                if (!savedSession?.session_token) {
+                    storage.remove("driver_session");
+                    return;
+                }
+                setDriver(savedSession);
+                setAuthenticated(true);
+                loadDriverOrders(savedSession.id, savedSession.session_token);
             }
-            setDriver(parsedDriver);
-            setAuthenticated(true);
-            loadDriverOrders(parsedDriver.id, parsedDriver.session_token);
-        }
+        });
     }, []);
 
     useEffect(() => {
@@ -145,7 +146,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
     }, [driver]);
 
     const handleLogout = () => {
-        localStorage.removeItem("driver_session");
+        storage.remove("driver_session");
         setDriver(null);
         setAuthenticated(false);
         setSelectedOrderId(null);

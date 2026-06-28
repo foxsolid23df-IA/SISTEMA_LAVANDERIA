@@ -4,7 +4,25 @@
     max-width: 95vw;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: 90dvh;
+}
+
+@media (max-width: 768px) {
+    .bulk-import-modal {
+        width: 100%;
+        max-width: 100%;
+        max-height: 85dvh;
+    }
+
+    .bulk-import-modal .preview-table-wrapper {
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bulk-import-modal .drop-zone {
+        padding: 1.5rem;
+    }
 }
 
 .bulk-import-modal .modal-header h2 {

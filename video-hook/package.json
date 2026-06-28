@@ -1,0 +1,14 @@
+{
+  "name": "laundry-hook-video",
+  "version": "1.0.0",
+  "description": "Futuristic TikTok hook for laundry system",
+  "main": "main.js",
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "hyperframes": "latest"
+  },
+  "scripts": {
+    "preview": "hyperframes preview",
+    "render": "hyperframes render"
+  }
+}

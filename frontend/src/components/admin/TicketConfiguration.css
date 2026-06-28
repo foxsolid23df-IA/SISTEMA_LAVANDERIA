@@ -174,3 +174,43 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+@media (max-width: 768px) {
+    .ticket-config-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .ticket-config-header {
+        margin-bottom: 1rem;
+        text-align: left;
+    }
+
+    .ticket-config-header h1 {
+        font-size: 1.35rem;
+        line-height: 1.2;
+    }
+
+    .ticket-config-form {
+        gap: 1rem;
+    }
+
+    .form-group-config input,
+    .form-group-config textarea,
+    .form-group-config select,
+    .printer-config-section select {
+        min-height: 44px;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .save-config-btn {
+        min-height: 48px;
+        position: sticky;
+        bottom: calc(8px + var(--safe-area-bottom, 0px));
+        z-index: 2;
+    }
+}

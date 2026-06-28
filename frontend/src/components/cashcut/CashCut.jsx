@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { cashCutService } from "../../services/cashCutService";
 import { salesService } from "../../services/salesService";
@@ -23,7 +23,7 @@ export const CashCut = ({ onClose }) => {
     checkCashSession,
   } = useAuth();
 
-  // Si no hay sesión activa, permitir realizar la apertura
+  // Si no hay sesiÃ³n activa, permitir realizar la apertura
   if (!cashSession) {
     return (
       <CashFundModal
@@ -53,7 +53,7 @@ export const CashCut = ({ onClose }) => {
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false); // State for modal
   const ticketRef = useRef(null);
 
-  // El resumen se carga mediante el efecto dependiente de cutType definido más abajo
+  // El resumen se carga mediante el efecto dependiente de cutType definido mÃ¡s abajo
 
   const processSummaryData = (data) => {
     const sales = data.sales || [];
@@ -80,7 +80,7 @@ export const CashCut = ({ onClose }) => {
       0,
     );
     expectedMXN -= parseFloat(data.withdrawals?.totalMXN || 0);
-    // Nota: No restamos cancelaciones aquí porque cashSales ya solo incluye ventas activas.
+    // Nota: No restamos cancelaciones aquÃ­ porque cashSales ya solo incluye ventas activas.
 
     const usdSalesMixed = activeSales.filter(
       (s) => s.payment_method === "dolares",
@@ -163,7 +163,7 @@ export const CashCut = ({ onClose }) => {
     if (diffMXN !== 0 && !notes.trim()) {
       Swal.fire({
         icon: "warning",
-        title: "Justificación Requerida",
+        title: "JustificaciÃ³n Requerida",
         text: "Por favor agrega una nota explicando la diferencia en caja",
         confirmButtonColor: "#10b981",
       });
@@ -173,8 +173,8 @@ export const CashCut = ({ onClose }) => {
     if (diffUSD !== 0 && !notes.trim()) {
       Swal.fire({
         icon: "warning",
-        title: "Justificación Requerida",
-        text: "Por favor agrega una nota explicando la diferencia en dólares",
+        title: "JustificaciÃ³n Requerida",
+        text: "Por favor agrega una nota explicando la diferencia en dÃ³lares",
         confirmButtonColor: "#10b981",
       });
       return;
@@ -198,7 +198,7 @@ export const CashCut = ({ onClose }) => {
         : 0;
 
     const result = await Swal.fire({
-      title: typeToExecute === "dia" ? "¿Cerrar el día?" : "¿Cerrar turno?",
+      title: typeToExecute === "dia" ? "Â¿Cerrar el dÃ­a?" : "Â¿Cerrar turno?",
       html:
         `<div style="text-align: left; font-size: 0.9em;">
         <p><strong>Fondo Inicial:</strong> ${formatMoney(parseFloat(cashSession?.opening_fund) || 0)}</p>
@@ -217,7 +217,7 @@ export const CashCut = ({ onClose }) => {
         `</div>`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Sí, cerrar",
+      confirmButtonText: "SÃ­, cerrar",
       cancelButtonText: "Cancelar",
     });
 
@@ -282,17 +282,23 @@ export const CashCut = ({ onClose }) => {
   const handlePrint = async () => {
     if (!ticketRef.current) return;
 
-    // Modo imagen: Envía el elemento DOM directamente para captura pixel-perfect
+    // Modo imagen: EnvÃ­a el elemento DOM directamente para captura pixel-perfect
     try {
       await printService.print(ticketRef.current, settings?.printer_name, {
         copies: 1,
         settings: settings,
+        ticketData: {
+          type: "cashCut",
+          cutResult,
+          cutType,
+          settings,
+        },
       });
     } catch (error) {
       console.error("Error al imprimir el corte de caja:", error);
       Swal.fire(
-        "Atención",
-        "Hubo un problema al contactar la impresora preferida, se intentará usar la del sistema.",
+        "AtenciÃ³n",
+        "Hubo un problema al contactar la impresora preferida, se intentarÃ¡ usar la del sistema.",
         "warning",
       );
     }
@@ -306,10 +312,10 @@ export const CashCut = ({ onClose }) => {
     }
 
     Swal.fire({
-      title: "¡Corte realizado!",
+      title: "Â¡Corte realizado!",
       text:
         cutType === "dia"
-          ? "El día ha sido cerrado exitosamente"
+          ? "El dÃ­a ha sido cerrado exitosamente"
           : "Tu turno ha sido cerrado exitosamente",
       icon: "success",
       timer: 2000,
@@ -322,23 +328,23 @@ export const CashCut = ({ onClose }) => {
     if (onClose) onClose();
   };
 
-  // Función para manejar el éxito del retiro
+  // FunciÃ³n para manejar el Ã©xito del retiro
   const handleWithdrawalSuccess = () => {
     loadSummary(); // Recargar el resumen para actualizar los montos esperados
   };
 
-  // Función para exportar historial de retiros
+  // FunciÃ³n para exportar historial de retiros
   const handleExportWithdrawals = async () => {
     try {
-      // Si hay sesión, intentamos filtrar por ella, si no, traemos los del día/turno aproximado
-      // Por simplicidad, exportamos los de la sesión actual o recientes
+      // Si hay sesiÃ³n, intentamos filtrar por ella, si no, traemos los del dÃ­a/turno aproximado
+      // Por simplicidad, exportamos los de la sesiÃ³n actual o recientes
       let withdrawals = [];
       if (cashSession?.id) {
         withdrawals = await cashWithdrawalService.getWithdrawalsBySession(
           cashSession.id,
         );
       } else {
-        // Fallback: últimos 50 o por fecha
+        // Fallback: Ãºltimos 50 o por fecha
         withdrawals = await cashWithdrawalService.getWithdrawalHistory({
           limit: 100,
           startDate: summary?.startTime,
@@ -362,7 +368,7 @@ export const CashCut = ({ onClose }) => {
 
   const currentSummary = cutType === "dia" ? daySummary : shiftSummary;
 
-  // Cálculos en tiempo real para la UI
+  // CÃ¡lculos en tiempo real para la UI
   const expectedMXN = currentSummary?.expectedMXN || 0;
   const diffMXN =
     cutType === "turno" ? (parseFloat(actualCash) || 0) - expectedMXN : 0;
@@ -480,7 +486,7 @@ export const CashCut = ({ onClose }) => {
         </div>
 
         <div className="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-4">
-          {/* Botones de Acción Rápida (Retiros y Exportar) */}
+          {/* Botones de AcciÃ³n RÃ¡pida (Retiros y Exportar) */}
           <div className="flex gap-2 mb-1">
             <button
               onClick={() => setShowWithdrawalModal(true)}
@@ -526,14 +532,14 @@ export const CashCut = ({ onClose }) => {
               <span className="material-symbols-rounded text-base">
                 dark_mode
               </span>
-              Cierre del Día
+              Cierre del DÃ­a
             </button>
           </div>
 
-          {/* ===== VISTA CIERRE DEL DÍA (dos tarjetas) ===== */}
+          {/* ===== VISTA CIERRE DEL DÃA (dos tarjetas) ===== */}
           {cutType === "dia" && (
             <div className="space-y-4">
-              {/* ── TARJETA 1: CORTE DEL TURNO ── */}
+              {/* â”€â”€ TARJETA 1: CORTE DEL TURNO â”€â”€ */}
               <div
                 className={`relative rounded-2xl border-2 transition-all duration-500 overflow-hidden ${
                   shiftDeclared
@@ -663,7 +669,7 @@ export const CashCut = ({ onClose }) => {
                             <span className="material-symbols-rounded text-emerald-500 text-sm">
                               payments
                             </span>
-                            Efectivo Físico (MXN)
+                            Efectivo FÃ­sico (MXN)
                           </label>
                           <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -691,7 +697,7 @@ export const CashCut = ({ onClose }) => {
                               <span className="material-symbols-rounded text-emerald-500 text-sm">
                                 currency_exchange
                               </span>
-                              Efectivo Físico (USD)
+                              Efectivo FÃ­sico (USD)
                             </label>
                             <div className="relative group">
                               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -718,7 +724,7 @@ export const CashCut = ({ onClose }) => {
                           </div>
                         )}
                       </div>
-                      {/* Botón declarar turno */}
+                      {/* BotÃ³n declarar turno */}
                       <button
                         onClick={() => executeCut("turno")}
                         disabled={submitting}
@@ -738,7 +744,7 @@ export const CashCut = ({ onClose }) => {
                 </div>
               </div>
 
-              {/* ── TARJETA 2: CIERRE DEL DÍA ── */}
+              {/* â”€â”€ TARJETA 2: CIERRE DEL DÃA â”€â”€ */}
               <div
                 className={`rounded-2xl border-2 transition-all duration-500 overflow-hidden ${
                   shiftDeclared
@@ -772,11 +778,11 @@ export const CashCut = ({ onClose }) => {
                   </div>
                   <div>
                     <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">
-                      Cierre del Día
+                      Cierre del DÃ­a
                     </h3>
                     <p className="text-[9px] text-slate-500 font-bold">
                       {shiftDeclared
-                        ? `Período completo — Inicio: ${formatTime(daySummary?.startTime)}`
+                        ? `PerÃ­odo completo â€” Inicio: ${formatTime(daySummary?.startTime)}`
                         : "Declara el turno primero"}
                     </p>
                   </div>
@@ -790,7 +796,7 @@ export const CashCut = ({ onClose }) => {
                             {daySummary.salesCount || 0}
                           </div>
                           <div className="text-[8px] uppercase font-bold text-slate-400 tracking-widest mt-0.5">
-                            Ventas del Día
+                            Ventas del DÃ­a
                           </div>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
@@ -814,11 +820,11 @@ export const CashCut = ({ onClose }) => {
                             {formatMoney(daySummary.expectedMXN || 0)}
                           </div>
                           <div className="text-[8px] uppercase font-bold text-emerald-50 tracking-widest mt-0.5">
-                            Esperado Día
+                            Esperado DÃ­a
                           </div>
                         </div>
                       </div>
-                      {/* Secundarios del día */}
+                      {/* Secundarios del dÃ­a */}
                       <div className="grid grid-cols-3 gap-2">
                         {daySummary.cardTotal > 0 && (
                           <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/10 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/30">
@@ -857,7 +863,7 @@ export const CashCut = ({ onClose }) => {
                             </span>
                             <div>
                               <p className="text-[8px] uppercase font-bold text-slate-400 tracking-widest">
-                                Dólares
+                                DÃ³lares
                               </p>
                               <p className="text-xs font-black text-slate-900 dark:text-white">
                                 {formatMoney(daySummary.totalUSD, "USD")}
@@ -906,7 +912,7 @@ export const CashCut = ({ onClose }) => {
                     <span className="material-symbols-rounded text-blue-500 text-lg">
                       analytics
                     </span>
-                    Resumen del Período
+                    Resumen del PerÃ­odo
                   </div>
                   <span className="text-[10px] text-slate-500 font-bold uppercase bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
                     Inicio: {formatTime(currentSummary?.startTime)}
@@ -999,7 +1005,7 @@ export const CashCut = ({ onClose }) => {
                         </div>
                         <div>
                           <p className="text-[9px] uppercase font-bold text-slate-400 tracking-widest">
-                            Dólares
+                            DÃ³lares
                           </p>
                           <p className="text-lg font-black text-slate-900 dark:text-white leading-tight">
                             {formatMoney(currentSummary.totalUSD, "USD")}
@@ -1124,10 +1130,10 @@ export const CashCut = ({ onClose }) => {
                       }`}
                     >
                       {diffMXN === 0
-                        ? "✓ MXN Correcto"
+                        ? "âœ“ MXN Correcto"
                         : diffMXN > 0
-                          ? "⬆ Sobrante MXN"
-                          : "⬇ Faltante MXN"}
+                          ? "â¬† Sobrante MXN"
+                          : "â¬‡ Faltante MXN"}
                     </span>
                   </div>
                   <span
@@ -1175,10 +1181,10 @@ export const CashCut = ({ onClose }) => {
                         }`}
                       >
                         {diffUSD === 0
-                          ? "✓ USD Correcto"
+                          ? "âœ“ USD Correcto"
                           : diffUSD > 0
-                            ? "⬆ Sobrante USD"
-                            : "⬇ Faltante USD"}
+                            ? "â¬† Sobrante USD"
+                            : "â¬‡ Faltante USD"}
                       </span>
                     </div>
                     <span
@@ -1231,7 +1237,7 @@ export const CashCut = ({ onClose }) => {
                 disabled={submitting || !shiftDeclared}
                 className="flex-[2.5] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-[0.15em] text-xs hover:translate-y-[-1px] hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 disabled:translate-y-0 disabled:cursor-not-allowed"
               >
-                {submitting ? "Procesando..." : "Ejecutar Cierre del Día"}
+                {submitting ? "Procesando..." : "Ejecutar Cierre del DÃ­a"}
                 {!submitting && (
                   <span className="material-symbols-rounded text-base">
                     chevron_right
@@ -1277,9 +1283,10 @@ export const CashCut = ({ onClose }) => {
           terminalId={cashSession?.terminal_id}
           staffId={activeStaff?.id}
           staffName={activeStaff?.name}
-          maxAmount={expectedMXN} // Opcional: Advertencia si retira más de lo esperado
+          maxAmount={expectedMXN} // Opcional: Advertencia si retira mÃ¡s de lo esperado
         />
       )}
     </div>
   );
 };
+

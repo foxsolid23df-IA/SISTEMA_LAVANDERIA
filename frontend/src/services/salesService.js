@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+﻿import { supabase } from '../supabase';
 import { terminalService } from './terminalService';
 import { config } from '../config';
 
@@ -17,19 +17,22 @@ export const salesService = {
         // --- FLUJO OFFLINE PRIMERO (INTENTO) ---
         // Si no hay internet o falla Supabase, enviamos al backend local (Electron)
         try {
-            // Verificamos si podemos llegar a Supabase rápidamente (opcional, o simplemente intentamos local si falla la nube)
-            // Para asegurar máxima resiliencia, si estamos en modo Electron, podemos intentar GUARDAR LOCAL primero
+            // Verificamos si podemos llegar a Supabase rÃ¡pidamente (opcional, o simplemente intentamos local si falla la nube)
+            // Para asegurar mÃ¡xima resiliencia, si estamos en modo Electron, podemos intentar GUARDAR LOCAL primero
             // pero el requerimiento es "Garantizar ventas sin internet".
 
             // Si el navegador reporta offline, vamos directo a local
             if (!navigator.onLine) {
+                if (config.isAndroid) {
+                    throw new Error("El APK Android requiere internet para registrar ventas en esta version.");
+                }
                 const ticketUuid = crypto.randomUUID();
                 const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
                 return await salesService.saveToLocal({ ...saleData, ticket_uuid: ticketUuid, pin_facturacion: pinFacturacion }, userData?.user?.id, terminalId);
             }
 
-            // 1. Generar PIN y UUID de facturación (si no existen)
-            // Generación de PIN de 4 dígitos numéricos (ej: 4821)
+            // 1. Generar PIN y UUID de facturaciÃ³n (si no existen)
+            // GeneraciÃ³n de PIN de 4 dÃ­gitos numÃ©ricos (ej: 4821)
             const ticketUuid = crypto.randomUUID();
             const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -82,8 +85,13 @@ export const salesService = {
 
             return { ...sale, pin_facturacion: pinFacturacion, ticket_uuid: ticketUuid };
         } catch (error) {
+            if (config.isAndroid) {
+                console.warn('[SalesService] Fallo en la nube en Android online-first:', error.message);
+                throw new Error(error.message || "No se pudo registrar la venta. Verifica la conexion a internet.");
+            }
+
             console.warn('[SalesService] Fallo en la nube, guardando en cola local...', error.message);
-            // Si la nube falló, generamos los datos aquí antes de enviar a local
+            // Si la nube fallÃ³, generamos los datos aquÃ­ antes de enviar a local
             const ticketUuid = crypto.randomUUID();
             const pinFacturacion = Math.floor(1000 + Math.random() * 9000).toString();
             
@@ -118,7 +126,7 @@ export const salesService = {
                     invoice_requested: saleData.invoice_requested || false,
                     ticket_uuid: saleData.ticket_uuid,
                     pin_facturacion: saleData.pin_facturacion,
-                    status: 'pending' // Importante para la sincronización
+                    status: 'pending' // Importante para la sincronizaciÃ³n
                 })
             });
 
@@ -128,7 +136,7 @@ export const salesService = {
             return {
                 ...localSale,
                 offline: true,
-                message: 'Venta guardada localmente (pendiente de sincronización)'
+                message: 'Venta guardada localmente (pendiente de sincronizaciÃ³n)'
             };
         } catch (e) {
             console.error('[SalesService] Error fatal: No se pudo guardar ni en nube ni local.', e);
@@ -166,7 +174,7 @@ export const salesService = {
                         pin_facturacion: localSale.pin_facturacion
                     };
 
-                    // Implementar lógica de subida similar a createSale pero forzando nube
+                    // Implementar lÃ³gica de subida similar a createSale pero forzando nube
                     const { data: sale, error } = await supabase.from('sales').insert([cloudSaleData]).select().single();
                     if (error) throw error;
 
@@ -196,7 +204,7 @@ export const salesService = {
 
             return { count: synced };
         } catch (error) {
-            console.error('[SalesService] Error general en sincronización:', error);
+            console.error('[SalesService] Error general en sincronizaciÃ³n:', error);
             throw error;
         }
     },
@@ -245,7 +253,7 @@ export const salesService = {
             });
         } catch (error) {
             console.warn('[SalesService] No se pudieron obtener ventas locales:', error);
-            // Si falla (ej. el servicio local no corre), retornamos array vacío para no romper el flujo
+            // Si falla (ej. el servicio local no corre), retornamos array vacÃ­o para no romper el flujo
             return [];
         }
     },
@@ -297,7 +305,7 @@ export const salesService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        // Validación de UUID para terminalId
+        // ValidaciÃ³n de UUID para terminalId
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
         let query = supabase
@@ -312,7 +320,7 @@ export const salesService = {
         if (terminalId && uuidRegex.test(terminalId)) {
             query = query.eq('terminal_id', terminalId);
         } else if (terminalId) {
-            console.warn('getSalesSince: terminalId provisto no es un UUID válido:', terminalId);
+            console.warn('getSalesSince: terminalId provisto no es un UUID vÃ¡lido:', terminalId);
         }
 
         const { data, error } = await query;
@@ -321,7 +329,7 @@ export const salesService = {
         return data || [];
     },
 
-    // Obtener todas las ventas (con paginación)
+    // Obtener todas las ventas (con paginaciÃ³n)
     getSales: async (limit = 50) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
@@ -351,7 +359,7 @@ export const salesService = {
         return data || [];
     },
 
-    // Obtener estadísticas generales
+    // Obtener estadÃ­sticas generales
     getStatistics: async (signal) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("No authenticated user");
@@ -376,7 +384,7 @@ export const salesService = {
 
         console.log('[salesService] Consultando ventas desde Supabase...')
 
-        // Obtener todas las ventas para cálculos (Limitado a las últimas 2000 para evitar bloqueos)
+        // Obtener todas las ventas para cÃ¡lculos (Limitado a las Ãºltimas 2000 para evitar bloqueos)
         let query = supabase
             .from('sales')
             .select('total, created_at')
@@ -393,7 +401,7 @@ export const salesService = {
             throw ventasError;
         }
 
-        // Calcular estadísticas
+        // Calcular estadÃ­sticas
         const ventasTotales = todasVentas.length;
         const ingresosTotales = todasVentas.reduce((sum, v) => sum + (parseFloat(v.total) || 0), 0);
 
@@ -436,7 +444,7 @@ export const salesService = {
         };
     },
 
-    // Obtener top productos más vendidos
+    // Obtener top productos mÃ¡s vendidos
     getTopProducts: async (limit = 5, signal) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
@@ -482,7 +490,7 @@ export const salesService = {
         return topProductos;
     },
 
-    // Obtener ventas por día de la semana actual
+    // Obtener ventas por dÃ­a de la semana actual
     getWeeklySalesData: async (signal) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [0, 0, 0, 0, 0, 0, 0];
@@ -510,7 +518,7 @@ export const salesService = {
 
         if (error) throw error;
 
-        // Agrupar ventas por día de la semana (0 = Lunes, 6 = Domingo)
+        // Agrupar ventas por dÃ­a de la semana (0 = Lunes, 6 = Domingo)
         const ventasPorDia = [0, 0, 0, 0, 0, 0, 0]; // Lun, Mar, Mie, Jue, Vie, Sab, Dom
 
         ventas.forEach(venta => {
@@ -524,7 +532,7 @@ export const salesService = {
         return ventasPorDia;
     },
 
-    // Obtener estadísticas por rango de fechas
+    // Obtener estadÃ­sticas por rango de fechas
     getStatisticsByDateRange: async (fechaInicio, fechaFin, signal) => {
         let query = supabase
             .from('sales')
@@ -534,7 +542,7 @@ export const salesService = {
             query = query.gte('created_at', fechaInicio);
         }
         if (fechaFin) {
-            // Agregar tiempo al final del día
+            // Agregar tiempo al final del dÃ­a
             const fechaFinCompleta = new Date(fechaFin);
             fechaFinCompleta.setHours(23, 59, 59, 999);
             query = query.lte('created_at', fechaFinCompleta.toISOString());
@@ -554,8 +562,8 @@ export const salesService = {
         return {
             ventasEnRango,
             ingresosEnRango,
-            fechaInicio: fechaInicio || 'Sin límite inicial',
-            fechaFin: fechaFin || 'Sin límite final'
+            fechaInicio: fechaInicio || 'Sin lÃ­mite inicial',
+            fechaFin: fechaFin || 'Sin lÃ­mite final'
         };
     },
 
@@ -577,3 +585,4 @@ export const salesService = {
         return true;
     }
 };
+

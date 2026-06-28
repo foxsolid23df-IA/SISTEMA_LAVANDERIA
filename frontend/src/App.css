@@ -76,6 +76,7 @@ body.swal2-shown {
 
 html {
   height: 100%;
+  height: 100dvh;
   /* Safari iOS fix */
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -85,6 +86,7 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   font-family:
     "Outfit",
     "Inter",
@@ -105,11 +107,13 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   /* Safe areas para dispositivos con notch */
   padding-left: var(--safe-area-left);
@@ -121,6 +125,7 @@ body {
   display: flex;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .main-content {
@@ -176,7 +181,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   min-height: -webkit-fill-available;
   font-size: var(--font-lg);
   color: var(--text-muted);
@@ -198,6 +203,7 @@ body {
   padding-top: calc(var(--header-height) + var(--safe-area-top));
   padding-bottom: calc(var(--safe-area-bottom) + 8px);
   min-height: 100dvh;
+  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
 }
@@ -215,6 +221,7 @@ body {
   .app-layout {
     flex-direction: row;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
   }
 
@@ -323,4 +330,651 @@ body,
     background-color 0.3s ease,
     color 0.3s ease,
     border-color 0.3s ease;
+}
+
+/* Android APK responsive hardening */
+@media (max-width: 768px) {
+  html,
+  body,
+  #root,
+  .layout,
+  .app-layout,
+  .main-content {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .main-content {
+    padding-left: max(10px, var(--safe-area-left));
+    padding-right: max(10px, var(--safe-area-right));
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  .table-container,
+  .orders-container,
+  .sales-container,
+  .admin-container,
+  .inventory-page,
+  .stats-view {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .modal-overlay,
+  .payment-modal-overlay,
+  .cash-cut-overlay,
+  .terminal-setup-overlay {
+    padding: calc(10px + var(--safe-area-top)) max(10px, var(--safe-area-right)) calc(10px + var(--safe-area-bottom)) max(10px, var(--safe-area-left));
+  }
+
+  .modal-content,
+  .payment-modal-container,
+  .cash-cut-modal,
+  .terminal-setup-modal {
+    width: min(100%, 520px);
+    max-width: 100%;
+    max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 20px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .main-content {
+    padding-left: max(8px, var(--safe-area-left));
+    padding-right: max(8px, var(--safe-area-right));
+  }
+
+  .modal-content,
+  .payment-modal-container,
+  .cash-cut-modal,
+  .terminal-setup-modal {
+    border-radius: 8px;
+  }
+}
+
+/* ============================================================
+   Android APK – touch & viewport fixes
+   KEY PRINCIPLE: NEVER use position:fixed on body/html in WebView.
+   That kills native touch-scroll. Use overflow:hidden on containers
+   and overflow-y:auto ONLY on the scrollable child (.main-content).
+   ============================================================ */
+
+body.capacitor-android {
+  /* Safe-area variable: fall back to 16px if no gesture nav bar */
+  --android-nav-safe-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  /* Lock the body WITHOUT position:fixed (that breaks WebView touch events) */
+  height: 100dvh !important;
+  min-height: unset !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html:has(body.capacitor-android) {
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Override base min-height:100vh on #root */
+body.capacitor-android #root {
+  height: 100dvh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Override base min-height:100vh on .layout */
+body.capacitor-android .layout {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Override base min-height:100vh on .app-layout */
+body.capacitor-android .app-layout {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+/* THE ONLY element that scrolls:
+   flex: 1 1 0 + min-height: 0 is the canonical WebView scroll fix.
+   This overrides the base min-height: 100dvh on .main-content. */
+body.capacitor-android .main-content {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y pinch-zoom !important;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(var(--android-nav-safe-bottom) + 16px) !important;
+  scroll-behavior: smooth;
+}
+
+/* Floating Cart Toggle Button & Drawer Bottom Padding Fixes */
+body.capacitor-android .mobile-cart-toggle {
+  bottom: calc(var(--android-nav-safe-bottom) + 8px) !important;
+}
+
+body.capacitor-android .mobile-cart-drawer {
+  padding-bottom: calc(var(--android-nav-safe-bottom) + 8px) !important;
+}
+
+/* Sidebar Menu Text & Icon Adjustments */
+body.capacitor-android .app-sidebar nav a,
+body.capacitor-android .app-sidebar nav button {
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  gap: 0.5rem !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.capacitor-android .app-sidebar nav a span.material-icons-outlined,
+body.capacitor-android .app-sidebar nav button span.material-icons-outlined {
+  font-size: 18px !important;
+  flex-shrink: 0 !important;
+}
+
+body.capacitor-android .custom-scrollbar,
+body.capacitor-android .app-sidebar-nav,
+body.capacitor-android .mobile-sales-grid,
+body.capacitor-android .cart-items-modern,
+body.capacitor-android .cart-items,
+body.capacitor-android .payment-modal-content {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+
+body.capacitor-android .app-sidebar {
+  width: min(78vw, 264px);
+  max-width: 84vw;
+  padding-bottom: var(--android-nav-safe-bottom);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.capacitor-android .app-sidebar-nav {
+  padding-bottom: 1rem;
+}
+
+body.capacitor-android .app-sidebar-footer {
+  padding-bottom: calc(1rem + var(--android-nav-safe-bottom));
+}
+
+/* Android APK global scrolling for all modules */
+body.capacitor-android .admin-content,
+body.capacitor-android .admin-panel,
+body.capacitor-android .inventory-page,
+body.capacitor-android .orders-container,
+body.capacitor-android .stats-view,
+body.capacitor-android .table-container,
+body.capacitor-android .table-wrapper,
+body.capacitor-android .client-table-scroll,
+body.capacitor-android .preview-table-wrapper,
+body.capacitor-android .overflow-x-auto,
+body.capacitor-android .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+body.capacitor-android .admin-content,
+body.capacitor-android .inventory-page,
+body.capacitor-android .orders-container,
+body.capacitor-android .stats-view,
+body.capacitor-android .client-manager,
+body.capacitor-android .maintenance-container,
+body.capacitor-android .ticket-config-container {
+  min-height: calc(100dvh - var(--header-height, 64px));
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 24px) !important;
+}
+
+body.capacitor-android table {
+  touch-action: pan-x pan-y;
+}
+
+body.capacitor-android .table-container,
+body.capacitor-android .table-wrapper,
+body.capacitor-android .client-table-scroll,
+body.capacitor-android .preview-table-wrapper {
+  overflow-x: auto !important;
+  overflow-y: auto;
+  max-width: 100%;
+}
+
+body.capacitor-android .admin-table,
+body.capacitor-android .products-table,
+body.capacitor-android .client-table,
+body.capacitor-android .preview-table {
+  min-width: 760px;
+}
+
+body.capacitor-android .modal-overlay,
+body.capacitor-android .new-product-modal-overlay,
+body.capacitor-android .client-modal-overlay,
+body.capacitor-android .config-modal-backdrop {
+  touch-action: auto !important;
+}
+
+body.capacitor-android .modal-content,
+body.capacitor-android .new-product-modal,
+body.capacitor-android .client-modal,
+body.capacitor-android .filters-modal,
+body.capacitor-android .categories-modal {
+  max-height: calc(100dvh - var(--safe-area-top, 0px) - var(--android-nav-safe-bottom, 64px) - 16px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto !important;
+}
+
+/* All inner module containers: height:auto so they grow naturally
+   inside the scrollable .main-content. Do NOT set overflow:hidden here. */
+
+body.capacitor-android .historial-page,
+body.capacitor-android .stats-view,
+body.capacitor-android .cash-reports,
+body.capacitor-android .cancellations-report,
+body.capacitor-android .client-manager-container,
+body.capacitor-android .supply-inventory-page,
+body.capacitor-android .admin-panel,
+body.capacitor-android .admin-content,
+body.capacitor-android .admin-body,
+body.capacitor-android .settings-container,
+body.capacitor-android .user-manager-container,
+body.capacitor-android .maintenance-container,
+body.capacitor-android .ticket-config-container,
+body.capacitor-android .price-config-container,
+body.capacitor-android .payment-methods-settings,
+body.capacitor-android .exchange-rate-settings,
+body.capacitor-android .kardex-view,
+body.capacitor-android .delivery-dashboard,
+body.capacitor-android .driver-portal,
+body.capacitor-android .order-tracking,
+body.capacitor-android .main-content > [class*="min-h-screen"],
+body.capacitor-android .main-content [class*="h-full"][class*="overflow-hidden"],
+body.capacitor-android .main-content [class*="min-w-0"][class*="overflow-hidden"] {
+  height: auto !important;
+  min-height: calc(100dvh - var(--header-height, 64px));
+  overflow-y: visible !important;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 28px) !important;
+  touch-action: auto !important;
+}
+
+body.capacitor-android .historial-results,
+body.capacitor-android .historial-page [class*="max-h"],
+body.capacitor-android .orders-list,
+body.capacitor-android .orders-kanban,
+body.capacitor-android .inventory-content,
+body.capacitor-android .stats-content,
+body.capacitor-android .cash-reports__table-wrapper,
+body.capacitor-android .cash-reports__ranking-section,
+body.capacitor-android .cut-details,
+body.capacitor-android .report-body,
+body.capacitor-android .modal-body,
+body.capacitor-android .payment-modal-content,
+body.capacitor-android .client-modal .modal-body {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: auto !important;
+}
+
+body.capacitor-android .android-x-scroll,
+body.capacitor-android .historial-mode-tabs,
+body.capacitor-android .historial-header-actions,
+body.capacitor-android .historial-filter-actions,
+body.capacitor-android .historial-list-header,
+body.capacitor-android .orders-status-tabs,
+body.capacitor-android .orders-toolbar,
+body.capacitor-android .orders-toolbar-actions,
+body.capacitor-android .mobile-sale-tabs,
+body.capacitor-android .control-buttons,
+body.capacitor-android .header-actions,
+body.capacitor-android .header-buttons,
+body.capacitor-android .table-header,
+body.capacitor-android .filters-section,
+body.capacitor-android .filter-actions,
+body.capacitor-android .cash-reports__quick-filters,
+body.capacitor-android .cash-reports__filters,
+body.capacitor-android .cash-reports__charts-header,
+body.capacitor-android .cut-details__tabs,
+body.capacitor-android .modal-actions,
+body.capacitor-android .settings-actions,
+body.capacitor-android .ap-filters-row,
+body.capacitor-android .ap-date-filters,
+body.capacitor-android .admin-header-actions,
+body.capacitor-android .admin-nav,
+body.capacitor-android .date-buttons,
+body.capacitor-android [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x !important;
+  scrollbar-width: none;
+}
+
+body.capacitor-android .android-x-scroll::-webkit-scrollbar,
+body.capacitor-android .historial-mode-tabs::-webkit-scrollbar,
+body.capacitor-android .historial-header-actions::-webkit-scrollbar,
+body.capacitor-android .historial-filter-actions::-webkit-scrollbar,
+body.capacitor-android .historial-list-header::-webkit-scrollbar,
+body.capacitor-android .orders-status-tabs::-webkit-scrollbar,
+body.capacitor-android .orders-toolbar::-webkit-scrollbar,
+body.capacitor-android .orders-toolbar-actions::-webkit-scrollbar,
+body.capacitor-android .mobile-sale-tabs::-webkit-scrollbar,
+body.capacitor-android .control-buttons::-webkit-scrollbar,
+body.capacitor-android .header-actions::-webkit-scrollbar,
+body.capacitor-android .header-buttons::-webkit-scrollbar,
+body.capacitor-android .table-header::-webkit-scrollbar,
+body.capacitor-android .filters-section::-webkit-scrollbar,
+body.capacitor-android .filter-actions::-webkit-scrollbar,
+body.capacitor-android .cash-reports__quick-filters::-webkit-scrollbar,
+body.capacitor-android .cash-reports__filters::-webkit-scrollbar,
+body.capacitor-android .cash-reports__charts-header::-webkit-scrollbar,
+body.capacitor-android .cut-details__tabs::-webkit-scrollbar,
+body.capacitor-android .modal-actions::-webkit-scrollbar,
+body.capacitor-android .settings-actions::-webkit-scrollbar,
+body.capacitor-android .ap-filters-row::-webkit-scrollbar,
+body.capacitor-android .ap-date-filters::-webkit-scrollbar,
+body.capacitor-android .admin-header-actions::-webkit-scrollbar,
+body.capacitor-android .admin-nav::-webkit-scrollbar,
+body.capacitor-android .date-buttons::-webkit-scrollbar,
+body.capacitor-android [class*="overflow-x-auto"]::-webkit-scrollbar {
+  display: none;
+}
+
+body.capacitor-android .historial-mode-tabs > *,
+body.capacitor-android .historial-header-actions > *,
+body.capacitor-android .historial-filter-actions > *,
+body.capacitor-android .orders-status-tabs > *,
+body.capacitor-android .orders-toolbar-actions > *,
+body.capacitor-android .mobile-sale-tabs > *,
+body.capacitor-android .control-buttons > *,
+body.capacitor-android .header-actions > *,
+body.capacitor-android .header-buttons > *,
+body.capacitor-android .table-header > *,
+body.capacitor-android .filters-section > *,
+body.capacitor-android .filter-actions > *,
+body.capacitor-android .cash-reports__quick-filters > *,
+body.capacitor-android .cash-reports__filters > *,
+body.capacitor-android .cash-reports__charts-header > *,
+body.capacitor-android .cut-details__tabs > *,
+body.capacitor-android .modal-actions > *,
+body.capacitor-android .settings-actions > *,
+body.capacitor-android .ap-filters-row > *,
+body.capacitor-android .ap-date-filters > *,
+body.capacitor-android .admin-header-actions > *,
+body.capacitor-android .admin-nav > *,
+body.capacitor-android .date-buttons > * {
+  flex: 0 0 auto;
+  touch-action: pan-x;
+}
+
+body.capacitor-android .historial-filters,
+body.capacitor-android .cash-reports__filters,
+body.capacitor-android .filters-section,
+body.capacitor-android .ap-filters-row {
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+}
+
+body.capacitor-android .historial-filters > *,
+body.capacitor-android .cash-reports__filter-group,
+body.capacitor-android .filters-section .filter-group,
+body.capacitor-android .ap-search-box {
+  min-width: min(78vw, 260px);
+}
+
+body.capacitor-android .table-container,
+body.capacitor-android .table-wrapper,
+body.capacitor-android .client-table-scroll,
+body.capacitor-android .preview-table-wrapper,
+body.capacitor-android .cash-reports__table-wrapper,
+body.capacitor-android .cash-reports__ranking-section,
+body.capacitor-android .cancellations-table,
+body.capacitor-android .orders-list-container,
+body.capacitor-android .report-table-section,
+body.capacitor-android [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
+body.capacitor-android .admin-table,
+body.capacitor-android .products-table,
+body.capacitor-android .client-table,
+body.capacitor-android .preview-table,
+body.capacitor-android .cash-reports__table,
+body.capacitor-android .ranking-table,
+body.capacitor-android .cut-details__table,
+body.capacitor-android .cancellations-table table,
+body.capacitor-android .orders-list-container table,
+body.capacitor-android [class*="overflow-x-auto"] table {
+  min-width: 760px;
+  width: max-content;
+}
+
+body.capacitor-android .historial-list-header,
+body.capacitor-android .historial-page .group {
+  min-width: 760px;
+}
+
+body.capacitor-android .historial-results > div {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+body.capacitor-android .historial-results > div > .flex-1,
+body.capacitor-android .historial-results > div > .historial-list-header,
+body.capacitor-android .historial-results > div > [class*="overflow-y-auto"] {
+  min-width: 760px;
+}
+
+body.capacitor-android .stats-header,
+body.capacitor-android .cash-reports__header,
+body.capacitor-android .report-header,
+body.capacitor-android .client-manager-header,
+body.capacitor-android .admin-header {
+  gap: 0.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+body.capacitor-android .stats-header > *,
+body.capacitor-android .cash-reports__header > *,
+body.capacitor-android .report-header > *,
+body.capacitor-android .client-manager-header > *,
+body.capacitor-android .admin-header > * {
+  flex: 0 0 auto;
+}
+
+body.capacitor-android .stats-content,
+body.capacitor-android .cash-reports,
+body.capacitor-android .cancellations-report,
+body.capacitor-android .client-manager-container {
+  padding-left: max(12px, var(--safe-area-left, 0px));
+  padding-right: max(12px, var(--safe-area-right, 0px));
+}
+
+body.capacitor-android .admin-panel {
+  display: flex;
+  min-width: 0;
+}
+
+body.capacitor-android .admin-sidebar {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--android-nav-safe-bottom, 64px);
+}
+
+body.capacitor-android .admin-content {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body.capacitor-android .modal-wide,
+body.capacitor-android .history-modal,
+body.capacitor-android .client-modal,
+body.capacitor-android .filters-modal,
+body.capacitor-android .categories-modal,
+body.capacitor-android .new-product-modal,
+body.capacitor-android .payment-modal-container,
+body.capacitor-android .cash-cut-modal,
+body.capacitor-android .terminal-setup-modal {
+  max-height: calc(100dvh - var(--safe-area-top, 0px) - var(--android-nav-safe-bottom, 64px) - 16px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+@media (max-width: 768px) {
+  body.capacitor-android .historial-page header,
+  body.capacitor-android .historial-page section,
+  body.capacitor-android .cash-reports,
+  body.capacitor-android .cancellations-report,
+  body.capacitor-android .client-manager-container,
+  body.capacitor-android .stats-content {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  body.capacitor-android .stats-grid,
+  body.capacitor-android .summary-cards,
+  body.capacitor-android .cash-reports__summary,
+  body.capacitor-android .cash-reports__payment-breakdown {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.capacitor-android .cash-reports__charts-grid,
+  body.capacitor-android .cash-reports__comparison-grid,
+  body.capacitor-android .content-columns {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* ============================================================
+   UNIVERSAL ANDROID SCROLL & OVERFLOW FIXES
+   ============================================================ */
+
+/* Utility class reusable para cualquier contenedor scrolleable en Android */
+body.capacitor-android .android-scroll,
+body.capacitor-android [class*="overflow-y-auto"]:not(.no-android-fix),
+body.capacitor-android [class*="overflow-auto"]:not(.no-android-fix) {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+
+body.capacitor-android [class*="overflow-x-auto"]:not(.no-android-fix) {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+}
+
+/* Prevenir overflow horizontal en todos los hijos directos del main-content */
+body.capacitor-android .main-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.capacitor-android .main-content > .flex-1 {
+  overflow: hidden;
+}
+
+/* Asegurar que todos los contenedores de tabla tengan scroll horizontal en Android */
+body.capacitor-android .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  max-width: 100%;
+}
+
+body.capacitor-android .table-responsive > table {
+  min-width: 600px;
+}
+
+/* Force hardware acceleration para scroll suave en Android WebView */
+body.capacitor-android .main-content,
+body.capacitor-android .android-scroll,
+body.capacitor-android [class*="overflow-y-auto"] {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* ============================================================
+   GLOBAL: PERMITIR SCROLL EN CUALQUIER ELEMENTO (ANDROID)
+   touch-action NO se hereda en CSS. Cada elemento hijo con
+   touch-action:auto (default) captura el evento táctil y no
+   lo pasa al padre scrolleable. Esto obliga al usuario a
+   tocar los bordes/márgenes para hacer scroll.
+
+   Solución: aplicar touch-action:pan-y a TODOS los elementos
+   dentro de contenedores scrolleables verticales, y pan-x
+   para scroll horizontal. Un tap corto sigue activando el
+   elemento (click), pero un deslizamiento vertical ahora
+   desplazará la página aunque empiece sobre un botón/tarjeta.
+   ============================================================ */
+
+/* Contenedor principal de scroll (main-content) */
+body.capacitor-android .main-content,
+body.capacitor-android .main-content * {
+  touch-action: pan-y;
+}
+
+/* Contenedores con overflow-y-auto/overflow-auto */
+body.capacitor-android [class*="overflow-y-auto"],
+body.capacitor-android [class*="overflow-y-auto"] *,
+body.capacitor-android [class*="overflow-auto"],
+body.capacitor-android [class*="overflow-auto"] *,
+body.capacitor-android .android-scroll,
+body.capacitor-android .android-scroll * {
+  touch-action: pan-y;
+}
+
+/* Scroll horizontal: permitir pan-x en el contenedor y todos sus hijos */
+body.capacitor-android [class*="overflow-x-auto"],
+body.capacitor-android [class*="overflow-x-auto"] * {
+  touch-action: pan-x;
+}
+
+/* Restaurar touch-action para inputs de texto/number/select dentro de scroll
+   para que el usuario pueda seleccionar texto e interactuar con campos de formulario */
+body.capacitor-android .main-content input[type="text"],
+body.capacitor-android .main-content input[type="number"],
+body.capacitor-android .main-content input[type="email"],
+body.capacitor-android .main-content input[type="tel"],
+body.capacitor-android .main-content input[type="search"],
+body.capacitor-android .main-content input[type="password"],
+body.capacitor-android .main-content input[type="date"],
+body.capacitor-android .main-content textarea,
+body.capacitor-android .main-content select {
+  touch-action: auto;
 }

@@ -1,0 +1,11 @@
+# Configuracion de firma para release APK/AAB
+# Copia este archivo como release-signing.properties y completa los valores
+# NO COMMITEE este archivo con credenciales reales
+
+storeFile=keystore/release-keystore.jks
+storePassword=TU_CONTRASENA
+keyAlias=lavanderia-key
+keyPassword=TU_CONTRASENA_KEY
+
+# Opcional: para generar un keystore nuevo, ejecuta:
+#   keytool -genkey -v -keystore keystore/release-keystore.jks -alias lavanderia-key -keyalg RSA -keysize 2048 -validity 10000

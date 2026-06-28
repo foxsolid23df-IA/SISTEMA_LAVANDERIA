@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useSettings } from "../../contexts/SettingsContext";
 import { printService } from "../../services/printService";
+import { platform } from "../../utils/platform";
 import "./TicketConfiguration.css";
 
 export const TicketConfiguration = () => {
@@ -25,6 +26,9 @@ export const TicketConfiguration = () => {
     printer_is_bold: false,
     printer_margin: 0,
     printer_name: "",
+    printer_connection_type: platform.isAndroid ? "bluetooth" : "system",
+    printer_bluetooth_address: "",
+    printer_bluetooth_name: "",
     ticket_double_print: false,
     enable_billing_system: false,
     ticket_preview: true,
@@ -52,6 +56,9 @@ export const TicketConfiguration = () => {
         printer_is_bold: settings.printer_is_bold || false,
         printer_margin: settings.printer_margin || 0,
         printer_name: settings.printer_name || "",
+        printer_connection_type: settings.printer_connection_type || (platform.isAndroid ? "bluetooth" : "system"),
+        printer_bluetooth_address: settings.printer_bluetooth_address || "",
+        printer_bluetooth_name: settings.printer_bluetooth_name || "",
         ticket_double_print: settings.ticket_double_print || false,
         enable_billing_system: settings.enable_billing_system || false,
         ticket_preview: settings.ticket_preview !== undefined ? settings.ticket_preview : true,
@@ -80,6 +87,33 @@ export const TicketConfiguration = () => {
       [name]: value,
     }));
   };
+  const handlePrinterSelect = (e) => {
+    const value = e.target.value;
+    const selected = printersList.find(
+      (printer) => (printer.address || printer.name) === value,
+    );
+
+    setFormData((prev) => {
+      const bluetooth = selected?.connectionType === "bluetooth" || prev.printer_connection_type === "bluetooth" || platform.isAndroid;
+      if (bluetooth) {
+        return {
+          ...prev,
+          printer_connection_type: "bluetooth",
+          printer_bluetooth_address: selected?.address || value,
+          printer_bluetooth_name: selected?.name || value,
+          printer_name: selected?.name || prev.printer_name,
+        };
+      }
+
+      return {
+        ...prev,
+        printer_connection_type: "system",
+        printer_name: selected?.name || value,
+        printer_bluetooth_address: "",
+        printer_bluetooth_name: "",
+      };
+    });
+  };
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -101,15 +135,15 @@ export const TicketConfiguration = () => {
     try {
       await updateSettings(formData);
       Swal.fire({
-        title: "¡Configuración Guardada!",
-        text: "Los cambios se han sincronizado con todos tus usuarios registrados en Gestión de Usuarios.",
+        title: "Â¡ConfiguraciÃ³n Guardada!",
+        text: "Los cambios se han sincronizado con todos tus usuarios registrados en GestiÃ³n de Usuarios.",
         icon: "success",
         timer: 3000,
         showConfirmButton: true,
       });
     } catch (error) {
-      console.error("Error guardando configuración:", error);
-      Swal.fire("Error", "No se pudo guardar la configuración", "error");
+      console.error("Error guardando configuraciÃ³n:", error);
+      Swal.fire("Error", "No se pudo guardar la configuraciÃ³n", "error");
     } finally {
       setSaving(false);
     }
@@ -119,13 +153,30 @@ export const TicketConfiguration = () => {
     const testHtml = printService.generateTicketHtml(
       formData,
       { id: "TEST-001", total: "0.00" },
-      [{ quantity: 1, name: "PRUEBA DE IMPRESIÓN", price: 0 }],
+      [{ quantity: 1, name: "PRUEBA DE IMPRESIÃ“N", price: 0 }],
     );
-    const ok = await printService.print(testHtml, formData.printer_name);
+    const ok = await printService.print(testHtml, formData.printer_name, {
+      copies: 1,
+      settings: formData,
+      ticketData: {
+        type: "sale",
+        settings: formData,
+        venta: { id: "TEST-001", total: "0.00" },
+        items: [{ quantity: 1, name: "PRUEBA DE IMPRESION", price: 0 }],
+      },
+    });
     if (ok) {
-      Swal.fire("Éxito", "Comando de impresión enviado", "success");
+      Swal.fire("Ã‰xito", "Comando de impresiÃ³n enviado", "success");
     }
   };
+
+  const isBluetoothMode = formData.printer_connection_type === "bluetooth" || platform.isAndroid;
+  const selectedPrinterValue = isBluetoothMode
+    ? formData.printer_bluetooth_address || ""
+    : formData.printer_name || "";
+  const isPrinterConfigured = isBluetoothMode
+    ? !!formData.printer_bluetooth_address
+    : !!formData.printer_name;
 
   if (loadingContext && !settings)
     return (
@@ -133,7 +184,7 @@ export const TicketConfiguration = () => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
           <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-xs">
-            Cargando configuración...
+            Cargando configuraciÃ³n...
           </p>
         </div>
       </div>
@@ -148,20 +199,20 @@ export const TicketConfiguration = () => {
             <button
                onClick={() => navigate('/configuracion')}
                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-colors shrink-0 flex items-center gap-2 font-bold text-sm"
-               title="Volver a Configuración"
+               title="Volver a ConfiguraciÃ³n"
             >
                <span className="material-icons-outlined">arrow_back</span>
-               Volver a Configuración
+               Volver a ConfiguraciÃ³n
             </button>
             <div>
               <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white flex items-center gap-4 tracking-tight">
                 <div className="hidden md:flex w-14 h-14 bg-indigo-600 rounded-2xl items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none">
                   <span className="material-icons-outlined text-white text-3xl">settings_applications</span>
                 </div>
-                Configuración
+                ConfiguraciÃ³n
               </h2>
               <p className="text-slate-500 dark:text-slate-400 mt-2 md:mt-3 text-base md:text-lg font-medium max-w-2xl">
-                Gestiona la identidad de tu negocio, datos fiscales y parámetros de impresión POS en un solo lugar.
+                Gestiona la identidad de tu negocio, datos fiscales y parÃ¡metros de impresiÃ³n POS en un solo lugar.
               </p>
             </div>
           </div>
@@ -180,7 +231,7 @@ export const TicketConfiguration = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN: IDENTIDAD Y FACTURACIÓN */}
+        {/* LEFT COLUMN: IDENTIDAD Y FACTURACIÃ“N */}
         <div className="lg:col-span-8 space-y-8">
           
           {/* DATOS GENERALES */}
@@ -202,11 +253,11 @@ export const TicketConfiguration = () => {
                     value={formData.name}
                     onChange={handleChange}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-800 dark:text-white font-medium"
-                    placeholder="Ej. Lavandería Express"
+                    placeholder="Ej. LavanderÃ­a Express"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">Teléfono o WhatsApp</label>
+                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">TelÃ©fono o WhatsApp</label>
                   <input
                     type="text"
                     name="phone"
@@ -218,14 +269,14 @@ export const TicketConfiguration = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">Dirección Física Completa</label>
+                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">DirecciÃ³n FÃ­sica Completa</label>
                 <textarea
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
                   rows="3"
                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-slate-800 dark:text-white font-medium resize-none"
-                  placeholder="Calle, Número, Colonia, Ciudad, Estado..."
+                  placeholder="Calle, NÃºmero, Colonia, Ciudad, Estado..."
                 />
               </div>
             </div>
@@ -237,7 +288,7 @@ export const TicketConfiguration = () => {
               <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                 <span className="material-icons-outlined text-emerald-600 dark:text-emerald-400">description</span>
               </div>
-              <h3 className="font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest text-xs">Datos de Facturación (SAT)</h3>
+              <h3 className="font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest text-xs">Datos de FacturaciÃ³n (SAT)</h3>
             </div>
             
             <div className="p-8 space-y-6">
@@ -255,28 +306,28 @@ export const TicketConfiguration = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">Razón Social</label>
+                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">RazÃ³n Social</label>
                   <input
                     type="text"
                     name="razon_social"
                     value={formData.razon_social || ""}
                     onChange={handleChange}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-800 dark:text-white font-medium"
-                    placeholder="Denominación legal"
+                    placeholder="DenominaciÃ³n legal"
                   />
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">Régimen Fiscal</label>
+                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">RÃ©gimen Fiscal</label>
                   <select
                     name="regimen_fiscal"
                     value={formData.regimen_fiscal || ""}
                     onChange={handleChange}
                     className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-800 dark:text-white font-medium"
                   >
-                    <option value="">Seleccionar régimen...</option>
+                    <option value="">Seleccionar rÃ©gimen...</option>
                     <option value="601">601 - Gral. Ley Personas Morales</option>
                     <option value="612">612 - PF Actividades Empresariales</option>
                     <option value="626">626 - RESICO (Confianza)</option>
@@ -284,7 +335,7 @@ export const TicketConfiguration = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">C.P. Expedición</label>
+                  <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">C.P. ExpediciÃ³n</label>
                   <input
                     type="text"
                     name="codigo_postal"
@@ -298,7 +349,7 @@ export const TicketConfiguration = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">URL de Facturación (Código QR)</label>
+                <label className="text-sm font-bold text-slate-600 dark:text-slate-400 ml-1">URL de FacturaciÃ³n (CÃ³digo QR)</label>
                 <input
                   type="text"
                   name="billing_url"
@@ -307,10 +358,10 @@ export const TicketConfiguration = () => {
                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none text-slate-800 dark:text-white font-medium"
                   placeholder="https://pos-autofactura.vercel.app/"
                 />
-                <p className="text-[10px] text-slate-500 ml-1">Esta URL se usará para generar el código QR en los tickets.</p>
+                <p className="text-[10px] text-slate-500 ml-1">Esta URL se usarÃ¡ para generar el cÃ³digo QR en los tickets.</p>
               </div>
 
-              {/* TOGGLE: ACTIVAR FACTURACIÓN ELECTRÓNICA EN TICKETS */}
+              {/* TOGGLE: ACTIVAR FACTURACIÃ“N ELECTRÃ“NICA EN TICKETS */}
               <div className="col-span-full pt-4 mt-2 border-t border-emerald-100 dark:border-emerald-900/30">
                 <div className="flex items-center justify-between p-5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30">
                   <div className="flex items-center gap-4">
@@ -318,8 +369,8 @@ export const TicketConfiguration = () => {
                       <span className="material-icons-outlined text-white text-lg">{formData.enable_billing_system ? 'receipt_long' : 'receipt'}</span>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-white">Facturación Electrónica en Tickets</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Muestra el QR, enlace y PIN de facturación en cada ticket impreso</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">FacturaciÃ³n ElectrÃ³nica en Tickets</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Muestra el QR, enlace y PIN de facturaciÃ³n en cada ticket impreso</p>
                     </div>
                   </div>
                   <div 
@@ -332,7 +383,7 @@ export const TicketConfiguration = () => {
                 {!formData.enable_billing_system && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-2 ml-1 flex items-center gap-1">
                     <span className="material-icons-outlined text-xs">info</span>
-                    Los tickets se imprimirán sin datos de facturación electrónica
+                    Los tickets se imprimirÃ¡n sin datos de facturaciÃ³n electrÃ³nica
                   </p>
                 )}
               </div>
@@ -346,28 +397,42 @@ export const TicketConfiguration = () => {
                 <span className="material-icons-outlined text-white">print</span>
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest text-xs">Configuración de Impresora</h3>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Terminal POS y parámetros de impresión</p>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 uppercase tracking-widest text-xs">ConfiguraciÃ³n de Impresora</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Terminal POS y parÃ¡metros de impresiÃ³n</p>
               </div>
-              <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${formData.printer_name ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                {formData.printer_name ? 'Conectada' : 'No Configurada'}
+              <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${isPrinterConfigured ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                {isPrinterConfigured ? 'Conectada' : 'No Configurada'}
               </div>
             </div>
 
             <div className="p-8 space-y-6">
               {/* SELECCIONAR IMPRESORA */}
               <div className="space-y-2">
+                <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Tipo de Conexion</label>
+                <select
+                  name="printer_connection_type"
+                  value={formData.printer_connection_type || (platform.isAndroid ? "bluetooth" : "system")}
+                  onChange={handleChange}
+                  disabled={platform.isAndroid}
+                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-sm font-bold text-slate-800 dark:text-white disabled:opacity-70"
+                >
+                  <option value="system">Sistema / Windows</option>
+                  <option value="bluetooth">Bluetooth POS Android</option>
+                </select>
+
                 <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Seleccionar Impresora</label>
                 <div className="flex flex-col gap-3">
                   <select
-                    name="printer_name"
-                    value={formData.printer_name || ""}
-                    onChange={handleChange}
+                    name={isBluetoothMode ? "printer_bluetooth_address" : "printer_name"}
+                    value={selectedPrinterValue}
+                    onChange={handlePrinterSelect}
                     className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-sm font-bold text-slate-800 dark:text-white"
                   >
-                    <option value="">Impresora Predeterminada</option>
+                    <option value="">{isBluetoothMode ? "Selecciona impresora Bluetooth emparejada" : "Impresora Predeterminada"}</option>
                     {printersList.map((p) => (
-                      <option key={p.name} value={p.name}>{p.name}</option>
+                      <option key={p.address || p.name} value={p.address || p.name}>
+                        {p.name}{p.address ? ` - ${p.address}` : ""}
+                      </option>
                     ))}
                   </select>
                   <div className="flex gap-2">
@@ -386,13 +451,13 @@ export const TicketConfiguration = () => {
                       className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                     >
                       <span className="material-icons-outlined text-lg">print</span>
-                      Prueba de Impresión
+                      Prueba de ImpresiÃ³n
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* ROW: ANCHO DEL PAPEL + TAMAÑO FUENTE + MARGEN */}
+              {/* ROW: ANCHO DEL PAPEL + TAMAÃ‘O FUENTE + MARGEN */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-2">
                   <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Ancho del Papel</label>
@@ -403,11 +468,11 @@ export const TicketConfiguration = () => {
                     className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-sm font-bold text-slate-800 dark:text-white"
                   >
                     <option value={58}>58 mm (Impresora Mini)</option>
-                    <option value={80}>80 mm (Impresora Estándar)</option>
+                    <option value={80}>80 mm (Impresora EstÃ¡ndar)</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Tamaño Fuente</label>
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">TamaÃ±o Fuente</label>
                   <input
                     type="number"
                     name="printer_font_size"
@@ -461,13 +526,13 @@ export const TicketConfiguration = () => {
                       <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all shadow-sm" style={{ left: formData.printer_is_bold ? '1.125rem' : '0.125rem' }}></div>
                     </div>
                     <span className={`text-[10px] font-black uppercase ${formData.printer_is_bold ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                      {formData.printer_is_bold ? 'SÍ' : 'NO'}
+                      {formData.printer_is_bold ? 'SÃ' : 'NO'}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">Impresión Doble</label>
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider ml-1">ImpresiÃ³n Doble</label>
                   <div 
                     onClick={() => setFormData(p => ({ ...p, ticket_double_print: !p.ticket_double_print }))}
                     className="flex items-center gap-2 px-3 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-indigo-300 transition-all min-h-[54px]"
@@ -505,7 +570,7 @@ export const TicketConfiguration = () => {
                 {!formData.ticket_preview && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold ml-1 flex items-center gap-1">
                     <span className="material-icons-outlined text-xs">info</span>
-                    Al desactivar, el ticket se imprimirá automáticamente al confirmar el pago sin previsualización
+                    Al desactivar, el ticket se imprimirÃ¡ automÃ¡ticamente al confirmar el pago sin previsualizaciÃ³n
                   </p>
                 )}
               </div>
@@ -519,9 +584,9 @@ export const TicketConfiguration = () => {
                   onChange={handleChange}
                   rows="2"
                   className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none text-sm text-slate-800 dark:text-white font-medium resize-none"
-                  placeholder="¡Gracias por su preferencia!"
+                  placeholder="Â¡Gracias por su preferencia!"
                 />
-                <p className="text-[10px] text-slate-500 ml-1">Aparecerá al pie de cada ticket impreso</p>
+                <p className="text-[10px] text-slate-500 ml-1">AparecerÃ¡ al pie de cada ticket impreso</p>
               </div>
             </div>
           </div>
@@ -579,3 +644,9 @@ export const TicketConfiguration = () => {
     </div>
   );
 };
+
+
+
+
+
+

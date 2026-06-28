@@ -1,16 +1,16 @@
-import { supabase } from '../supabase';
+﻿import { supabase } from '../supabase';
 import { isAbortError } from '../utils/supabaseErrorHandler';
 import { config } from '../config';
 
 const LOCAL_API_URL = config.api.baseUrl + '/api/products';
 
-// Variables de caché en memoria (Desactivadas temporalmente para asegurar sincronización multicaja)
+// Variables de cachÃ© en memoria (Desactivadas temporalmente para asegurar sincronizaciÃ³n multicaja)
 let productsCache = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 0; // 0 para forzar siempre carga desde DB en multicaja
 
 export const productService = {
-    // Helper para actualizar el caché localmente (útil para realtime)
+    // Helper para actualizar el cachÃ© localmente (Ãºtil para realtime)
     updateCache: (updatedProduct, type = 'UPDATE') => {
         if (!productsCache) return;
 
@@ -39,7 +39,7 @@ export const productService = {
                 table: 'products'
             }, (payload) => {
                 console.log('[ProductService] Cambio detectado:', payload.eventType);
-                // Actualizar caché local según el tipo de evento
+                // Actualizar cachÃ© local segÃºn el tipo de evento
                 productService.updateCache(payload.new || payload.old, payload.eventType);
                 // Notificar al componente/contexto
                 callback(payload);
@@ -47,11 +47,11 @@ export const productService = {
             .subscribe();
     },
 
-    // Obtener todos los productos (con caché y fallback local)
+    // Obtener todos los productos (con cachÃ© y fallback local)
     getProducts: async ({ forceRefresh = false } = {}) => {
         const now = Date.now();
 
-        // 1. Si hay caché válido y no se fuerza refresco
+        // 1. Si hay cachÃ© vÃ¡lido y no se fuerza refresco
         if (!forceRefresh && productsCache && (now - lastFetchTime < CACHE_DURATION)) {
             return [...productsCache];
         }
@@ -65,7 +65,7 @@ export const productService = {
                 console.warn('[ProductService] No se pudo obtener el usuario para filtrar productos:', userError?.message);
             }
         } catch (authError) {
-            console.warn('[ProductService] Error de autenticación al intentar cargar productos:', authError.message);
+            console.warn('[ProductService] Error de autenticaciÃ³n al intentar cargar productos:', authError.message);
         }
 
         // 3. Intentar Supabase (Nube) - Solo si tenemos usuario
@@ -85,12 +85,17 @@ export const productService = {
                 
                 if (error) console.warn('[ProductService] Error en Supabase, intentando local...', error.message);
             } catch (error) {
-                console.warn('[ProductService] Fallo de conexión a Supabase, intentando local...');
+                console.warn('[ProductService] Fallo de conexiÃ³n a Supabase, intentando local...');
             }
         }
 
+        if (config.isAndroid) {
+            console.warn('[ProductService] Android APK requiere Supabase en linea; se omite fallback local.');
+            return productsCache || [];
+        }
+
         // 4. Fallback: Intentar API Local (SQLite)
-        // Intentamos local si no hay usuario (offline) o si falló Supabase
+        // Intentamos local si no hay usuario (offline) o si fallÃ³ Supabase
         try {
             const response = await fetch(LOCAL_API_URL).catch(() => null);
             if (response && response.ok) {
@@ -109,10 +114,10 @@ export const productService = {
                 }
             }
         } catch (localError) {
-            console.error('[ProductService] Error crítico: Ni Supabase ni API Local responden correctamente.', localError);
+            console.error('[ProductService] Error crÃ­tico: Ni Supabase ni API Local responden correctamente.', localError);
         }
 
-        // 5. Última opción: Retornar caché anterior o array vacío
+        // 5. Ãšltima opciÃ³n: Retornar cachÃ© anterior o array vacÃ­o
         return productsCache || [];
     },
 
@@ -123,7 +128,7 @@ export const productService = {
         try {
             // 1. Obtener el usuario actual
             const { data: { user }, error: authError } = await supabase.auth.getUser();
-            if (authError || !user) throw new Error("No hay una sesión activa para sincronizar.");
+            if (authError || !user) throw new Error("No hay una sesiÃ³n activa para sincronizar.");
 
             // 2. Obtener datos frescos de la nube FILTRADOS por user_id
             const { data: cloudProducts, error } = await supabase
@@ -144,14 +149,14 @@ export const productService = {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('[ProductService] Detalle del error de sincronización:', errorData);
+                console.error('[ProductService] Detalle del error de sincronizaciÃ³n:', errorData);
                 throw new Error(errorData.error || 'Error al guardar en base de datos local');
             }
 
             const result = await response.json();
             return { success: true, ...result.result };
         } catch (error) {
-            console.error('[ProductService] Error en sincronización:', error);
+            console.error('[ProductService] Error en sincronizaciÃ³n:', error);
             throw error;
         }
     },
@@ -162,7 +167,7 @@ export const productService = {
 
         if (authError) {
             if (authError.message?.includes('aborted') || authError.name === 'AbortError') {
-                throw new Error('Operación cancelada');
+                throw new Error('OperaciÃ³n cancelada');
             }
             throw authError;
         }
@@ -182,7 +187,7 @@ export const productService = {
             user_id: userData.user.id
         };
 
-        // Agregar categoría si existe (puede no estar en el esquema de BD, pero lo intentamos)
+        // Agregar categorÃ­a si existe (puede no estar en el esquema de BD, pero lo intentamos)
         if (product.category) {
             insertData.category = product.category;
         }
@@ -195,7 +200,7 @@ export const productService = {
 
         if (error) throw error;
 
-        // Actualizar caché local
+        // Actualizar cachÃ© local
         productService.updateCache(data, 'INSERT');
 
         return data;
@@ -205,7 +210,7 @@ export const productService = {
     updateProduct: async (id, updates) => {
         const dbUpdates = {};
         
-        // Solo agregar al objeto de actualización los campos que vienen en 'updates'
+        // Solo agregar al objeto de actualizaciÃ³n los campos que vienen en 'updates'
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.price !== undefined) dbUpdates.price = parseFloat(updates.price);
         if (updates.cost_price !== undefined) dbUpdates.cost_price = parseFloat(updates.cost_price);
@@ -230,7 +235,7 @@ export const productService = {
 
         if (error) throw error;
 
-        // Actualizar caché local
+        // Actualizar cachÃ© local
         productService.updateCache(data, 'UPDATE');
 
         return data;
@@ -245,11 +250,11 @@ export const productService = {
 
         if (error) throw error;
 
-        // Actualizar caché local
+        // Actualizar cachÃ© local
         productService.updateCache({ id }, 'DELETE');
     },
 
-    // Buscar producto por código de barras
+    // Buscar producto por cÃ³digo de barras
     getProductByBarcode: async (barcode) => {
         const { data, error } = await supabase
             .from('products')
@@ -279,13 +284,13 @@ export const productService = {
         return data || [];
     },
 
-    // Crear múltiples productos (Carga Masiva)
+    // Crear mÃºltiples productos (Carga Masiva)
     bulkCreateProducts: async (products) => {
         const { data: userData, error: authError } = await supabase.auth.getUser();
 
         if (authError) {
             if (authError.message?.includes('aborted') || authError.name === 'AbortError') {
-                throw new Error('Operación cancelada');
+                throw new Error('OperaciÃ³n cancelada');
             }
             throw authError;
         }
@@ -313,9 +318,12 @@ export const productService = {
 
         if (error) throw error;
 
-        // Invalidar caché
+        // Invalidar cachÃ©
         productsCache = null;
 
         return data;
     }
 };
+
+
+

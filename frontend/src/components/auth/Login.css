@@ -5,7 +5,7 @@
 
 /* ---- Container: full viewport, centered ---- */
 .login-container {
-    min-height: 100vh !important;
+    min-height: 100dvh !important;
     width: 100% !important;
     display: flex !important;
     align-items: center !important;

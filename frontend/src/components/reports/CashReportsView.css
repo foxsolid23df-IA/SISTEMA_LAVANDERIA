@@ -8,7 +8,7 @@
   margin: 0 auto;
   color: var(--admin-text-main);
   background-color: var(--admin-bg);
-  min-height: 100vh;
+  min-height: 100dvh;
   transition: background-color 0.3s ease, color 0.3s ease;
 
   /* Chart & Data Viz Variables (Light Mode) */

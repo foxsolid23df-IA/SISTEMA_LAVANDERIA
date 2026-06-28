@@ -20,3 +20,13 @@
 
 /* Sidebar Nav Persistence Fix */
 /* Sidebar Nav Persistence Fix handled in App.css */
+/* Android APK sidebar touch fixes */
+body.capacitor-android .app-sidebar-nav {
+    touch-action: auto !important;
+    overscroll-behavior: contain;
+}
+
+body.capacitor-android .app-sidebar a,
+body.capacitor-android .app-sidebar button {
+    min-height: 44px;
+}

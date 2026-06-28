@@ -17,7 +17,7 @@ export const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, received, processing, ready, delivered
 
-  // Nuevos estados para filtros y búsqueda
+  // Nuevos estados para filtros y busqueda
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [showFilters, setShowFilters] = useState(false);
@@ -35,7 +35,7 @@ export const Orders = () => {
   const [paymentMethod, setPaymentMethod] = useState(""); // efectivo, tarjeta, transferencia
   const [paymentStatus, setPaymentStatus] = useState(""); // pending, paid
 
-  // Estados para liquidación de pago
+  // Estados para liquidacion de pago
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [orderToLiquidate, setOrderToLiquidate] = useState(null);
   const [metodoPago, setMetodoPago] = useState("cash");
@@ -44,7 +44,7 @@ export const Orders = () => {
   const [usarUSD, setUsarUSD] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Estados para reimpresión
+  // Estados para reimpresion
   const [businessSettings, setBusinessSettings] = useState(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [orderToPrint, setOrderToPrint] = useState(null);
@@ -89,8 +89,8 @@ export const Orders = () => {
 
     if (newStatus === "cancelled") {
       const firstConfirm = await Swal.fire({
-        title: "¿Iniciar Cancelación?",
-        text: "Se iniciará el proceso de cancelación de la orden. ¿Deseas continuar?",
+        title: "Iniciar Cancelacion?",
+        text: "Se iniciara el proceso de cancelacion de la orden. Deseas continuar?",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#ef4444",
@@ -102,8 +102,8 @@ export const Orders = () => {
       if (!firstConfirm.isConfirmed) return;
 
       const secondConfirm = await Swal.fire({
-        title: "Confirmación de Seguridad",
-        text: "¿Estás seguro que quieren cancelar?",
+        title: "Confirmacion de Seguridad",
+        text: "Estas seguro que quieren cancelar?",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#ef4444",
@@ -124,7 +124,7 @@ export const Orders = () => {
       if (isPaid) {
         Swal.fire({
           title: "Orden Pagada",
-          text: `La orden #${orderNumber} ha sido ${actionText}. El pago está completo.`,
+          text: `La orden #${orderNumber} ha sido ${actionText}. El pago esta completo.`,
           icon: "success",
           timer: 3000,
           toast: true,
@@ -134,11 +134,11 @@ export const Orders = () => {
       } else {
         if (newStatus === "delivered") {
           const result = await Swal.fire({
-            title: "¡Saldo Pendiente!",
-            text: `La orden #${orderNumber} tiene un saldo de ${formatearDinero(balance)}. ¿Confirmar entrega sin liquidar?`,
+            title: "Saldo Pendiente!",
+            text: `La orden #${orderNumber} tiene un saldo de ${formatearDinero(balance)}. Confirmar entrega sin liquidar?`,
             icon: "warning",
             showCancelButton: true,
-            confirmButtonText: "Sí, entregar",
+            confirmButtonText: "Si, entregar",
             cancelButtonText: "Cancelar",
             confirmButtonColor: "#10b981",
             cancelButtonColor: "#f43f5e",
@@ -176,11 +176,11 @@ export const Orders = () => {
   const handleOrderDelete = async (orderId) => {
     const { value: password } = await Swal.fire({
       title: "Seguridad del Sistema",
-      text: "Ingresa la contraseña del administrador para eliminar esta orden:",
+      text: "Ingresa la contrasena del administrador para eliminar esta orden:",
       input: "password",
-      inputPlaceholder: "Contraseña de Seguridad",
+      inputPlaceholder: "Contrasena de Seguridad",
       showCancelButton: true,
-      confirmButtonText: "Confirmar Eliminación",
+      confirmButtonText: "Confirmar Eliminacion",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#000000",
     });
@@ -190,19 +190,19 @@ export const Orders = () => {
 
       if (isValidAdmin) {
         const confirm = await Swal.fire({
-          title: "¿Eliminar esta orden?",
-          text: "La orden será removida de la vista activa. El stock se restaurará automáticamente.",
+          title: "Eliminar esta orden?",
+          text: "La orden sera removida de la vista activa. El stock se restaurara automaticamente.",
           icon: "warning",
           showCancelButton: true,
           confirmButtonColor: "#ef4444",
           cancelButtonColor: "#000000",
-          confirmButtonText: "Sí, eliminar",
+          confirmButtonText: "Si, eliminar",
           cancelButtonText: "Cancelar",
         });
 
         if (confirm.isConfirmed) {
           try {
-            await orderService.deleteOrder(orderId, activeStaff?.id || null, 'Eliminada desde panel de órdenes');
+            await orderService.deleteOrder(orderId, activeStaff?.id || null, 'Eliminada desde panel de ordenes');
             setOrders((prev) => prev.filter((o) => o.id !== orderId));
             Swal.fire({
               title: "Orden Eliminada",
@@ -260,7 +260,7 @@ export const Orders = () => {
       );
 
       Swal.fire({
-        title: "¡Pago Liquidado!",
+        title: "Pago Liquidado!",
         text: `La orden #${orderToLiquidate.folio ? orderToLiquidate.folio.toString().padStart(6, "0") : orderToLiquidate.id.toString().slice(-6).toUpperCase()} ha sido pagada totalmente.`,
         icon: "success",
         timer: 2000,
@@ -295,8 +295,8 @@ export const Orders = () => {
   const handleUpdateMethod = (order) => {
     if (order.status === "delivered") {
       Swal.fire({
-        title: "Acción no permitida",
-        text: "No se puede cambiar el método de pago de una orden que ya ha sido entregada.",
+        title: "Accion no permitida",
+        text: "No se puede cambiar el metodo de pago de una orden que ya ha sido entregada.",
         icon: "error",
         confirmButtonColor: "#10b981",
       });
@@ -323,7 +323,7 @@ export const Orders = () => {
         ),
       );
       Swal.fire({
-        title: "Método de Pago Actualizado",
+        title: "Metodo de Pago Actualizado",
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
@@ -332,7 +332,7 @@ export const Orders = () => {
       setOrderToUpdateMethod(null);
     } catch (error) {
       console.error("Error updating method:", error);
-      Swal.fire("Error", "No se pudo actualizar el método de pago", "error");
+      Swal.fire("Error", "No se pudo actualizar el metodo de pago", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -343,7 +343,7 @@ export const Orders = () => {
 
     setIsPrinting(true);
     try {
-      // Modo imagen: Envía el elemento DOM directamente para captura pixel-perfect
+      // Modo imagen: Envia el elemento DOM directamente para captura pixel-perfect
       await printService.print(ticketRef.current, businessSettings.printer_name, {
         copies: 1,
         settings: businessSettings,
@@ -378,12 +378,12 @@ export const Orders = () => {
     },
   };
 
-  // Lógica de filtrado avanzada
+  // Logica de filtrado avanzada
   const filteredOrders = orders.filter((order) => {
     // 1. Filtro por Estado
     if (filter !== "all" && order.status !== filter) return false;
 
-    // 2. Filtro por Búsqueda de Texto (ID o Nombre Cliente)
+    // 2. Filtro por Busqueda de Texto (ID o Nombre Cliente)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const clientName = order.customers?.name?.toLowerCase() || "";
@@ -393,7 +393,7 @@ export const Orders = () => {
       }
     }
 
-    // 3. Filtro por Rango de Fechas (Fecha de creación)
+    // 3. Filtro por Rango de Fechas (Fecha de creacion)
     if (dateRange.start) {
       const orderDate = new Date(order.created_at).setHours(0, 0, 0, 0);
       const startDate = new Date(dateRange.start).setHours(0, 0, 0, 0);
@@ -409,7 +409,7 @@ export const Orders = () => {
     if (minAmount && order.total < parseFloat(minAmount)) return false;
     if (maxAmount && order.total > parseFloat(maxAmount)) return false;
 
-    // 5. Filtro por Método de Pago
+    // 5. Filtro por Metodo de Pago
     if (paymentMethod && order.payment_method !== paymentMethod) return false;
 
     // 6. Filtro por Estado de Pago
@@ -441,7 +441,7 @@ export const Orders = () => {
     if (order.staff && order.staff.name) {
       return order.staff.name;
     }
-    // Fallback para órdenes antiguas sin información de staff
+    // Fallback para ordenes antiguas sin informacion de staff
     return "Sistema";
   };
 
@@ -496,11 +496,10 @@ export const Orders = () => {
                     - {order.customers?.name.split(" ")[0]}
                   </h4>
                   <p className="text-[10px] text-slate-500">
-                    {order.order_items?.length} items •{" "}
+                    {order.order_items?.length} items -{" "}
                     {formatearDinero(order.total)}
                   </p>
-                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">
-                    👤 {getEmployeeName(order)}
+                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium">                    {getEmployeeName(order)}
                   </p>
                 </div>
               </div>
@@ -523,7 +522,7 @@ export const Orders = () => {
                   <button
                     onClick={() => handleUpdateMethod(order)}
                     className="p-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded text-emerald-500"
-                    title="Cambiar método de pago"
+                    title="Cambiar metodo de pago"
                   >
                     <span className="material-symbols-outlined text-sm">
                       currency_exchange
@@ -535,7 +534,7 @@ export const Orders = () => {
           ))}
           {columnOrders.length === 0 && (
             <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-              <span className="text-xs text-slate-400">Sin órdenes</span>
+              <span className="text-xs text-slate-400">Sin ordenes</span>
             </div>
           )}
         </div>
@@ -543,41 +542,41 @@ export const Orders = () => {
     );
   };
 
-  // Función para exportar a Excel detallado
+  // Funcion para exportar a Excel detallado
   const exportToExcel = () => {
     const dataToExport = [];
 
     filteredOrders.forEach((order) => {
-      // Si por alguna razón la orden no tiene items, crear una fila básica
+      // Si por alguna razon la orden no tiene items, crear una fila basica
       if (!order.order_items || order.order_items.length === 0) {
         dataToExport.push({
           "ID Orden": order.id,
           Cliente: order.customers?.name || "Cliente General",
-          Teléfono: order.customers?.phone || "",
+          "Telefono": order.customers?.phone || "",
           Estado: statusLabels[order.status]?.label || order.status,
-          "Fecha Creación": new Date(order.created_at).toLocaleDateString(),
+          "Fecha Creacion": new Date(order.created_at).toLocaleDateString(),
           "Fecha Prometida": new Date(order.promised_at).toLocaleDateString(),
           Cantidad: "",
           Unidad: "",
-          Artículo: "Sin artículos",
+          "Articulo": "Sin articulos",
           Total: order.total,
           Pagado: order.paid_amount,
           Debe: Math.max(0, order.total - (order.paid_amount || 0)),
           Notas: order.notes || "",
         });
       } else {
-        // Crear una fila por cada artículo de la orden
+        // Crear una fila por cada articulo de la orden
         order.order_items.forEach((item, index) => {
           dataToExport.push({
             "ID Orden": order.id,
             Cliente: order.customers?.name || "Cliente General",
-            Teléfono: order.customers?.phone || "",
+            "Telefono": order.customers?.phone || "",
             Estado: statusLabels[order.status]?.label || order.status,
-            "Fecha Creación": new Date(order.created_at).toLocaleDateString(),
+            "Fecha Creacion": new Date(order.created_at).toLocaleDateString(),
             "Fecha Prometida": new Date(order.promised_at).toLocaleDateString(),
             Cantidad: item.quantity,
             Unidad: item.pricing_type === "kg" ? "kg" : "pza",
-            Artículo: item.product_name,
+            "Articulo": item.product_name,
             // Montos monetarios y notas solo en la primera fila para evitar duplicidad en sumas de Excel
             Total: index === 0 ? order.total : "",
             Pagado: index === 0 ? order.paid_amount || 0 : "",
@@ -605,14 +604,14 @@ export const Orders = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
-            Gestión de Lavandería
+            Gestion de Lavanderia
           </h1>
           <p className="text-slate-500 dark:text-slate-400">
             Administra el ciclo de vida de las prendas
           </p>
         </div>
 
-        <div className="flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto max-w-full">
+        <div className="orders-status-tabs flex gap-2 bg-slate-50 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto max-w-full">
           {["all", "received", "processing", "ready", "delivered"].map((f) => (
             <button
               key={f}
@@ -647,8 +646,8 @@ export const Orders = () => {
         </div>
       </div>
 
-      {/* BARRA DE HERRAMIENTAS DE FILTROS Y EXPORTACIÓN */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 animate-fade-in-down">
+      {/* BARRA DE HERRAMIENTAS DE FILTROS Y EXPORTACION */}
+      <div className="orders-toolbar bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 animate-fade-in-down">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           {/* Buscador */}
           <div className="relative w-full md:w-auto md:flex-1 max-w-md">
@@ -665,7 +664,7 @@ export const Orders = () => {
           </div>
 
           {/* Acciones */}
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="orders-toolbar-actions flex gap-2 w-full md:w-auto">
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${showFilters ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
@@ -751,7 +750,7 @@ export const Orders = () => {
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                 >
-                  <option value="">Método...</option>
+                  <option value="">Metodo...</option>
                   <option value="efectivo">Efectivo</option>
                   <option value="tarjeta">Tarjeta</option>
                   <option value="transferencia">Transferencia</option>
@@ -821,21 +820,21 @@ export const Orders = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
         </div>
       ) : viewMode === "kanban" ? (
-        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)] items-start">
+        <div className="orders-kanban flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)] items-start">
           <KanbanColumn status="received" title="Recibido" />
           <KanbanColumn status="processing" title="En Lavado" />
           <KanbanColumn status="ready" title="Listo P/ Entrega" />
           <KanbanColumn status="delivered" title="Entregado" />
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="orders-list flex flex-col gap-4">
           {filteredOrders.length === 0 ? (
             <div className="w-full py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
               <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">
                 inventory_2
               </span>
               <p className="text-slate-500">
-                No hay órdenes que coincidan con los filtros
+                No hay ordenes que coincidan con los filtros
               </p>
               <button
                 onClick={() => {
@@ -1026,7 +1025,7 @@ export const Orders = () => {
                       <button
                         onClick={() => handleUpdateMethod(order)}
                         className="p-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
-                        title="Cambiar método de pago"
+                        title="Cambiar metodo de pago"
                       >
                         <span className="material-symbols-outlined text-[18px]">
                           currency_exchange
@@ -1041,7 +1040,7 @@ export const Orders = () => {
         </div>
       )}
 
-      {/* MODAL DE PAGO (Liquidación) */}
+      {/* MODAL DE PAGO (Liquidacion) */}
       {isPaymentModalOpen && orderToLiquidate && (
         <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
@@ -1120,7 +1119,7 @@ export const Orders = () => {
                       currency_exchange
                     </span>
                     <span className="text-[10px] font-bold uppercase text-center">
-                      Pagar con Dólares (USD @ ${exchangeRate.rate})
+                      Pagar con Dolares (USD @ ${exchangeRate.rate})
                     </span>
                   </button>
                 )}
@@ -1136,7 +1135,7 @@ export const Orders = () => {
                     className={`text-xs font-bold uppercase tracking-wider mb-2 block ${usarUSD ? "text-blue-700 dark:text-blue-400" : "text-emerald-700 dark:text-emerald-400"}`}
                   >
                     {usarUSD
-                      ? "Dólares Recibidos (USD)"
+                      ? "Dolares Recibidos (USD)"
                       : "Dinero Recibido (MXN)"}
                   </label>
 
@@ -1225,13 +1224,13 @@ export const Orders = () => {
         </div>
       )}
 
-      {/* MODAL DE CAMBIO DE MÉTODO DE PAGO */}
+      {/* MODAL DE CAMBIO DE METODO DE PAGO */}
       {isMethodModalOpen && orderToUpdateMethod && (
         <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-bold text-lg dark:text-white uppercase tracking-tighter">
-                Cambiar Método
+                Cambiar Metodo
               </h3>
               <button
                 onClick={() => setIsMethodModalOpen(false)}
@@ -1246,7 +1245,7 @@ export const Orders = () => {
                   Orden # {orderToUpdateMethod.folio || orderToUpdateMethod.id}
                 </p>
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                  Selecciona el nuevo método de pago
+                  Selecciona el nuevo metodo de pago
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-3">
@@ -1301,7 +1300,7 @@ export const Orders = () => {
         </div>
       )}
 
-      {/* MODAL REIMPRESIÓN */}
+      {/* MODAL REIMPRESION */}
       {orderToPrint && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
@@ -1338,3 +1337,5 @@ export const Orders = () => {
     </div>
   );
 };
+
+

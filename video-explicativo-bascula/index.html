@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explainer: Venta con Báscula</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script>window.__timelines = window.__timelines || {};</script>
+</head>
+<body>
+    <div id="stage" 
+         data-composition-id="explainer-bascula" 
+         data-width="1080" 
+         data-height="1920" 
+         data-duration="10" 
+         data-fps="30"
+         data-start="0">
+        
+        <script>window.COMPOSITION_ID = "explainer-bascula";</script>
+
+        <!-- Capa de Fondo (Obsidiana) -->
+        <div id="bg-layer" class="layer bg-layer clip" data-start="0" data-duration="10">
+            <div id="grid" class="grid"></div>
+        </div>
+
+        <!-- Escena 1: Intro -->
+        <div id="intro-scene" class="layer scene clip" data-start="0" data-duration="2.5">
+            <h1 class="main-title">SISTEMA DE<br><span class="acid-text">PESAJE</span></h1>
+            <div class="line-divider"></div>
+            <p class="subtitle">PREPARANDO SENSORES...</p>
+        </div>
+
+        <!-- Escena 2: Colocación de Ropa -->
+        <div id="step1-scene" class="layer scene clip" data-start="2.5" data-duration="3.5">
+            <div class="step-indicator">PASO 01</div>
+            <h2 class="step-title">COLOCA LA CARGA</h2>
+            
+            <div id="scale-ui" class="scale-visual">
+                <div class="scale-base"></div>
+                <div id="weight-display" class="weight-text">0.00 KG</div>
+            </div>
+            
+            <div class="hud-scanning">
+                <div class="scan-bar"></div>
+                <p>SYNCING SCALE_ID: 882</p>
+            </div>
+        </div>
+
+        <!-- Escena 3: Cálculo -->
+        <div id="step2-scene" class="layer scene clip" data-start="6.0" data-duration="2.5">
+            <div class="step-indicator">PASO 02</div>
+            <h2 class="step-title">CÁLCULO EXACTO</h2>
+            
+            <div class="math-box">
+                <div class="math-line"><span id="final-weight">4.50</span> KG</div>
+                <div class="math-line operator">×</div>
+                <div class="math-line price">$15.00/KG</div>
+                <div class="line-divider"></div>
+                <div id="total-price" class="total-result">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Escena 4: Final -->
+        <div id="final-scene" class="layer scene clip" data-start="8.5" data-duration="1.5">
+            <div class="success-icon">✓</div>
+            <h1 class="logo-text">ORDEN LISTA</h1>
+            <p class="blink">SISTEMA SINCRONIZADO</p>
+        </div>
+
+        <!-- Overlay HUD (Global) -->
+        <div id="hud-overlay" class="layer hud-layer clip" data-start="0" data-duration="10">
+            <div class="hud-item top-left">APP_VER: 3.4.1</div>
+            <div class="hud-item top-right">HARDWARE: CALIBRATED</div>
+            <div class="hud-item bottom-left">AUTO_CALC: ON</div>
+            <div class="hud-item bottom-right">WASH_SYS</div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

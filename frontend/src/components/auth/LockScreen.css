@@ -4,7 +4,7 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     display: flex;
     z-index: 9999;
     font-family: 'Space Grotesk', 'Inter', -apple-system, sans-serif;

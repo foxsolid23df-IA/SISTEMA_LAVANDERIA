@@ -1,5 +1,5 @@
 .customer-display-container {
-    height: 100vh;
+    height: 100dvh;
     width: 100vw;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: white;
@@ -21,7 +21,7 @@
 /* Error & Welcome Screens */
 .customer-display-error,
 .customer-display-welcome {
-    height: 100vh;
+    height: 100dvh;
     width: 100vw;
     display: flex;
     flex-direction: column;

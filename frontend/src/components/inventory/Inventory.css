@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--admin-bg);
   font-family: "Inter", sans-serif;
 }
@@ -663,7 +663,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   .new-product-modal {
     max-width: 100%;
     height: 100%;
-    max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     border: none;
   }
@@ -1819,4 +1819,122 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .new-product-price-input {
   padding-left: 40px !important;
+}
+
+/* Android APK catalog scrolling */
+body.capacitor-android .inventory-page {
+  height: auto;
+  min-height: calc(100dvh - var(--header-height, 64px));
+  overflow: visible;
+}
+
+body.capacitor-android .inventory-header {
+  position: relative;
+  z-index: 1;
+  padding: 0.875rem 1rem;
+}
+
+body.capacitor-android .inventory-content {
+  overflow-y: visible;
+  padding: 1rem;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 2rem);
+}
+
+body.capacitor-android .search-controls {
+  gap: 0.875rem;
+}
+
+body.capacitor-android .control-buttons {
+  display: flex !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  padding-bottom: 0.25rem;
+  scroll-snap-type: x proximity;
+}
+
+body.capacitor-android .control-btn {
+  flex: 0 0 auto;
+  min-width: 138px;
+  min-height: 48px;
+  justify-content: center;
+  scroll-snap-align: start;
+}
+
+body.capacitor-android .control-btn.primary {
+  min-width: 180px;
+}
+
+body.capacitor-android .table-container {
+  max-height: none;
+  overflow-x: auto !important;
+  overflow-y: visible;
+  padding-bottom: 0.5rem;
+  touch-action: pan-x pan-y;
+}
+
+body.capacitor-android .products-table {
+  min-width: 760px;
+  table-layout: auto;
+}
+
+body.capacitor-android .products-table th,
+body.capacitor-android .products-table td {
+  white-space: nowrap;
+}
+
+body.capacitor-android .product-cell,
+body.capacitor-android .product-info,
+body.capacitor-android .product-name {
+  min-width: 0;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--admin-card-border);
+  background-color: var(--admin-card-bg);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 2.5rem;
+  text-align: center;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-btn.pagination-active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.pagination-info {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
 }

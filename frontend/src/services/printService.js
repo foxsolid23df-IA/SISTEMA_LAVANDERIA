@@ -1,10 +1,13 @@
-/**
- * Servicio unificado de impresión para POS
+﻿/**
+ * Servicio unificado de impresiÃ³n para POS
  * Convierte el ticket HTML a imagen via html2canvas para garantizar
- * que la salida física sea idéntica a la vista previa.
+ * que la salida fÃ­sica sea idÃ©ntica a la vista previa.
  */
 
 import html2canvas from 'html2canvas';
+import { platform } from '../utils/platform';
+import { posBluetoothPrinter } from './posBluetoothPrinter';
+import { escposTicketBuilder } from './escposTicketBuilder';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -14,6 +17,18 @@ export const printService = {
      */
     async getPrinters() {
         try {
+            if (platform.isAndroid) {
+                const devices = await posBluetoothPrinter.listPairedDevices();
+                return devices.map((device) => ({
+                    name: device.name || device.address,
+                    address: device.address || device.id,
+                    id: device.id || device.address,
+                    connectionType: 'bluetooth',
+                    isDefault: false,
+                    isOnline: true,
+                }));
+            }
+
             if (window.electron && window.electron.getPrinters) {
                 // Modo Electron: Usar API nativa
                 const printers = await window.electron.getPrinters();
@@ -23,7 +38,7 @@ export const printService = {
                     isOnline: p.status === 0
                 }));
             } else {
-                // Modo Web: Consultar al backend local que actúa como puente
+                // Modo Web: Consultar al backend local que actÃºa como puente
                 const response = await fetch(`${API_URL}/printer/list`);
                 if (!response.ok) throw new Error('No se pudo obtener la lista de impresoras');
                 return await response.json();
@@ -37,19 +52,19 @@ export const printService = {
     /**
      * Captura un elemento DOM como imagen base64 usando html2canvas
      * @param {HTMLElement} element - El elemento DOM del ticket
-     * @param {object} settings - Configuración del negocio (ancho, fuente, etc.)
+     * @param {object} settings - ConfiguraciÃ³n del negocio (ancho, fuente, etc.)
      * @returns {Promise<string>} - Imagen en formato base64 (data:image/png;base64,...)
      */
     async captureTicketAsImage(element, settings = {}) {
         if (!element) throw new Error('Elemento del ticket no proporcionado');
 
         const width = settings.printer_width || 80;
-        // Convertir mm a px (1mm ≈ 3.78px a 96dpi)
+        // Convertir mm a px (1mm â‰ˆ 3.78px a 96dpi)
         const widthPx = Math.round(width * 3.78);
 
         const canvas = await html2canvas(element, {
-            scale: 2,                    // Alta resolución para nitidez en impresión
-            useCORS: true,               // Permitir imágenes externas (logo)
+            scale: 2,                    // Alta resoluciÃ³n para nitidez en impresiÃ³n
+            useCORS: true,               // Permitir imÃ¡genes externas (logo)
             allowTaint: true,
             backgroundColor: '#ffffff',
             width: widthPx,
@@ -83,7 +98,7 @@ export const printService = {
     /**
      * Genera el HTML wrapper para imprimir una imagen de ticket
      * @param {string} imageBase64 - La imagen del ticket en base64
-     * @param {object} settings - Configuración de impresión
+     * @param {object} settings - ConfiguraciÃ³n de impresiÃ³n
      * @returns {string} - HTML completo listo para imprimir
      */
     generateImagePrintHtml(imageBase64, settings = {}) {
@@ -129,8 +144,8 @@ export const printService = {
     },
 
     /**
-     * Envía contenido a imprimir
-     * Prioriza html2canvas (imagen) para impresoras térmicas,
+     * EnvÃ­a contenido a imprimir
+     * Prioriza html2canvas (imagen) para impresoras tÃ©rmicas,
      * con fallback a HTML directo si no hay elemento DOM disponible.
      * 
      * @param {string|HTMLElement} content - HTML string o elemento DOM del ticket
@@ -143,34 +158,50 @@ export const printService = {
         const normalizedPrinter = (printerName === 'Default' || printerName === 'default') ? null : printerName;
 
         try {
-            console.log(`[PrintService] Inicio de impresión. Copias: ${copies}, Impresora: ${normalizedPrinter || 'Default'}`);
+            console.log(`[PrintService] Inicio de impresiÃ³n. Copias: ${copies}, Impresora: ${normalizedPrinter || 'Default'}`);
 
             let printHtml;
 
             // Si content es un elemento DOM, extraer HTML directo del DOM
-            // (html2canvas generaba imágenes demasiado grandes para el buffer de impresoras térmicas)
+            // (html2canvas generaba imÃ¡genes demasiado grandes para el buffer de impresoras tÃ©rmicas)
             if (content instanceof HTMLElement) {
-                console.log('[PrintService] Modo HTML directo — Extrayendo del DOM');
+                console.log('[PrintService] Modo HTML directo â€” Extrayendo del DOM');
                 printHtml = this.extractHtmlFromElement(content, settings);
             } else {
                 // Compatibilidad: si recibimos HTML string, asegurar charset UTF-8
-                console.log('[PrintService] Modo HTML (legacy) — Contenido string');
+                console.log('[PrintService] Modo HTML (legacy) â€” Contenido string');
                 printHtml = this.ensureHtmlCharset(content);
+            }
+
+            if (platform.isAndroid) {
+                const printerAddress = settings.printer_bluetooth_address || normalizedPrinter;
+                if (!printerAddress) {
+                    throw new Error('Configura una impresora Bluetooth POS antes de imprimir en Android.');
+                }
+
+                const data = escposTicketBuilder.build(options.ticketData, printHtml, settings);
+                for (let i = 0; i < copies; i++) {
+                    await posBluetoothPrinter.printTicket({ address: printerAddress, data });
+                    if (copies > 1 && i < copies - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+                return true;
             }
 
             for (let i = 0; i < copies; i++) {
                 if (window.electron && window.electron.printTicket) {
-                    // Modo Electron: Impresión silenciosa nativa
+                    // Modo Electron: ImpresiÃ³n silenciosa nativa
                     console.log(`[PrintService] Usando Electron Native Print (Copia ${i + 1}/${copies})`);
                     const result = await window.electron.printTicket(printHtml, normalizedPrinter);
                     if (!result.success) {
-                        console.error(`[PrintService] ❌ Electron Print falló:`, result.error);
+                        console.error(`[PrintService] âŒ Electron Print fallÃ³:`, result.error);
                         throw new Error(result.error);
                     } else {
-                        console.log(`[PrintService] ✅ Copia ${i + 1}/${copies} impresa exitosamente`);
+                        console.log(`[PrintService] âœ… Copia ${i + 1}/${copies} impresa exitosamente`);
                     }
                 } else {
-                    // Modo Web: Intentar vía Backend Bridge
+                    // Modo Web: Intentar vÃ­a Backend Bridge
                     console.log(`[PrintService] Usando Backend Bridge Print (Copia ${i + 1}/${copies})`);
                     const response = await fetch(`${API_URL}/printer/print`, {
                         method: 'POST',
@@ -182,13 +213,13 @@ export const printService = {
                     });
 
                     if (!response.ok) {
-                        console.warn('[PrintService] Bridge falló, usando fallback de navegador.');
+                        console.warn('[PrintService] Bridge fallÃ³, usando fallback de navegador.');
                         this.fallbackPrint(printHtml);
                         return true;
                     }
                 }
 
-                // Pausa entre impresiones para evitar saturación del buffer
+                // Pausa entre impresiones para evitar saturaciÃ³n del buffer
                 if (copies > 1 && i < copies - 1) {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
@@ -196,7 +227,7 @@ export const printService = {
 
             return true;
         } catch (error) {
-            console.error('[PrintService] Error en impresión:', error);
+            console.error('[PrintService] Error en impresiÃ³n:', error);
             // Fallback final: abrir en ventana del navegador
             if (typeof content === 'string') {
                 this.fallbackPrint(content);
@@ -207,10 +238,10 @@ export const printService = {
 
     /**
      * Extrae el HTML de un elemento DOM y lo envuelve en un documento HTML
-     * completo con estilos de impresión para impresoras térmicas.
-     * Reemplaza html2canvas que generaba imágenes demasiado grandes.
+     * completo con estilos de impresiÃ³n para impresoras tÃ©rmicas.
+     * Reemplaza html2canvas que generaba imÃ¡genes demasiado grandes.
      * @param {HTMLElement} element - El elemento DOM del ticket
-     * @param {object} settings - Configuración del negocio
+     * @param {object} settings - ConfiguraciÃ³n del negocio
      * @returns {string} - HTML completo listo para imprimir
      */
     extractHtmlFromElement(element, settings = {}) {
@@ -255,9 +286,9 @@ export const printService = {
         }
         
         /* ===== CONTENEDOR PRINCIPAL DEL TICKET =====
-         * CRÍTICO: Los !important sobreescriben los estilos inline del JSX
-         * que aplican width en mm. En contexto de impresión, el body YA
-         * tiene el ancho correcto, así que el ticket debe ser 100%.
+         * CRÃTICO: Los !important sobreescriben los estilos inline del JSX
+         * que aplican width en mm. En contexto de impresiÃ³n, el body YA
+         * tiene el ancho correcto, asÃ­ que el ticket debe ser 100%.
          */
         .ticket-venta {
             width: 100% !important;
@@ -304,7 +335,7 @@ export const printService = {
             padding-bottom: 20px !important;
         }
         
-        /* ===== SECCIÓN FACTURACIÓN: Contener dentro del ancho ===== */
+        /* ===== SECCIÃ“N FACTURACIÃ“N: Contener dentro del ancho ===== */
         .ticket-billing-section {
             box-sizing: border-box !important;
             max-width: 100% !important;
@@ -312,7 +343,7 @@ export const printService = {
             word-break: break-word;
         }
         
-        /* ===== IMÁGENES & MEDIA ===== */
+        /* ===== IMÃGENES & MEDIA ===== */
         img { max-width: 100% !important; height: auto; display: block; }
         svg { max-width: 100% !important; height: auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -342,7 +373,7 @@ export const printService = {
     },
 
     /**
-     * Asegura que un HTML string tenga charset UTF-8 y estilos de impresión
+     * Asegura que un HTML string tenga charset UTF-8 y estilos de impresiÃ³n
      */
     ensureHtmlCharset(html) {
         if (!html.includes('charset')) {
@@ -352,12 +383,12 @@ export const printService = {
     },
 
     /**
-     * Fallback cuando la impresión silenciosa falla o no está disponible
+     * Fallback cuando la impresiÃ³n silenciosa falla o no estÃ¡ disponible
      */
     fallbackPrint(htmlContent) {
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-            console.error('[PrintService] No se pudo abrir ventana de impresión (popup bloqueado)');
+            console.error('[PrintService] No se pudo abrir ventana de impresiÃ³n (popup bloqueado)');
             return;
         }
         printWindow.document.write(htmlContent);
@@ -370,7 +401,7 @@ export const printService = {
     },
 
     /**
-     * Genera el HTML básico para un ticket (Ticket de Venta)
+     * Genera el HTML bÃ¡sico para un ticket (Ticket de Venta)
      * Mantenido por compatibilidad con flujos que no usan el componente React
      */
     generateTicketHtml(businessData, orderData, items) {
@@ -410,7 +441,7 @@ export const printService = {
 <body>
     <div class="text-center">
         ${businessData.logo_url ? `<img src="${businessData.logo_url}" class="header-logo">` : ''}
-        <div class="bold">${businessData.name || 'LAVANDERÍA'}</div>
+        <div class="bold">${businessData.name || 'LAVANDERÃA'}</div>
         <div>${businessData.address || ''}</div>
         <div>Tel: ${businessData.phone || ''}</div>
     </div>
@@ -441,12 +472,12 @@ export const printService = {
     <div class="text-right bold">TOTAL: $${orderData.total || '0.00'}</div>
     <hr>
     <div class="text-center">
-        ${businessData.ticket_message || '¡Gracias por su preferencia!'}
+        ${businessData.ticket_message || 'Â¡Gracias por su preferencia!'}
     </div>
     <hr>
     ${businessData.enable_billing_system ? `
     <div class="text-center" style="font-size: 10px;">
-        <div class="bold">FACTURACIÓN ELECTRÓNICA</div>
+        <div class="bold">FACTURACIÃ“N ELECTRÃ“NICA</div>
         <div>Portal: ${businessData.billing_url || 'https://pos-autofactura.vercel.app/'}</div>
         <div style="margin-top: 4px;">Ticket: ${orderData.ticket_uuid || 'N/A'}</div>
         <div class="bold">PIN: ${orderData.pin_facturacion || 'N/A'}</div>
@@ -457,3 +488,5 @@ export const printService = {
 </html>`;
     }
 };
+
+

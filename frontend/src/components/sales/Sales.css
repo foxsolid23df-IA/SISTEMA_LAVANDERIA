@@ -228,14 +228,14 @@
   .sales-main-area {
     width: 100%;
     height: auto;
-    min-height: 40vh;
+    min-height: 40dvh;
     overflow: visible;
   }
 
   .cart-sidebar {
     width: 100%;
     height: auto;
-    max-height: 50vh;
+    max-height: 50dvh;
     border-left: none;
     border-top: 1px solid var(--admin-card-border);
     margin-top: 1rem;
@@ -243,7 +243,7 @@
   }
 
   .cart-items-modern {
-    max-height: 300px;
+    max-height: 40dvh;
   }
 }
 
@@ -897,7 +897,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 320px);
+  height: calc(100dvh - 320px);
   min-height: 350px;
   max-height: 600px;
 }
@@ -1387,7 +1387,7 @@
   }
 
   .cart-section {
-    height: calc(100vh - 280px);
+    height: calc(100dvh - 280px);
     min-height: 300px;
   }
 
@@ -1741,7 +1741,7 @@
   }
 
   .cart-section {
-    height: calc(100vh - 100px);
+    height: calc(100dvh - 100px);
     max-height: none;
   }
 }
@@ -1791,7 +1791,7 @@
   background: var(--admin-card-bg);
   width: 100%;
   max-width: 80rem;
-  height: 85vh;
+  height: 85dvh;
   border-radius: 1.5rem;
   overflow: hidden;
   box-shadow: var(--admin-modal-shadow);
@@ -1835,7 +1835,7 @@
 
 @media (max-width: 900px) {
   .payment-modal-container {
-    height: 95vh;
+    height: 95dvh;
     max-width: 95vw;
   }
 
@@ -1848,7 +1848,7 @@
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--admin-card-border);
-    max-height: 30vh;
+    max-height: 30dvh;
   }
 
   .payment-method-section {
@@ -2514,4 +2514,96 @@
 .date-input-highlight:hover::-webkit-calendar-picker-indicator {
     transform: scale(1.6);
     background-color: rgba(245, 158, 11, 0.1); /* light amber bg on hover */
+}
+
+/* Android APK sales touch/safe-area fixes */
+body.capacitor-android .pos-container {
+  height: calc(100dvh - var(--header-height, 64px));
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.capacitor-android .pos-container > .flex-1 {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 92px);
+}
+
+body.capacitor-android .mobile-sale-tabs {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+  justify-content: flex-start;
+}
+
+body.capacitor-android .mobile-sale-tabs > button {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-height: 44px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+body.capacitor-android .mobile-sales-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 120px) !important;
+}
+
+/* Permite scroll vertical incluso cuando el toque empieza sobre un botón o tarjeta de producto */
+body.capacitor-android .mobile-sales-grid button,
+body.capacitor-android .mobile-sales-grid [role="button"],
+body.capacitor-android .mobile-sales-grid a {
+  touch-action: pan-y;
+}
+
+body.capacitor-android .mobile-cart-toggle {
+  bottom: calc(var(--android-nav-safe-bottom, 64px) + 10px) !important;
+  z-index: 120;
+}
+
+body.capacitor-android .mobile-cart-toggle button {
+  min-height: 56px;
+  border-radius: 1rem;
+}
+
+body.capacitor-android .mobile-cart-drawer {
+  bottom: 0;
+  height: calc(86dvh - var(--android-nav-safe-bottom, 64px));
+  max-height: calc(100dvh - var(--header-height, 64px) - 8px);
+  padding-bottom: var(--android-nav-safe-bottom, 64px);
+  touch-action: pan-y;
+}
+
+body.capacitor-android .mobile-cart-drawer .cart-items-modern,
+body.capacitor-android .mobile-cart-drawer .cart-items {
+  max-height: none;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+@media (max-width: 480px) {
+  body.capacitor-android .mobile-sales-grid {
+    gap: 0.75rem;
+    padding-right: 0;
+  }
+
+  body.capacitor-android .mobile-cart-toggle {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+  }
+}
+
+body.capacitor-android .total-section {
+  bottom: calc(1rem + var(--android-nav-safe-bottom, 64px)) !important;
+  z-index: 120 !important;
 }

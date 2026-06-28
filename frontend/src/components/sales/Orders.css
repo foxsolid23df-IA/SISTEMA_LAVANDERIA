@@ -1,5 +1,5 @@
 .orders-container {
-  min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
 }
 
 .order-card {
@@ -85,4 +85,76 @@
 }
 .animate-pulse-slow {
   animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Android APK orders scrolling */
+body.capacitor-android .orders-container {
+  min-height: calc(100dvh - var(--header-height, 64px));
+  padding: 1rem !important;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 2rem) !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+body.capacitor-android .orders-status-tabs {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+}
+
+body.capacitor-android .orders-status-tabs button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  scroll-snap-align: start;
+}
+
+body.capacitor-android .orders-toolbar {
+  overflow: visible;
+}
+
+body.capacitor-android .orders-toolbar-actions {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  padding-bottom: 0.25rem;
+}
+
+body.capacitor-android .orders-toolbar-actions button {
+  flex: 0 0 auto;
+  min-height: 48px;
+}
+
+body.capacitor-android .orders-kanban {
+  height: calc(100dvh - 260px);
+  min-height: 380px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 1rem);
+}
+
+body.capacitor-android .orders-kanban > * {
+  flex: 0 0 min(82vw, 320px);
+}
+
+body.capacitor-android .orders-list {
+  padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 1rem);
+}
+
+body.capacitor-android .orders-list > div {
+  overflow: visible;
+}
+
+@media (max-width: 480px) {
+  body.capacitor-android .orders-container h1 {
+    font-size: 1.55rem;
+    line-height: 1.15;
+  }
 }
