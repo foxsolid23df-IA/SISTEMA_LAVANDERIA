@@ -10,6 +10,38 @@ import { formatearDinero } from "../../utils";
 import * as XLSX from "xlsx";
 import Swal from "sweetalert2";
 import "./Orders.css";
+import { supabase } from "../../supabase";
+import { platform } from "../../utils/platform";
+
+const playNewOrderSound = () => {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  try {
+    const ctx = new AudioContext();
+    const playTone = (startTime, frequency) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.22);
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + 0.24);
+    };
+
+    const now = ctx.currentTime;
+    playTone(now, 880);
+    playTone(now + 0.28, 1175);
+  } catch (err) {
+    console.warn("[Orders] No se pudo reproducir alerta sonora:", err);
+  }
+};
 
 export const Orders = () => {
   const { activeStaff } = useAuth();
@@ -75,8 +107,51 @@ export const Orders = () => {
     }
   };
 
+  const reloadOrdersSilent = async () => {
+    try {
+      const updatedOrders = await orderService.getOrders();
+      setOrders(updatedOrders);
+    } catch (error) {
+      console.error("Error silently reloading orders:", error);
+    }
+  };
+
   useEffect(() => {
     loadOrders();
+
+    // Suscribirse a cambios en tiempo real en la tabla orders
+    const channel = supabase
+      .channel('orders-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log("[Realtime] Cambio detectado en orders:", payload);
+          
+          // Recargar silenciosamente la lista de ordenes
+          reloadOrdersSilent();
+
+          // Si es una insercion y no estamos en electron (.exe)
+          if (payload.eventType === 'INSERT' && !platform.isElectron) {
+            playNewOrderSound();
+            Swal.fire({
+              title: "Nueva Orden Recibida",
+              text: `Se ha creado una nueva orden (Folio: ${payload.new.folio ? payload.new.folio.toString().padStart(6, '0') : payload.new.id}).`,
+              icon: "info",
+              toast: true,
+              position: "top-end",
+              timer: 4000,
+              showConfirmButton: false,
+              timerProgressBar: true
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleStatusChange = async (order, newStatus) => {

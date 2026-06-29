@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.56] - 2026-06-28
+
+### Added
+
+- **Sincronización en Tiempo Real de Órdenes:** Las órdenes creadas en la aplicación de escritorio (.exe) ahora se reflejan automáticamente en el portal web de gestión de órdenes sin necesidad de actualizar manualmente la página.
+- **Alerta Sonora y Visual (Solo Portal Web):** Cuando llega una nueva orden desde otra terminal, el portal web reproduce un tono de notificación y muestra un toast informativo en la esquina superior derecha con el folio de la nueva orden. Esta alerta NO se muestra en la app de escritorio (.exe) para evitar alertas duplicadas.
+- **Recarga Silenciosa:** La lista de órdenes se actualiza en segundo plano sin mostrar spinners de carga ni interrumpir el flujo del operador.
+- **Migración SQL de Realtime:** Se incluye script de migración `20260629000000_enable_orders_realtime.sql` para habilitar la publicación en tiempo real sobre la tabla `orders` en Supabase.
+
 ## [Comercial] - 2026-06-16
 
 ### Added
