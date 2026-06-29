@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase } from "../supabase";
 import { staffService } from "../services/staffService";
 import { cashSessionService } from "../services/cashSessionService";
@@ -116,6 +116,32 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(timeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Suscribirse a cambios en tiempo real en el perfil del usuario actual
+    const channel = supabase
+      .channel(`profile-realtime-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log("[Realtime] Perfil actualizado desde DB:", payload.new);
+          setProfile(payload.new);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const fetchProfile = async (userId) => {
     try {
