@@ -25,6 +25,8 @@
     display: grid;
     place-items: center;
     padding: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 .driver-auth-card {
@@ -138,7 +140,7 @@
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--driver-line);
-    padding: 12px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right));
+    padding: calc(12px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -299,11 +301,25 @@
     color: var(--driver-ink);
 }
 
-.driver-task-list,
+.driver-task-list {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    padding: 16px 16px 90px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    gap: 12px;
+}
+
+/* If followed by stats bar, shift bottom padding to stats bar instead */
+.driver-task-list:has(+ .driver-stats-bar) {
+    padding-bottom: 16px;
+}
+
 .driver-detail-view {
     width: min(100%, 760px);
     margin: 0 auto;
-    padding: 16px;
+    padding: 16px 16px 130px;
+    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
     display: grid;
     gap: 12px;
 }
@@ -885,7 +901,8 @@
 .driver-stats-bar {
     width: min(100%, 760px);
     margin: 0 auto;
-    padding: 0 16px 16px;
+    padding: 0 16px 90px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 .driver-stats-mini {
@@ -972,5 +989,19 @@
     .task-next span {
         max-width: none;
         text-align: left;
+    }
+}
+
+/* ─── TABLET / LANDSCAPE RESPONSIVE GRIDS ────────────────────────── */
+
+@media (min-width: 600px) {
+    .driver-task-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 480px) {
+    .driver-info-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
