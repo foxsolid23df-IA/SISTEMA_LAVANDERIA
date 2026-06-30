@@ -550,6 +550,72 @@ body.capacitor-android .ticket-config-container {
   padding-bottom: calc(var(--android-nav-safe-bottom, 64px) + 24px) !important;
 }
 
+/* ============================================================
+   PORTALES STANDALONE (sin sidebar/header de la app)
+   Todos los portales fullscreen de acceso directo por URL.
+   Se les da su propio viewport de scroll independiente del body.
+   ============================================================ */
+
+/* Portales standalone: scroll libre vertical Y horizontal */
+body.capacitor-android .driver-auth-wrapper,
+body.capacitor-android .driver-portal-wrapper,
+body.capacitor-android .tracking-page,
+body.capacitor-android .login-page,
+body.capacitor-android .lock-screen-wrapper,
+body.capacitor-android .customer-display-wrapper,
+body.capacitor-android .super-admin-layout,
+body.capacitor-android .super-admin-login-page {
+  /* Viewport propio de scroll — el body tiene overflow:hidden en Android */
+  height: 100dvh !important;
+  min-height: unset !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x pan-y pinch-zoom !important;
+  overscroll-behavior: contain;
+  /* Padding para safe areas en Android */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+/* Todos los hijos directos de portales standalone: heredan touch-action */
+body.capacitor-android .driver-auth-wrapper *,
+body.capacitor-android .driver-portal-wrapper *,
+body.capacitor-android .tracking-page *,
+body.capacitor-android .login-page *,
+body.capacitor-android .lock-screen-wrapper *,
+body.capacitor-android .customer-display-wrapper *,
+body.capacitor-android .super-admin-layout *,
+body.capacitor-android .super-admin-login-page * {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* Restaurar touch-action:auto en inputs dentro de portales standalone
+   para que el usuario pueda seleccionar texto y usar teclado correctamente */
+body.capacitor-android .driver-auth-wrapper input,
+body.capacitor-android .driver-portal-wrapper input,
+body.capacitor-android .tracking-page input,
+body.capacitor-android .login-page input,
+body.capacitor-android .lock-screen-wrapper input,
+body.capacitor-android .customer-display-wrapper input,
+body.capacitor-android .super-admin-layout input,
+body.capacitor-android .super-admin-login-page input,
+body.capacitor-android .driver-auth-wrapper textarea,
+body.capacitor-android .driver-portal-wrapper textarea,
+body.capacitor-android .tracking-page textarea,
+body.capacitor-android .login-page textarea,
+body.capacitor-android .super-admin-layout textarea,
+body.capacitor-android .driver-auth-wrapper select,
+body.capacitor-android .driver-portal-wrapper select,
+body.capacitor-android .tracking-page select,
+body.capacitor-android .login-page select,
+body.capacitor-android .super-admin-layout select {
+  touch-action: auto;
+}
+
 body.capacitor-android table {
   touch-action: pan-x pan-y;
 }

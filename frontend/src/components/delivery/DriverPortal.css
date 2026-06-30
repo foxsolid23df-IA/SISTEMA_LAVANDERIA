@@ -15,8 +15,10 @@
 .driver-auth-wrapper,
 .driver-portal-wrapper {
     height: 100dvh;
+    overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y pinch-zoom;
     background:
         linear-gradient(180deg, #e8f6fb 0%, #f8fafc 48%, #eef4f8 100%);
     color: var(--driver-ink);
