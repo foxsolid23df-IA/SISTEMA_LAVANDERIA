@@ -14,7 +14,9 @@
 
 .driver-auth-wrapper,
 .driver-portal-wrapper {
-    min-height: 100dvh;
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background:
         linear-gradient(180deg, #e8f6fb 0%, #f8fafc 48%, #eef4f8 100%);
     color: var(--driver-ink);
@@ -27,6 +29,7 @@
     padding: 24px;
     padding-top: calc(24px + env(safe-area-inset-top, 0px));
     padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
 }
 
 .driver-auth-card {
