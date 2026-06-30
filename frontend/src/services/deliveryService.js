@@ -81,8 +81,11 @@ const runDeliveryAction = async (action, payload = {}) => {
         body: { action, payload }
     });
 
-    if (error) throw error;
+    // El SDK lanza un error genérico ("Edge Function returned a non-2xx status code")
+    // cuando el status HTTP es >= 400. El mensaje real viene en data.error del body JSON.
+    // Leer data.error primero para mostrar el motivo real al usuario.
     if (data?.error) throw new Error(data.error);
+    if (error) throw error;
     return data;
 };
 

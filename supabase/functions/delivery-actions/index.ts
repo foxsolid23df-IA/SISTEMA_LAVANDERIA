@@ -528,7 +528,10 @@ serve(async (req) => {
       const garmentSummary = String(payload.garment_summary || "").trim();
       const notes = String(payload.notes || "").trim();
       const deliveryFee = Number(payload.delivery_fee) || 0;
-      const paymentPreference = String(payload.payment_preference || "").trim();
+      const paymentPreferenceRaw = String(payload.payment_preference || "").trim();
+      // Solo aceptar valores válidos según la constraint de la BD; cadena vacía → null
+      const VALID_PREFERENCES = ["pay_at_pickup", "pay_on_ready_delivery", "pay_at_store_pickup"];
+      const paymentPreference = VALID_PREFERENCES.includes(paymentPreferenceRaw) ? paymentPreferenceRaw : null;
       const evidencePath = payload.pickup_evidence_path ? String(payload.pickup_evidence_path) : null;
 
       if (!customerName || !customerPhone || !customerAddress) {
@@ -537,6 +540,8 @@ serve(async (req) => {
       if (!garmentSummary) {
         return jsonResponse({ error: "Describe las prendas que recogiste." }, 400);
       }
+
+      console.log(`[create_express_pickup] storeId=${user.id} driverId=${driverId} phone=${customerPhone}`);
 
       const now = new Date().toISOString();
 
@@ -554,13 +559,16 @@ serve(async (req) => {
           service_cost: 0,
           delivery_fee: Math.max(0, deliveryFee),
           pickup_evidence_path: evidencePath || null,
-          payment_preference: paymentPreference || null,
+          payment_preference: paymentPreference,
           picked_up_at: now,
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[create_express_pickup] Error en insert delivery_orders:", JSON.stringify(error));
+        throw error;
+      }
 
       // Optionally create linked POS order if next_folio provided
       let posOrder = null;
@@ -738,7 +746,18 @@ serve(async (req) => {
 
     return jsonResponse({ error: "Accion no soportada." }, 400);
   } catch (err: any) {
-    console.error("[delivery-actions] Error:", err);
-    return jsonResponse({ error: err.message || "Error interno en delivery." }, 500);
+    // Extraer el mensaje real: PostgREST usa err.message, err.details, err.hint, err.code
+    const pgMessage = err?.message || "";
+    const pgDetails = err?.details || "";
+    const pgHint = err?.hint || "";
+    const pgCode = err?.code || "";
+    const errorMessage = [
+      pgMessage || "Error interno en delivery.",
+      pgDetails ? `Detalle: ${pgDetails}` : "",
+      pgHint ? `Sugerencia: ${pgHint}` : "",
+      pgCode ? `Código: ${pgCode}` : "",
+    ].filter(Boolean).join(" | ");
+    console.error("[delivery-actions] Unhandled error:", JSON.stringify({ message: pgMessage, details: pgDetails, hint: pgHint, code: pgCode, raw: String(err) }));
+    return jsonResponse({ error: errorMessage }, 500);
   }
 });
