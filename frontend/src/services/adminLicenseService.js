@@ -234,30 +234,28 @@ export const adminLicenseService = {
     },
 
     /**
-     * Crea o actualiza un aviso remoto.
+     * Crea o actualiza un aviso remoto (requiere PIN Maestro).
      */
-    saveRemoteNotice: async (notice) => {
+    saveRemoteNotice: async (notice, masterPin) => {
         try {
-            const payload = {
-                user_id: notice.user_id,
-                notice_key: notice.notice_key,
-                title: notice.title,
-                message: notice.message,
-                events: notice.events,
-                active: notice.active,
-                starts_at: notice.starts_at || null,
-                ends_at: notice.ends_at || null,
-                button_text: notice.button_text || null,
-                button_url: notice.button_url || null,
-                updated_at: new Date().toISOString(),
-            };
+            const { data, error } = await supabase.rpc('save_remote_notice', {
+                p_id: notice.id || null,
+                p_user_id: notice.user_id,
+                p_notice_key: notice.notice_key,
+                p_title: notice.title,
+                p_message: notice.message,
+                p_events: notice.events || [],
+                p_active: notice.active,
+                p_starts_at: notice.starts_at || null,
+                p_ends_at: notice.ends_at || null,
+                p_button_text: notice.button_text || null,
+                p_button_url: notice.button_url || null,
+                master_pin: masterPin
+            });
 
-            const query = notice.id
-                ? supabase.from('remote_notices').update(payload).eq('id', notice.id).select().single()
-                : supabase.from('remote_notices').insert([{ ...payload, created_at: new Date().toISOString() }]).select().single();
-
-            const { data, error } = await query;
             if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Error al guardar aviso');
+
             return { success: true, data };
         } catch (error) {
             console.error('Error saving remote notice:', error);
@@ -266,18 +264,19 @@ export const adminLicenseService = {
     },
 
     /**
-     * Cambia el estado activo/inactivo de un aviso remoto.
+     * Cambia el estado activo/inactivo de un aviso remoto (requiere PIN Maestro).
      */
-    toggleRemoteNotice: async (noticeId, active) => {
+    toggleRemoteNotice: async (noticeId, active, masterPin) => {
         try {
-            const { data, error } = await supabase
-                .from('remote_notices')
-                .update({ active, updated_at: new Date().toISOString() })
-                .eq('id', noticeId)
-                .select()
-                .single();
+            const { data, error } = await supabase.rpc('toggle_remote_notice', {
+                p_id: noticeId,
+                p_active: active,
+                master_pin: masterPin
+            });
 
             if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Error al actualizar aviso');
+
             return { success: true, data };
         } catch (error) {
             console.error('Error toggling remote notice:', error);
@@ -286,17 +285,19 @@ export const adminLicenseService = {
     },
 
     /**
-     * Elimina un aviso remoto.
+     * Elimina un aviso remoto (requiere PIN Maestro).
      */
-    deleteRemoteNotice: async (noticeId) => {
+    deleteRemoteNotice: async (noticeId, masterPin) => {
         try {
-            const { error } = await supabase
-                .from('remote_notices')
-                .delete()
-                .eq('id', noticeId);
+            const { data, error } = await supabase.rpc('delete_remote_notice', {
+                p_id: noticeId,
+                master_pin: masterPin
+            });
 
             if (error) throw error;
-            return { success: true };
+            if (!data?.success) throw new Error(data?.error || 'Error al eliminar aviso');
+
+            return { success: true, data };
         } catch (error) {
             console.error('Error deleting remote notice:', error);
             return { success: false, error: error.message };

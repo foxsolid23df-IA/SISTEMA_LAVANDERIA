@@ -506,11 +506,13 @@ export const MasterLicenseManager = () => {
         const pwd = document.getElementById("swal-input-pwd").value;
         if (!email || !pwd) {
           Swal.showValidationMessage("Ambos campos son obligatorios");
+          return false;
         }
         if (pwd.length < 6) {
           Swal.showValidationMessage(
             "La contraseña debe tener al menos 6 caracteres",
           );
+          return false;
         }
         return { email, pwd };
       },
@@ -928,7 +930,7 @@ export const MasterLicenseManager = () => {
       )}
 
       {activeTab === "notices" && (
-        <RemoteNoticesManager profiles={profiles} />
+        <RemoteNoticesManager profiles={profiles} masterPin={masterPin} />
       )}
 
       {activeTab === "preferences" && (

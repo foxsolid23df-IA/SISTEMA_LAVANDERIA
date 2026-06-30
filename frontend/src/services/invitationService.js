@@ -8,13 +8,17 @@ export const invitationService = {
         }
 
         try {
-            const codeUpper = code.toUpperCase().trim();
+            const codeTrimmed = code.trim();
+            const codeUpper = codeTrimmed.toUpperCase();
+            const codeLower = codeTrimmed.toLowerCase();
+            const codeCandidates = [...new Set([codeTrimmed, codeUpper, codeLower])];
 
             // Buscar el código en la base de datos
             const { data, error } = await supabase
                 .from('invitation_codes')
-                .select('id, code, used, used_by, expires_at')
-                .eq('code', codeUpper)
+                .select('id, code, used, expires_at')
+                .in('code', codeCandidates)
+                .limit(1)
                 .maybeSingle();
 
             if (error) {
@@ -45,7 +49,7 @@ export const invitationService = {
             return { 
                 valid: true, 
                 codeId: data.id,
-                code: codeUpper 
+                code: data.code 
             };
         } catch (error) {
             console.error('Error validando código de invitación:', error);

@@ -21,8 +21,10 @@ Entra a **Supabase -> SQL Editor** y genera un código único para el cliente:
 
 ```sql
 INSERT INTO public.invitation_codes (code, expires_at, notes)
-VALUES ('CODIGO-CLIENTE-2026', now() + interval '7 days', 'Licencia Lavandería X');
+VALUES (upper(trim('CODIGO-CLIENTE-2026')), now() + interval '7 days', 'Licencia Lavanderia X');
 ```
+
+> Importante: el portal normaliza los codigos en mayusculas. Si generas el codigo manualmente, guardalo en mayusculas o usa `upper(trim(...))`.
 
 ### Paso B: Registro y Configuración Inicial
 

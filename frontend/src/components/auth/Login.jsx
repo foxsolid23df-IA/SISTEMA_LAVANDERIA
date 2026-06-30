@@ -32,7 +32,7 @@ export const Login = () => {
             setIsRegistering(true);
             setFormData(prev => ({
                 ...prev,
-                invitationCode: invitationCode.toUpperCase()
+                invitationCode: invitationCode.trim()
             }));
         }
     }, [invitationCode]);

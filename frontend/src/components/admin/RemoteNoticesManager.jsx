@@ -31,7 +31,7 @@ const createNoticeKey = (userId) => {
   return `aviso-${Date.now()}-${String(userId).slice(0, 8)}-${suffix}`;
 };
 
-export const RemoteNoticesManager = ({ profiles = [] }) => {
+export const RemoteNoticesManager = ({ profiles = [], masterPin = '' }) => {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -171,7 +171,7 @@ export const RemoteNoticesManager = ({ profiles = [] }) => {
     const results = [];
 
     for (const clientId of targets) {
-      const response = await adminLicenseService.saveRemoteNotice(buildPayload(clientId));
+      const response = await adminLicenseService.saveRemoteNotice(buildPayload(clientId), masterPin);
       results.push(response);
     }
 
@@ -189,7 +189,7 @@ export const RemoteNoticesManager = ({ profiles = [] }) => {
   };
 
   const handleToggle = async (notice) => {
-    const response = await adminLicenseService.toggleRemoteNotice(notice.id, !notice.active);
+    const response = await adminLicenseService.toggleRemoteNotice(notice.id, !notice.active, masterPin);
     if (response.success) {
       setNotices((current) => current.map((item) => item.id === notice.id ? response.data : item));
     } else {
@@ -211,7 +211,7 @@ export const RemoteNoticesManager = ({ profiles = [] }) => {
 
     if (!result.isConfirmed) return;
 
-    const response = await adminLicenseService.deleteRemoteNotice(notice.id);
+    const response = await adminLicenseService.deleteRemoteNotice(notice.id, masterPin);
     if (response.success) {
       setNotices((current) => current.filter((item) => item.id !== notice.id));
       if (form.id === notice.id) resetForm();
