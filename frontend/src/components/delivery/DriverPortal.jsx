@@ -14,11 +14,15 @@ import {
     FiMessageCircle,
     FiPackage,
     FiPhone,
+    FiPlus,
+    FiPrinter,
     FiRefreshCw,
-    FiTruck
+    FiTruck,
+    FiX
 } from "react-icons/fi";
 import Swal from "sweetalert2";
 import { DELIVERY_PAYMENT_METHODS, DELIVERY_PAYMENT_PREFERENCES, deliveryService } from "../../services/deliveryService";
+import { printerService } from "../../services/printerService";
 import { supabase } from "../../supabase";
 import "./DriverPortal.css";
 
@@ -54,6 +58,21 @@ const getWhatsappUrl = (order) => {
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 };
 
+const initialExpressForm = {
+    customer_name: "",
+    customer_phone: "",
+    customer_address: "",
+    garment_summary: "",
+    notes: "",
+    delivery_fee: 0,
+    payment_preference: "",
+    register_payment: false,
+    payment_amount: 0,
+    payment_method: "efectivo",
+    payment_reference: "",
+    evidenceFile: null
+};
+
 export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
     const [pin, setPin] = useState("");
     const [driver, setDriver] = useState(null);
@@ -61,6 +80,11 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [authenticated, setAuthenticated] = useState(false);
+    const [showExpressForm, setShowExpressForm] = useState(false);
+    const [expressForm, setExpressForm] = useState(initialExpressForm);
+    const [expressLoading, setExpressLoading] = useState(false);
+    const [stats, setStats] = useState(null);
+    const [statsLoading, setStatsLoading] = useState(false);
 
     const selectedOrder = useMemo(
         () => orders.find((order) => order.id === selectedOrderId) || null,
@@ -81,6 +105,19 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             Swal.fire("Error", "No pudimos cargar tus pedidos asignados.", "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadStats = async () => {
+        if (!driver) return;
+        try {
+            setStatsLoading(true);
+            const s = await deliveryService.getDriverStats(driver);
+            setStats(s);
+        } catch (err) {
+            console.error("Error al cargar estadisticas:", err);
+        } finally {
+            setStatsLoading(false);
         }
     };
 
@@ -105,6 +142,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             setAuthenticated(true);
             await storage.setObject("driver_session", verifiedDriver);
             await loadDriverOrders(verifiedDriver.id, verifiedDriver.session_token);
+            await loadStats();
             setPin("");
         } catch (err) {
             console.error("Error al validar PIN:", err);
@@ -124,6 +162,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                 setDriver(savedSession);
                 setAuthenticated(true);
                 loadDriverOrders(savedSession.id, savedSession.session_token);
+                loadStats();
             }
         });
     }, []);
@@ -136,7 +175,10 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "delivery_orders", filter: `driver_id=eq.${driver.id}` },
-                () => loadDriverOrders(driver.id, driver.session_token)
+                () => {
+                    loadDriverOrders(driver.id, driver.session_token);
+                    loadStats();
+                }
             )
             .subscribe();
 
@@ -151,6 +193,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         setAuthenticated(false);
         setSelectedOrderId(null);
         setOrders([]);
+        setStats(null);
     };
 
     const handlePickupReport = async (order) => {
@@ -313,6 +356,137 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         }
     };
 
+    // ─── IMPRIMIR COMPROBANTE ────────────────────────────────────────
+
+    const handlePrintReceipt = async (order) => {
+        try {
+            await printerService.printDeliveryReceipt({
+                storeName: order.store_name || "Lavanderia",
+                driverName: driver?.name || "Repartidor",
+                orderId: order.id,
+                customerName: order.customer_name,
+                customerPhone: order.customer_phone,
+                customerAddress: order.customer_address,
+                garments: order.garment_summary || order.customer_item_description || "",
+                deliveryFee: order.delivery_fee || 0,
+                payment: order.payment_status !== "unpaid" ? null : null,
+                date: new Date()
+            });
+        } catch (err) {
+            console.error("Error al imprimir:", err);
+            Swal.fire("Error", "No se pudo imprimir el comprobante. " + (err.message || ""), "error");
+        }
+    };
+
+    // ─── RECOLECCIÓN EXPRÉS ───────────────────────────────────────────
+
+    const handleExpressFormChange = (field, value) => {
+        setExpressForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleExpressFileChange = (e) => {
+        const file = e.target.files?.[0] || null;
+        if (file && !file.type.startsWith("image/")) {
+            Swal.fire("Formato invalido", "La evidencia debe ser una imagen.", "warning");
+            e.target.value = "";
+            return;
+        }
+        if (file && file.size > 8 * 1024 * 1024) {
+            Swal.fire("Archivo muy grande", "La imagen no debe pesar mas de 8 MB.", "warning");
+            e.target.value = "";
+            return;
+        }
+        setExpressForm(prev => ({ ...prev, evidenceFile: file }));
+    };
+
+    const handleSubmitExpressPickup = async () => {
+        const f = expressForm;
+        if (!f.customer_name.trim() || !f.customer_phone.trim() || !f.customer_address.trim()) {
+            Swal.fire("Campos obligatorios", "Nombre, telefono y direccion del cliente son requeridos.", "warning");
+            return;
+        }
+        if (!f.garment_summary.trim()) {
+            Swal.fire("Describe las prendas", "Indica que recogiste del cliente.", "warning");
+            return;
+        }
+
+        setExpressLoading(true);
+        try {
+            // 1. Create express pickup first (without evidence)
+            const result = await deliveryService.createExpressPickup({
+                driver: driver,
+                customer_name: f.customer_name.trim(),
+                customer_phone: f.customer_phone.trim(),
+                customer_address: f.customer_address.trim(),
+                garment_summary: f.garment_summary.trim(),
+                notes: f.notes.trim(),
+                delivery_fee: Number(f.delivery_fee) || 0,
+                payment_preference: f.payment_preference,
+                pickup_evidence_path: null,
+                create_pos_order: false,
+                folio: null,
+                register_payment: f.register_payment && Number(f.payment_amount) > 0,
+                payment_amount: Number(f.payment_amount) || 0,
+                payment_method: f.payment_method,
+                payment_reference: f.payment_reference.trim()
+            });
+
+            // 2. Upload evidence with real order ID if provided (may fail on phone without store auth)
+            if (f.evidenceFile && result.order) {
+                try {
+                    const evidencePath = await deliveryService.uploadPickupEvidence(result.order, f.evidenceFile);
+                    if (evidencePath) {
+                        // Update evidence path via direct supabase update (works when store is authenticated)
+                        const { error: updErr } = await supabase
+                            .from('delivery_orders')
+                            .update({ pickup_evidence_path: evidencePath })
+                            .eq('id', result.order.id);
+                        if (updErr) console.warn("No se pudo guardar ruta de evidencia:", updErr);
+                    }
+                } catch (err) {
+                    console.warn("Foto no subida (puedes agregarla después desde sucursal):", err);
+                }
+            }
+
+            setShowExpressForm(false);
+            setExpressForm(initialExpressForm);
+
+            // Offer to print
+            const printResult = await Swal.fire({
+                title: "Recoleccion registrada",
+                text: `Pedido #${result.order.id} creado correctamente.`,
+                icon: "success",
+                showCancelButton: true,
+                confirmButtonText: "Imprimir comprobante",
+                cancelButtonText: "Cerrar",
+                confirmButtonColor: "#0891b2"
+            });
+
+            if (printResult.isConfirmed && result.order) {
+                await printerService.printDeliveryReceipt({
+                    storeName: "Lavanderia",
+                    driverName: driver?.name || "Repartidor",
+                    orderId: result.order.id,
+                    customerName: result.order.customer_name,
+                    customerPhone: result.order.customer_phone,
+                    customerAddress: result.order.customer_address,
+                    garments: result.order.garment_summary || "",
+                    deliveryFee: result.order.delivery_fee || 0,
+                    payment: f.register_payment ? f.payment_amount : null,
+                    date: new Date()
+                });
+            }
+
+            await loadDriverOrders(driver.id, driver.session_token);
+            await loadStats();
+        } catch (err) {
+            console.error("Error creando recoleccion express:", err);
+            Swal.fire("Error", err.message || "No se pudo crear la recoleccion.", "error");
+        } finally {
+            setExpressLoading(false);
+        }
+    };
+
     if (!authenticated) {
         return (
             <div className="driver-auth-wrapper">
@@ -368,7 +542,10 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                             POS
                         </button>
                     )}
-                        <button className="driver-icon-button" onClick={() => loadDriverOrders(driver.id, driver.session_token)} title="Actualizar">
+                    <button className="driver-icon-button" onClick={() => {
+                        loadDriverOrders(driver.id, driver.session_token);
+                        loadStats();
+                    }} title="Actualizar">
                         <FiRefreshCw />
                     </button>
                     <button className="driver-icon-button" onClick={handleLogout} title="Salir">
@@ -384,62 +561,229 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                     onBack={() => setSelectedOrderId(null)}
                     onPayment={() => handleRegisterPayment(selectedOrder)}
                     onNextAction={() => handleNextAction(selectedOrder)}
+                    onPrint={() => handlePrintReceipt(selectedOrder)}
                 />
             ) : (
-                <section className="driver-task-list">
-                    <div className="driver-section-title">
-                        <span>Rutas de hoy</span>
-                        {loading && <small>Actualizando...</small>}
-                    </div>
+                <>
+                    <section className="driver-task-list">
+                        <div className="driver-section-title">
+                            <span>Rutas de hoy</span>
+                            {loading && <small>Actualizando...</small>}
+                        </div>
 
-                    {loading && orders.length === 0 ? (
-                        <div className="driver-portal-loader">Cargando rutas...</div>
-                    ) : orders.length === 0 ? (
-                        <div className="driver-empty-state">
-                            <FiCheckSquare size={44} />
-                            <h2>Todo al dia</h2>
-                            <p>No tienes rutas asignadas por el momento.</p>
-                            <button className="btn-driver-refresh" onClick={() => loadDriverOrders(driver.id, driver.session_token)}>
-                                Actualizar
+                        {loading && orders.length === 0 ? (
+                            <div className="driver-portal-loader">Cargando rutas...</div>
+                        ) : orders.length === 0 ? (
+                            <div className="driver-empty-state">
+                                <FiCheckSquare size={44} />
+                                <h2>Todo al dia</h2>
+                                <p>No tienes rutas asignadas por el momento.</p>
+                                <div className="driver-stats-mini">
+                                    {statsLoading ? (
+                                        <p>Cargando resumen...</p>
+                                    ) : stats ? (
+                                        <div className="driver-stats-grid">
+                                            <div className="stat-item">
+                                                <strong>{stats.total_today}</strong>
+                                                <small>Recolecciones hoy</small>
+                                            </div>
+                                            <div className="stat-item">
+                                                <strong>{stats.delivered_to_store}</strong>
+                                                <small>Entregadas</small>
+                                            </div>
+                                            <div className="stat-item">
+                                                <strong>{money(stats.total_collected)}</strong>
+                                                <small>Total recolectado</small>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                </div>
+                                <button className="btn-driver-refresh" onClick={() => {
+                                    loadDriverOrders(driver.id, driver.session_token);
+                                    loadStats();
+                                }}>
+                                    Actualizar
+                                </button>
+                            </div>
+                        ) : (
+                            orders.map((order) => (
+                                <button
+                                    key={order.id}
+                                    type="button"
+                                    className={`driver-task-card ${order.status}`}
+                                    onClick={() => setSelectedOrderId(order.id)}
+                                >
+                                    <div className="task-main">
+                                        <div className="task-status-row">
+                                            <span className={`task-status ${order.status}`}>{getStatusLabel(order.status)}</span>
+                                            <span className="task-id">#{order.id}</span>
+                                        </div>
+                                        <strong>{order.customer_name}</strong>
+                                        <span className="task-address">
+                                            <FiMapPin />
+                                            {getShortAddress(order.customer_address)}
+                                        </span>
+                                        <div className="task-chips">
+                                            <span>{money(order.delivery_fee)}</span>
+                                            <span>{order.payment_preference ? "Pago definido" : "Pago pendiente"}</span>
+                                        </div>
+                                    </div>
+                                    <div className="task-next">
+                                        <span>{getNextActionLabel(order.status)}</span>
+                                        <FiChevronRight />
+                                    </div>
+                                </button>
+                            ))
+                        )}
+                    </section>
+
+                    {/* Stats section when there are orders */}
+                    {orders.length > 0 && stats && (
+                        <section className="driver-stats-bar">
+                            <div className="driver-stats-grid">
+                                <div className="stat-item">
+                                    <strong>{stats.total_today}</strong>
+                                    <small>Hoy</small>
+                                </div>
+                                <div className="stat-item">
+                                    <strong>{stats.picked_up}</strong>
+                                    <small>Recogidas</small>
+                                </div>
+                                <div className="stat-item">
+                                    <strong>{stats.delivered_to_store}</strong>
+                                    <small>Entregadas</small>
+                                </div>
+                                <div className="stat-item">
+                                    <strong>{money(stats.total_collected)}</strong>
+                                    <small>Total</small>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+                </>
+            )}
+
+            {/* FAB: Nueva recoleccion */}
+            {!selectedOrder && (
+                <button
+                    className="driver-fab"
+                    onClick={() => setShowExpressForm(true)}
+                    title="Nueva recoleccion express"
+                >
+                    <FiPlus size={28} />
+                </button>
+            )}
+
+            {/* Modal: Express Pickup Form */}
+            {showExpressForm && (
+                <div className="driver-modal-backdrop" onClick={() => !expressLoading && setShowExpressForm(false)}>
+                    <div className="driver-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="driver-modal-header">
+                            <h2>Nueva recoleccion express</h2>
+                            <button className="driver-modal-close" onClick={() => setShowExpressForm(false)} disabled={expressLoading}>
+                                <FiX />
                             </button>
                         </div>
-                    ) : (
-                        orders.map((order) => (
-                            <button
-                                key={order.id}
-                                type="button"
-                                className={`driver-task-card ${order.status}`}
-                                onClick={() => setSelectedOrderId(order.id)}
-                            >
-                                <div className="task-main">
-                                    <div className="task-status-row">
-                                        <span className={`task-status ${order.status}`}>{getStatusLabel(order.status)}</span>
-                                        <span className="task-id">#{order.id}</span>
-                                    </div>
-                                    <strong>{order.customer_name}</strong>
-                                    <span className="task-address">
-                                        <FiMapPin />
-                                        {getShortAddress(order.customer_address)}
-                                    </span>
-                                    <div className="task-chips">
-                                        <span>{money(order.delivery_fee)}</span>
-                                        <span>{order.payment_preference ? "Pago definido" : "Pago pendiente"}</span>
-                                    </div>
+
+                        <div className="driver-modal-body">
+                            <label className="driver-form-label">Nombre del cliente *</label>
+                            <input className="driver-form-input" type="text" placeholder="Maria Perez"
+                                value={expressForm.customer_name}
+                                onChange={(e) => handleExpressFormChange("customer_name", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Telefono *</label>
+                            <input className="driver-form-input" type="tel" placeholder="5551234567"
+                                value={expressForm.customer_phone}
+                                onChange={(e) => handleExpressFormChange("customer_phone", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Direccion *</label>
+                            <input className="driver-form-input" type="text" placeholder="Calle, colonia, numero"
+                                value={expressForm.customer_address}
+                                onChange={(e) => handleExpressFormChange("customer_address", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Prendas recolectadas *</label>
+                            <textarea className="driver-form-textarea" rows="3" placeholder="Ej. 2 bolsas negras, 1 cobertor matrimonial"
+                                value={expressForm.garment_summary}
+                                onChange={(e) => handleExpressFormChange("garment_summary", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Notas (opcional)</label>
+                            <input className="driver-form-input" type="text" placeholder="Indicaciones adicionales"
+                                value={expressForm.notes}
+                                onChange={(e) => handleExpressFormChange("notes", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Tarifa de delivery ($)</label>
+                            <input className="driver-form-input" type="number" min="0" step="0.01" placeholder="0.00"
+                                value={expressForm.delivery_fee}
+                                onChange={(e) => handleExpressFormChange("delivery_fee", e.target.value)}
+                                disabled={expressLoading} />
+
+                            <label className="driver-form-label">Evidencia fotografica (opcional)</label>
+                            <input className="driver-form-file" type="file" accept="image/*" capture="environment"
+                                onChange={handleExpressFileChange}
+                                disabled={expressLoading} />
+
+                            <div className="driver-form-divider" />
+
+                            <label className="driver-form-checkbox">
+                                <input type="checkbox"
+                                    checked={expressForm.register_payment}
+                                    onChange={(e) => handleExpressFormChange("register_payment", e.target.checked)}
+                                    disabled={expressLoading} />
+                                <span>Registrar pago / anticipo</span>
+                            </label>
+
+                            {expressForm.register_payment && (
+                                <div className="driver-form-payment-fields">
+                                    <label className="driver-form-label">Monto recibido ($)</label>
+                                    <input className="driver-form-input" type="number" min="0" step="0.01" placeholder="0.00"
+                                        value={expressForm.payment_amount}
+                                        onChange={(e) => handleExpressFormChange("payment_amount", e.target.value)}
+                                        disabled={expressLoading} />
+
+                                    <label className="driver-form-label">Metodo de pago</label>
+                                    <select className="driver-form-select"
+                                        value={expressForm.payment_method}
+                                        onChange={(e) => handleExpressFormChange("payment_method", e.target.value)}
+                                        disabled={expressLoading}>
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="transferencia">Transferencia</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                    </select>
+
+                                    {["transferencia", "tarjeta"].includes(expressForm.payment_method) && (
+                                        <>
+                                            <label className="driver-form-label">Referencia</label>
+                                            <input className="driver-form-input" type="text" placeholder="Autorizacion / referencia"
+                                                value={expressForm.payment_reference}
+                                                onChange={(e) => handleExpressFormChange("payment_reference", e.target.value)}
+                                                disabled={expressLoading} />
+                                        </>
+                                    )}
                                 </div>
-                                <div className="task-next">
-                                    <span>{getNextActionLabel(order.status)}</span>
-                                    <FiChevronRight />
-                                </div>
+                            )}
+                        </div>
+
+                        <div className="driver-modal-footer">
+                            <button className="driver-modal-btn-secondary" onClick={() => setShowExpressForm(false)} disabled={expressLoading}>
+                                Cancelar
                             </button>
-                        ))
-                    )}
-                </section>
+                            <button className="driver-modal-btn-primary" onClick={handleSubmitExpressPickup} disabled={expressLoading}>
+                                {expressLoading ? "Guardando..." : "Guardar y recoger"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </main>
     );
 };
 
-const DriverOrderDetail = ({ order, loading, onBack, onPayment, onNextAction }) => {
+const DriverOrderDetail = ({ order, loading, onBack, onPayment, onNextAction, onPrint }) => {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.customer_address || "")}`;
     const canAdvance = ["assigned", "accepted", "picked_up"].includes(order.status);
 
@@ -472,6 +816,10 @@ const DriverOrderDetail = ({ order, loading, onBack, onPayment, onNextAction }) 
                     <FiMessageCircle /> WhatsApp
                 </a>
             </div>
+
+            <button type="button" className="driver-print-button" onClick={onPrint}>
+                <FiPrinter /> Imprimir comprobante
+            </button>
 
             <div className="driver-info-grid">
                 <InfoBlock icon={<FiPackage />} label="Cliente entregara" value={order.customer_item_description || "Sin detalle capturado"} />

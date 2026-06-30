@@ -77,6 +77,31 @@ const verifyDriverSession = async (storeId: string, driverId: number, token: str
   return await signPayload(payload) === signature;
 };
 
+const getStoreFromDriverToken = async (token: string, supabase: any) => {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 4) return null;
+
+  const [tokenStoreId, tokenDriverId, issuedAt] = parts;
+  const driverId = Number(tokenDriverId);
+  if (!Number.isFinite(driverId)) return null;
+
+  const ok = await verifyDriverSession(tokenStoreId, driverId, token);
+  if (!ok) return null;
+
+  const { data: driver } = await supabase
+    .from("staff")
+    .select("id, name, role, phone, active")
+    .eq("id", driverId)
+    .eq("user_id", tokenStoreId)
+    .eq("active", true)
+    .in("role", ["repartidor", "chofer"])
+    .maybeSingle();
+
+  if (!driver) return null;
+
+  return { storeId: tokenStoreId, driver };
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -87,11 +112,6 @@ serve(async (req) => {
   }
 
   try {
-    const user = await getAuthUser(req);
-    if (!user) {
-      return jsonResponse({ error: "Usuario no autenticado." }, 401);
-    }
-
     const body = await req.json();
     const action = String(body?.action || "").trim();
     const payload = body?.payload || {};
@@ -99,6 +119,25 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Actions that work with driver-only auth (no store JWT needed)
+    const DRIVER_ONLY_ACTIONS = ["create_express_pickup", "get_driver_stats"];
+    let user: any = null;
+    let driverContext: any = null;
+
+    if (DRIVER_ONLY_ACTIONS.includes(action)) {
+      const sessionInfo = await getStoreFromDriverToken(payload.driver_session_token, supabase);
+      if (!sessionInfo) {
+        return jsonResponse({ error: "Sesion de repartidor invalida o expirada." }, 401);
+      }
+      user = { id: sessionInfo.storeId };
+      driverContext = sessionInfo.driver;
+    } else {
+      user = await getAuthUser(req);
+      if (!user) {
+        return jsonResponse({ error: "Usuario no autenticado." }, 401);
+      }
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -475,6 +514,209 @@ serve(async (req) => {
       }
 
       return jsonResponse({ payment });
+    }
+
+    if (action === "create_express_pickup") {
+      const driverId = driverContext?.id;
+      if (!driverId) {
+        return jsonResponse({ error: "Repartidor no válido." }, 400);
+      }
+
+      const customerName = String(payload.customer_name || "").trim();
+      const customerPhone = String(payload.customer_phone || "").trim();
+      const customerAddress = String(payload.customer_address || "").trim();
+      const garmentSummary = String(payload.garment_summary || "").trim();
+      const notes = String(payload.notes || "").trim();
+      const deliveryFee = Number(payload.delivery_fee) || 0;
+      const paymentPreference = String(payload.payment_preference || "").trim();
+      const evidencePath = payload.pickup_evidence_path ? String(payload.pickup_evidence_path) : null;
+
+      if (!customerName || !customerPhone || !customerAddress) {
+        return jsonResponse({ error: "Nombre, teléfono y dirección del cliente son obligatorios." }, 400);
+      }
+      if (!garmentSummary) {
+        return jsonResponse({ error: "Describe las prendas que recogiste." }, 400);
+      }
+
+      const now = new Date().toISOString();
+
+      const { data: order, error } = await supabase
+        .from("delivery_orders")
+        .insert([{
+          user_id: user.id,
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          customer_address: customerAddress,
+          notes: notes || null,
+          driver_id: driverId,
+          status: "picked_up",
+          garment_summary: garmentSummary.slice(0, 2000),
+          service_cost: 0,
+          delivery_fee: Math.max(0, deliveryFee),
+          pickup_evidence_path: evidencePath || null,
+          payment_preference: paymentPreference || null,
+          picked_up_at: now,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Optionally create linked POS order if next_folio provided
+      let posOrder = null;
+      if (payload.create_pos_order === true && payload.folio) {
+        const folioNum = Number(payload.folio);
+        if (Number.isFinite(folioNum) && folioNum > 0) {
+          const posPayload: Record<string, unknown> = {
+            user_id: user.id,
+            customer_id: null,
+            total: deliveryFee,
+            paid_amount: 0,
+            discount: 0,
+            status: "received",
+            payment_status: "pending",
+            payment_method: "cash",
+            notes: `Recolección express #${order.id}: ${garmentSummary.slice(0, 200)}`,
+            folio: folioNum,
+            has_tax: false,
+            tax_amount: 0,
+            invoice_requested: false,
+          };
+
+          const { data: posResult, error: posError } = await supabase
+            .from("orders")
+            .insert([posPayload])
+            .select()
+            .single();
+
+          if (!posError && posResult) {
+            posOrder = posResult;
+
+            // Link delivery order to POS order
+            await supabase
+              .from("delivery_orders")
+              .update({ pos_order_id: posOrder.id })
+              .eq("id", order.id)
+              .eq("user_id", user.id);
+
+            // Create order item for the service
+            await supabase
+              .from("order_items")
+              .insert([{
+                order_id: posOrder.id,
+                user_id: user.id,
+                product_name: `Servicio de lavandería - ${customerName}`,
+                quantity: 1,
+                price: deliveryFee,
+                pricing_type: "service",
+                total: deliveryFee,
+              }]);
+
+            order.pos_order_id = posOrder.id;
+          }
+        }
+      }
+
+      // Optionally register payment if driver collected
+      let payment = null;
+      if (payload.register_payment === true && payload.payment_amount) {
+        const pAmount = Number(payload.payment_amount);
+        const pMethod = String(payload.payment_method || "efectivo").trim();
+        const pReference = String(payload.payment_reference || "").trim();
+
+        if (Number.isFinite(pAmount) && pAmount > 0 && ["efectivo", "transferencia", "tarjeta"].includes(pMethod)) {
+          if (["transferencia", "tarjeta"].includes(pMethod) && !pReference) {
+            return jsonResponse({ error: "Referencia obligatoria para transferencia o tarjeta." }, 400);
+          }
+
+          const { data: payResult, error: payError } = await supabase
+            .from("delivery_payments")
+            .insert([{
+              user_id: user.id,
+              delivery_order_id: order.id,
+              driver_id: driverId,
+              amount: pAmount,
+              payment_method: pMethod,
+              reference: pReference || null,
+              status: "driver_collected",
+            }])
+            .select()
+            .single();
+
+          if (!payError && payResult) {
+            payment = payResult;
+
+            // Update payment status on delivery order
+            const total = (Number(order.service_cost) || 0) + (Number(order.delivery_fee) || 0);
+            await supabase
+              .from("delivery_orders")
+              .update({ payment_status: total > 0 ? "partial" : "paid" })
+              .eq("id", order.id);
+
+            // Update POS order paid amount if it was linked
+            if (posOrder) {
+              await supabase
+                .from("orders")
+                .update({
+                  paid_amount: pAmount,
+                  payment_status: pAmount >= total ? "paid" : "partial",
+                })
+                .eq("id", posOrder.id);
+            }
+          }
+        }
+      }
+
+      // Fetch the final order with driver info for response
+      const { data: finalOrder } = await supabase
+        .from("delivery_orders")
+        .select("*, driver:driver_id (id, name, role, phone)")
+        .eq("id", order.id)
+        .single();
+
+      return jsonResponse({
+        order: finalOrder || order,
+        pos_order: posOrder,
+        payment: payment,
+      });
+    }
+
+    if (action === "get_driver_stats") {
+      const driverId = driverContext?.id;
+      if (!driverId) {
+        return jsonResponse({ error: "Repartidor no válido." }, 400);
+      }
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const { data: todayOrders } = await supabase
+        .from("delivery_orders")
+        .select("id, status, delivery_fee, service_cost, payment_status, created_at")
+        .eq("user_id", user.id)
+        .eq("driver_id", driverId)
+        .gte("created_at", todayStart.toISOString())
+        .order("created_at", { ascending: false });
+
+      const totalToday = (todayOrders || []).length;
+      const pickedUp = (todayOrders || []).filter((o: any) =>
+        ["picked_up", "delivered_to_store", "completed"].includes(o.status)
+      ).length;
+      const delivered = (todayOrders || []).filter((o: any) =>
+        ["delivered_to_store", "completed"].includes(o.status)
+      ).length;
+      const totalCollected = (todayOrders || []).reduce((sum: number, o: any) =>
+        sum + (Number(o.delivery_fee) || 0) + (Number(o.service_cost) || 0), 0);
+
+      return jsonResponse({
+        stats: {
+          total_today: totalToday,
+          picked_up: pickedUp,
+          delivered_to_store: delivered,
+          total_collected: totalCollected,
+        },
+        orders: todayOrders || [],
+      });
     }
 
     if (action === "get_pickup_evidence_url") {

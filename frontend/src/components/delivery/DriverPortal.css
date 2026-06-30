@@ -658,6 +658,292 @@
     margin: 0 !important;
 }
 
+/* ─── FAB: NUEVA RECOLECCION ──────────────────────────────────────── */
+
+.driver-fab {
+    position: fixed;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    right: max(24px, env(safe-area-inset-right));
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--driver-primary);
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(8, 145, 178, 0.45);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    z-index: 20;
+}
+
+.driver-fab:active {
+    transform: scale(0.92);
+}
+
+/* ─── MODAL EXPRESS ────────────────────────────────────────────────── */
+
+.driver-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    display: grid;
+    place-items: end center;
+    padding: 0;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.driver-modal-card {
+    width: min(100%, 480px);
+    max-height: 92dvh;
+    background: #ffffff;
+    border-radius: 22px 22px 0 0;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+    box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.15);
+}
+
+.driver-modal-header {
+    padding: 18px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--driver-line);
+    flex: 0 0 auto;
+}
+
+.driver-modal-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 850;
+    color: var(--driver-ink);
+}
+
+.driver-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid var(--driver-line);
+    background: #f8fafc;
+    color: var(--driver-muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.driver-modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    display: grid;
+    gap: 10px;
+}
+
+.driver-form-label {
+    font-size: 0.72rem;
+    font-weight: 850;
+    color: var(--driver-muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.driver-form-input,
+.driver-form-select,
+.driver-form-textarea,
+.driver-form-file {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--driver-line);
+    border-radius: 12px;
+    padding: 0 12px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    background: #f8fafc;
+    color: var(--driver-ink);
+    box-sizing: border-box;
+}
+
+.driver-form-textarea {
+    min-height: 80px;
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.driver-form-file {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+}
+
+.driver-form-divider {
+    height: 1px;
+    background: var(--driver-line);
+    margin: 4px 0;
+}
+
+.driver-form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--driver-ink);
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.driver-form-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--driver-primary);
+}
+
+.driver-form-payment-fields {
+    display: grid;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+}
+
+.driver-modal-footer {
+    padding: 12px 20px max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--driver-line);
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.driver-modal-btn-primary,
+.driver-modal-btn-secondary {
+    min-height: 48px;
+    border-radius: 14px;
+    font-weight: 850;
+    cursor: pointer;
+    border: 0;
+    font-size: 0.9rem;
+}
+
+.driver-modal-btn-primary {
+    background: var(--driver-primary);
+    color: #ffffff;
+}
+
+.driver-modal-btn-secondary {
+    background: #f1f5f9;
+    color: var(--driver-ink);
+}
+
+.driver-modal-btn-primary:disabled,
+.driver-modal-btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* ─── PRINT BUTTON ─────────────────────────────────────────────────── */
+
+.driver-print-button {
+    width: 100%;
+    min-height: 48px;
+    border: 2px dashed var(--driver-line);
+    border-radius: 15px;
+    background: #f8fafc;
+    color: var(--driver-primary-dark);
+    font-weight: 850;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.driver-print-button:active {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+}
+
+/* ─── STATS BAR ────────────────────────────────────────────────────── */
+
+.driver-stats-bar {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    padding: 0 16px 16px;
+}
+
+.driver-stats-mini {
+    margin: 12px 0;
+}
+
+.driver-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.driver-stats-bar .driver-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-item {
+    background: #f8fafc;
+    border: 1px solid var(--driver-line);
+    border-radius: 14px;
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.stat-item strong {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: var(--driver-ink);
+    line-height: 1.2;
+}
+
+.stat-item small {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 850;
+    color: var(--driver-muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+@media (min-width: 720px) {
+    .driver-modal-card {
+        border-radius: 22px;
+        margin-bottom: 4vh;
+    }
+}
+
+@media (max-width: 390px) {
+    .driver-modal-body {
+        padding: 12px 14px;
+    }
+
+    .driver-modal-footer {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (min-width: 720px) {
     .driver-task-list,
     .driver-detail-view {

@@ -689,6 +689,58 @@ export const deliveryService = {
         return result.payment;
     },
 
+    // ─── RECOLECCIÓN EXPRÉS (DESDE PORTAL REPARTIDOR) ─────────────────
+    
+    // Crea un pedido express directamente desde el portal del repartidor
+    // El chofer recolecta en campo y el pedido nace en estado 'picked_up'
+    createExpressPickup: async (data) => {
+        // data = { driver, customer_name, customer_phone, customer_address, 
+        //          garment_summary, notes, delivery_fee, pickup_evidence_path,
+        //          payment_preference, create_pos_order, folio,
+        //          register_payment, payment_amount, payment_method, payment_reference }
+        
+        const result = await runDeliveryAction('create_express_pickup', {
+            driver_id: data.driver.id,
+            driver_name: data.driver.name,
+            driver_session_token: data.driver.session_token,
+            customer_name: data.customer_name,
+            customer_phone: data.customer_phone,
+            customer_address: data.customer_address,
+            garment_summary: data.garment_summary,
+            notes: data.notes || '',
+            delivery_fee: data.delivery_fee || 0,
+            pickup_evidence_path: data.pickup_evidence_path || null,
+            payment_preference: data.payment_preference || '',
+            create_pos_order: data.create_pos_order === true,
+            folio: data.folio || null,
+            register_payment: data.register_payment === true,
+            payment_amount: data.payment_amount || 0,
+            payment_method: data.payment_method || 'efectivo',
+            payment_reference: data.payment_reference || ''
+        });
+        
+        // Disparar notificación en segundo plano
+        try {
+            await deliveryService.triggerNotification(result.order, {
+                status: 'picked_up',
+                driver_name: data.driver.name
+            });
+        } catch (e) {
+            console.warn('[DeliveryService] Notificación no enviada para express pickup:', e);
+        }
+        
+        return result;
+    },
+    
+    // Obtener estadísticas del día para el repartidor
+    getDriverStats: async (driver) => {
+        const data = await runDeliveryAction('get_driver_stats', {
+            driver_id: driver.id,
+            driver_session_token: driver.session_token
+        });
+        return data?.stats || { total_today: 0, picked_up: 0, delivered_to_store: 0, total_collected: 0 };
+    },
+
     // ─── NOTIFICACIONES AUTOMÁTICAS E INTEGRACIÓN DE APIS ──────────────
 
     // Llama a la Edge Function notify-order para enviar el WhatsApp/SMS transaccional

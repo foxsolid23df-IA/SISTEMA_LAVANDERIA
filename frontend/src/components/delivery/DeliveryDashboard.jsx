@@ -151,6 +151,20 @@ export const DeliveryDashboard = () => {
                             timerProgressBar: false
                         });
                     }
+                    if (payload.eventType === 'INSERT' && (payload.new?.status === 'picked_up' || payload.new?.status === 'delivered_to_store') && !payload.new?.accepted_at) {
+                        playNewOrderSound();
+                        Swal.fire({
+                            title: "Recoleccion express",
+                            text: `${payload.new.customer_name || "Cliente"} - Recoleccion directa del repartidor.`,
+                            icon: "info",
+                            toast: true,
+                            position: "top-end",
+                            timer: 5000,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            timerProgressBar: false
+                        });
+                    }
                     loadData();
                 }
             )
@@ -610,11 +624,16 @@ export const DeliveryDashboard = () => {
                             </div>
                         ) : (
                             activeRouteOrders.map(order => (
-                                <div key={order.id} className="order-kanban-card">
+                                <div key={order.id} className={`order-kanban-card ${!order.accepted_at && order.status === 'picked_up' ? 'card-express' : ''}`}>
                                     <div className="card-top">
                                         <span className="card-id">#ID: {order.id}</span>
-                                        <span className={`status-pill pill-${order.status}`}>
-                                            {order.status === "assigned" ? "Asignado" : order.status === "accepted" ? "Aceptado" : "Recogido"}
+                                        <span>
+                                            {!order.accepted_at && order.status === 'picked_up' && (
+                                                <span className="express-badge">Express</span>
+                                            )}
+                                            <span className={`status-pill pill-${order.status}`}>
+                                                {order.status === "assigned" ? "Asignado" : order.status === "accepted" ? "Aceptado" : "Recogido"}
+                                            </span>
                                         </span>
                                     </div>
                                     <h3>{order.customer_name}</h3>
@@ -626,7 +645,9 @@ export const DeliveryDashboard = () => {
                                     {order.customer_item_description ? (
                                         <p className="notes-box"><strong>Que se recogera:</strong> {order.customer_item_description}</p>
                                     ) : (
-                                        <p className="payment-warning-box">Sin detalle de prendas capturado por la clienta.</p>
+                                        <p className={`payment-warning-box ${!order.accepted_at && order.status === 'picked_up' ? 'express-order' : ''}`}>
+                                            {!order.accepted_at && order.status === 'picked_up' ? 'Recoleccion express del repartidor' : 'Sin detalle de prendas capturado por la clienta.'}
+                                        </p>
                                     )}
                                     {order.payment_preference && (
                                         <p className="payment-info-box"><strong>Pago:</strong> {DELIVERY_PAYMENT_PREFERENCES[order.payment_preference]}</p>
