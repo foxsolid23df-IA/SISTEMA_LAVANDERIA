@@ -81,7 +81,7 @@ export const printerService = {
     if (isNative) {
       try {
         const { Printer } = await import('@capgo/capacitor-printer')
-        await Printer.print({
+        await Printer.printHtml({
           name: `Ticket #${ticketNumber || ''}`,
           html,
         })
@@ -103,7 +103,7 @@ export const printerService = {
     if (isNative) {
       try {
         const { Printer } = await import('@capgo/capacitor-printer')
-        await Printer.print({ name: jobName, html })
+        await Printer.printHtml({ name: jobName, html })
         return true
       } catch (err) {
         console.error('[Printer] Error:', err)
@@ -124,7 +124,7 @@ export const printerService = {
     if (isNative) {
       try {
         const { Printer } = await import('@capgo/capacitor-printer')
-        await Printer.print({
+        await Printer.printHtml({
           name: `Recoleccion #${orderId || ''}`,
           html,
         })

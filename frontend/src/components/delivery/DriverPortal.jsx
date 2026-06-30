@@ -423,7 +423,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                 delivery_fee: Number(f.delivery_fee) || 0,
                 payment_preference: f.payment_preference,
                 pickup_evidence_path: null,
-                create_pos_order: false,
+                create_pos_order: true,
                 folio: null,
                 register_payment: f.register_payment && Number(f.payment_amount) > 0,
                 payment_amount: Number(f.payment_amount) || 0,

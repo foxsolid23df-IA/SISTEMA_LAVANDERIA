@@ -570,11 +570,46 @@ serve(async (req) => {
         throw error;
       }
 
-      // Optionally create linked POS order if next_folio provided
+      // Optionally create linked POS order
       let posOrder = null;
-      if (payload.create_pos_order === true && payload.folio) {
-        const folioNum = Number(payload.folio);
-        if (Number.isFinite(folioNum) && folioNum > 0) {
+      if (payload.create_pos_order === true) {
+        // Auto-generate folio directly (service_role client bypasses RLS,
+        // so next_folio() RPC would fail because auth.uid() is null)
+        let folioNum = payload.folio ? Number(payload.folio) : null;
+        if (!folioNum || !(Number.isFinite(folioNum) && folioNum > 0)) {
+          try {
+            const { data: counter, error: cErr } = await supabase
+              .from("folio_counters")
+              .select("last_folio")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            if (cErr) throw cErr;
+            if (counter) {
+              folioNum = counter.last_folio + 1;
+              const { error: updErr } = await supabase
+                .from("folio_counters")
+                .update({ last_folio: folioNum, updated_at: new Date().toISOString() })
+                .eq("user_id", user.id);
+              if (updErr) throw updErr;
+            } else {
+              const { data: maxOrder } = await supabase
+                .from("orders")
+                .select("folio")
+                .eq("user_id", user.id)
+                .order("folio", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              folioNum = (maxOrder?.folio || 0) + 1;
+              const { error: insErr } = await supabase
+                .from("folio_counters")
+                .insert({ user_id: user.id, last_folio: folioNum, updated_at: new Date().toISOString() });
+              if (insErr) throw insErr;
+            }
+          } catch (e) {
+            console.error("[create_express_pickup] Error generando folio:", e);
+          }
+        }
+        if (folioNum && Number.isFinite(folioNum) && folioNum > 0) {
           const posPayload: Record<string, unknown> = {
             user_id: user.id,
             customer_id: null,
