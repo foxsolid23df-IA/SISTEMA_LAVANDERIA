@@ -621,6 +621,7 @@ serve(async (req) => {
             payment_method: "cash",
             notes: `Recolección express #${order.id}: ${garmentSummary.slice(0, 200)}`,
             folio: folioNum,
+            promised_at: now,
             has_tax: false,
             tax_amount: 0,
             invoice_requested: false,
@@ -632,7 +633,9 @@ serve(async (req) => {
             .select()
             .single();
 
-          if (!posError && posResult) {
+          if (posError) {
+            console.error("[create_express_pickup] Error creando orden POS:", JSON.stringify(posError));
+          } else if (posResult) {
             posOrder = posResult;
 
             // Link delivery order to POS order
