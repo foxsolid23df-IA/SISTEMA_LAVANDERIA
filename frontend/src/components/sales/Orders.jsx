@@ -5,6 +5,8 @@ import { staffService } from "../../services/staffService";
 import { exchangeRateService } from "../../services/exchangeRateService";
 import { businessSettingsService } from "../../services/businessSettingsService";
 import { printService } from "../../services/printService";
+import { shelvingService } from "../../services/shelvingService";
+import ShelfAssignmentModal from "../shelving/ShelfAssignmentModal";
 import TicketVenta from "./TicketVenta";
 import { formatearDinero } from "../../utils";
 import * as XLSX from "xlsx";
@@ -85,6 +87,12 @@ export const Orders = () => {
   const [orderToUpdateMethod, setOrderToUpdateMethod] = useState(null);
   const [newMethodSelection, setNewMethodSelection] = useState("");
 
+  // Estados para estanterías
+  const [shelfAssignments, setShelfAssignments] = useState([]);
+  const [showShelfModal, setShowShelfModal] = useState(false);
+  const [selectedOrderForShelf, setSelectedOrderForShelf] = useState(null);
+  const [shelvingEnabled, setShelvingEnabled] = useState(false);
+
   const loadOrders = async () => {
     setLoading(true);
     try {
@@ -100,6 +108,17 @@ export const Orders = () => {
       }
       setBusinessSettings(resp[2]);
       setEmployees(resp[3] || []);
+      setShelvingEnabled(resp[2]?.shelving_enabled || false);
+
+      // Cargar asignaciones de estanterías si está habilitado
+      if (resp[2]?.shelving_enabled) {
+        try {
+          const assignments = await shelvingService.getShelfAssignments();
+          setShelfAssignments(assignments);
+        } catch (e) {
+          console.warn("Error loading shelf assignments:", e);
+        }
+      }
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -243,6 +262,17 @@ export const Orders = () => {
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
       );
+
+      // Auto-desasignar estantería al entregar
+      if (newStatus === 'delivered' && shelvingEnabled) {
+        try {
+          await shelvingService.unassignOrder(orderId, activeStaff?.name || 'Sistema');
+          const updatedAssignments = await shelvingService.getShelfAssignments();
+          setShelfAssignments(updatedAssignments);
+        } catch (e) {
+          console.warn("Error auto-desasignando estantería:", e);
+        }
+      }
     } catch (error) {
       Swal.fire("Error", "No se pudo actualizar el estado", "error");
     }
@@ -354,15 +384,18 @@ export const Orders = () => {
 
   const handleReprint = (order) => {
     // Transformar los datos para que coincidan con lo que espera TicketVenta
+    const assignment = shelfAssignments.find(a => a.order_id === order.id);
     const ventaData = {
       ...order,
       cliente: order.customers,
+      metodo_pago: order.payment_method,
       productos: order.order_items.map((i) => ({
         name: i.product_name,
         quantity: i.quantity,
         price: i.price,
         pricing_type: i.pricing_type,
       })),
+      shelfAssignment: assignment || null,
     };
     setOrderToPrint(ventaData);
   };
@@ -410,6 +443,66 @@ export const Orders = () => {
       Swal.fire("Error", "No se pudo actualizar el metodo de pago", "error");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // ==================== FUNCIONES DE ESTANTERÍAS ====================
+
+  const getShelfForOrder = (orderId) => {
+    return shelfAssignments.find(a => a.order_id === orderId);
+  };
+
+  const handleOpenShelfModal = (order) => {
+    setSelectedOrderForShelf(order);
+    setShowShelfModal(true);
+  };
+
+  const handleAssignShelf = async (shelfId) => {
+    if (!selectedOrderForShelf || !shelfId) return;
+    try {
+      await shelvingService.assignOrderToShelf(
+        selectedOrderForShelf.id,
+        shelfId,
+        activeStaff?.name || 'Sistema'
+      );
+      const assignments = await shelvingService.getShelfAssignments();
+      setShelfAssignments(assignments);
+      setShowShelfModal(false);
+      setSelectedOrderForShelf(null);
+      Swal.fire({
+        title: "¡Asignada!",
+        text: "Orden asignada a la estantería correctamente",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
+  };
+
+  const handleUnassignShelf = async (orderId) => {
+    const result = await Swal.fire({
+      title: "¿Quitar asignación?",
+      text: "La ropa se marcará como retirada",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      confirmButtonText: "Sí, quitar"
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await shelvingService.unassignOrder(orderId);
+      const assignments = await shelvingService.getShelfAssignments();
+      setShelfAssignments(assignments);
+      Swal.fire({
+        title: "Desasignada",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
     }
   };
 
@@ -1025,6 +1118,38 @@ export const Orders = () => {
                     })()}
                   </div>
 
+                  {/* Badge de estantería */}
+                  {shelvingEnabled && (() => {
+                    const assignment = getShelfForOrder(order.id);
+                    return (
+                      <div className="flex items-center justify-between mt-3 mb-2">
+                        {assignment ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
+                              <span className="material-symbols-outlined text-[12px]">shelves</span>
+                              {assignment.shelf?.label}
+                            </span>
+                            <button
+                              onClick={() => handleUnassignShelf(order.id)}
+                              className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Quitar de estantería"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenShelfModal(order)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-blue-50 hover:text-blue-600 rounded-full text-xs font-bold transition-colors border border-dashed border-slate-300 dark:border-slate-600"
+                          >
+                            <span className="material-symbols-outlined text-[12px]">add_location</span>
+                            Asignar estantería
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex gap-2 flex-wrap items-end justify-end mt-auto">
                     {order.status === "received" && (
                       <button
@@ -1408,6 +1533,16 @@ export const Orders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL DE ASIGNACIÓN DE ESTANTERÍA */}
+      {showShelfModal && selectedOrderForShelf && (
+        <ShelfAssignmentModal
+          isOpen={showShelfModal}
+          onClose={() => { setShowShelfModal(false); setSelectedOrderForShelf(null); }}
+          onAssign={(shelfId) => handleAssignShelf(shelfId)}
+          orderId={selectedOrderForShelf.id}
+        />
       )}
     </div>
   );
