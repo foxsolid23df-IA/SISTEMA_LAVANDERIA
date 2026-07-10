@@ -1,0 +1,17 @@
+name: Ready Reminders Cron
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # cada hora en punto UTC
+  workflow_dispatch:      # permite ejecucion manual
+
+jobs:
+  send-ready-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call send-ready-reminders Edge Function
+        run: |
+          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/send-ready-reminders" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -d '{"trigger": "cron"}'
