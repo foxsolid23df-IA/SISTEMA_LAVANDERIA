@@ -1070,7 +1070,7 @@ export const Orders = () => {
                   </tr>
                 ) : (
                   filteredOrders.map((order) => {
-                    const firstItem = order.items?.[0];
+                    const firstItem = order.order_items?.[0];
                     const serviceName = firstItem?.product_name || "-";
                     const paid = parseFloat(order.paid_amount || 0);
                     const total = parseFloat(order.total || 0);

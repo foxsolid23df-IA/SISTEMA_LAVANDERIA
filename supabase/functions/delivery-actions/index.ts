@@ -834,14 +834,19 @@ serve(async (req) => {
                     .insert([{
                       order_id: posOrder.id,
                       user_id: user.id,
+                      product_id: null,
                       product_name: `Servicio de lavandería - ${customerName}`,
                       quantity: 1,
                       price: deliveryFee,
-                      pricing_type: "service",
+                      pricing_type: "unit",
                       total: deliveryFee,
+                      cost_price: null,
+                      category: null,
+                      staff_id: null,
                     }]);
                   if (retryItemError) {
                     console.error("[create_express_pickup] Error creando order_item (retry):", JSON.stringify(retryItemError));
+                    throw new Error(`Error creando item de orden (retry): ${retryItemError.message}`);
                   }
                   order.pos_order_id = posOrder.id;
                 } else {
@@ -867,14 +872,19 @@ serve(async (req) => {
               .insert([{
                 order_id: posOrder.id,
                 user_id: user.id,
+                product_id: null,
                 product_name: `Servicio de lavandería - ${customerName}`,
                 quantity: 1,
                 price: deliveryFee,
-                pricing_type: "service",
+                pricing_type: "unit",
                 total: deliveryFee,
+                cost_price: null,
+                category: null,
+                staff_id: null,
               }]);
             if (itemInsertError) {
               console.error("[create_express_pickup] Error creando order_item:", JSON.stringify(itemInsertError));
+              throw new Error(`Error creando item de orden: ${itemInsertError.message}`);
             }
 
             order.pos_order_id = posOrder.id;
