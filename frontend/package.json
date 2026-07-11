@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:driver": "vite build --mode driver",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -16,6 +17,7 @@
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor-mlkit/barcode-scanning": "^8.1.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capgo/capacitor-printer": "^8.1.0",

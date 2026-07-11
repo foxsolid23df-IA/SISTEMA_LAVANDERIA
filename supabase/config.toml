@@ -12,3 +12,35 @@ verify_jwt = true
 
 [functions.delivery-actions]
 verify_jwt = true
+
+[functions.test-whatsapp-connection]
+verify_jwt = false
+
+[functions.get-price-list]
+verify_jwt = false
+
+[functions.send-quote-reminders]
+verify_jwt = false
+
+[functions.auto-dispatch-orders]
+enabled = true
+verify_jwt = false
+import_map = "./functions/auto-dispatch-orders/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/auto-dispatch-orders/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/auto-dispatch-orders/*.html" ]
+
+[functions.send-abandoned-reminders]
+enabled = true
+verify_jwt = false
+
+[functions.auto-cancel-stale-orders]
+enabled = true
+verify_jwt = false
+
+[functions.send-ready-reminders]
+enabled = true
+verify_jwt = false

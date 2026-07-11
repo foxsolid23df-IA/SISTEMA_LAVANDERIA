@@ -9,7 +9,7 @@ Sistema de Punto de Venta (POS) profesional desarrollado con React y Supabase, d
 
 ## 🌐 Demo en Vivo
 
-**URL de Producción:** https://sistema-ventas-topaz.vercel.app
+**URL de Producción:** https://sistema-lavanderia-nu.vercel.app
 
 ---
 

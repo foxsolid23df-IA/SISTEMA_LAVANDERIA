@@ -395,13 +395,75 @@ serve(async (req) => {
 
       const { data, error } = await supabase
         .from("delivery_orders")
-        .update({ status: "cancelled" })
+        .update({
+          status: "cancelled",
+          cancelled_at: new Date().toISOString(),
+        })
         .eq("id", order.id)
         .eq("user_id", user.id)
         .select()
         .single();
 
       if (error) throw error;
+
+      // ── Notificar al chofer asignado si el pedido tenía chofer ──
+      if (order.driver_id && order.status !== "requested") {
+        try {
+          const { data: driver } = await supabase
+            .from("staff")
+            .select("phone, name")
+            .eq("id", order.driver_id)
+            .maybeSingle();
+
+          if (driver?.phone) {
+            const { data: storeProfile } = await supabase
+              .from("profiles")
+              .select("store_name, whatsapp_session_token, whatsapp_gateway_type")
+              .eq("id", user.id)
+              .maybeSingle();
+
+            if (storeProfile?.whatsapp_session_token) {
+              const storeName = storeProfile.store_name || "La lavandería";
+              const driverMsg = `❌ *Pedido #${order.id} cancelado*\n\nEl pedido de ${order.customer_name} en ${store_name} ha sido cancelado por la sucursal.\n\nYa no es necesario acudir a:\n📍 ${order.customer_address || "Sin dirección registrada"}`;
+
+              const evoUrl = Deno.env.get("EVOLUTION_API_URL") || "";
+              const phoneDigits = String(driver.phone).replace(/\D/g, "");
+              const phoneCandidates = phoneDigits.length === 10
+                ? [`521${phoneDigits}`, `52${phoneDigits}`]
+                : [phoneDigits];
+
+              for (const candidate of phoneCandidates) {
+                try {
+                  const res = await fetch(`${evoUrl}/message/sendText/${storeProfile.whatsapp_session_token}`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "apikey": Deno.env.get("EVOLUTION_API_KEY") || "",
+                    },
+                    body: JSON.stringify({ number: candidate, text: driverMsg }),
+                  });
+                  if (res.ok) break;
+                } catch { /* continue with next candidate */ }
+              }
+
+              // Log notification
+              await supabase.from("delivery_notification_logs").insert([{
+                user_id: user.id,
+                delivery_order_id: order.id,
+                recipient_type: "driver",
+                recipient_phone: driver.phone,
+                event_type: "cancelled",
+                gateway: "whatsapp_driver_cancel",
+                success: true,
+                payload: { reason: payload.reason || "store_cancelled" },
+              }]);
+            }
+          }
+        } catch (notifErr) {
+          console.error("[cancel_order] Error notifying driver:", notifErr);
+        }
+      }
+
       return jsonResponse({ order: data });
     }
 
@@ -435,12 +497,19 @@ serve(async (req) => {
           amount,
           payment_method: method,
           reference: reference || null,
+          proof_photo_path: payload.proof_photo_path || null,
           status: "driver_collected",
         }])
         .select()
         .single();
 
       if (error) throw error;
+
+      // Update registered_at timestamp
+      await supabase
+        .from("delivery_payments")
+        .update({ registered_at: new Date().toISOString() })
+        .eq("id", payment.id);
 
       const paid = [...(order.delivery_payments || []), payment]
         .filter((row: any) => row.status !== "voided")
@@ -452,6 +521,38 @@ serve(async (req) => {
         .update({ payment_status: paymentStatus(total, paid) })
         .eq("id", order.id)
         .eq("user_id", user.id);
+
+      // Notify store owner about the payment
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("store_name, whatsapp_session_token")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.whatsapp_session_token) {
+          const methodLabels: Record<string, string> = {
+            efectivo: "Efectivo",
+            transferencia: "Transferencia",
+            tarjeta: "Tarjeta",
+          };
+          const driverName = order.driver?.name || "Chofer";
+          const storeName = profile.store_name || "Sucursal";
+          const ownerMsg = `💰 *Pago registrado por chofer*\n\n📋 Orden: #${order.id}\n👤 Chofer: ${driverName}\n💵 Monto: $${amount.toFixed(2)} MXN\n💳 Método: ${methodLabels[method] || method}${reference ? `\n📄 Ref: ${reference}` : ""}${payload.proof_photo_path ? "\n📸 Foto comprobante adjunta" : ""}\n\nTotal pagado: $${paid.toFixed(2)} / $${total.toFixed(2)}\n\nConfirma el cobro en el panel de delivery.`;
+
+          const evoUrl = Deno.env.get("EVOLUTION_API_URL") || "";
+          await fetch(`${evoUrl}/message/sendText/${profile.whatsapp_session_token}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": Deno.env.get("EVOLUTION_API_KEY") || "",
+            },
+            body: JSON.stringify({ number: "", text: ownerMsg }),
+          });
+        }
+      } catch (notifErr) {
+        console.error("Error notifying store about payment:", notifErr);
+      }
 
       return jsonResponse({ payment });
     }
@@ -514,6 +615,73 @@ serve(async (req) => {
       }
 
       return jsonResponse({ payment });
+    }
+
+    if (action === "reconcile_all_payments") {
+      // Find all driver_collected payments for this store
+      const { data: pendingPayments, error: fetchError } = await supabase
+        .from("delivery_payments")
+        .select("id, delivery_order_id")
+        .eq("user_id", user.id)
+        .eq("status", "driver_collected");
+
+      if (fetchError) throw fetchError;
+      if (!pendingPayments || pendingPayments.length === 0) {
+        return jsonResponse({ reconciled: 0, message: "No hay pagos pendientes." });
+      }
+
+      const now = new Date().toISOString();
+      const orderIds = new Set<number>();
+
+      // Batch update all pending payments
+      for (const p of pendingPayments) {
+        await supabase
+          .from("delivery_payments")
+          .update({ status: "reconciled", reconciled_at: now })
+          .eq("id", p.id)
+          .eq("user_id", user.id);
+        orderIds.add(p.delivery_order_id);
+      }
+
+      // Recalculate payment_status for affected orders
+      for (const orderId of orderIds) {
+        const { data: orderPayments } = await supabase
+          .from("delivery_payments")
+          .select("amount, status")
+          .eq("delivery_order_id", orderId);
+
+        const { data: order } = await supabase
+          .from("delivery_orders")
+          .select("service_cost, delivery_fee, pos_order_id")
+          .eq("id", orderId)
+          .single();
+
+        if (order) {
+          const paid = (orderPayments || [])
+            .filter((r: any) => r.status !== "voided")
+            .reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+          const total = (Number(order.service_cost) || 0) + (Number(order.delivery_fee) || 0);
+
+          await supabase
+            .from("delivery_orders")
+            .update({ payment_status: paymentStatus(total, paid) })
+            .eq("id", orderId)
+            .eq("user_id", user.id);
+
+          if (order.pos_order_id) {
+            await supabase
+              .from("orders")
+              .update({
+                paid_amount: paid,
+                payment_status: total > 0 && paid >= total ? "paid" : paid > 0 ? "partial" : "pending",
+              })
+              .eq("id", order.pos_order_id)
+              .eq("user_id", user.id);
+          }
+        }
+      }
+
+      return jsonResponse({ reconciled: pendingPayments.length });
     }
 
     if (action === "create_express_pickup") {
@@ -625,6 +793,8 @@ serve(async (req) => {
             has_tax: false,
             tax_amount: 0,
             invoice_requested: false,
+            cash_session_id: null,
+            created_by_staff_id: null,
           };
 
           const { data: posResult, error: posError } = await supabase
@@ -635,6 +805,52 @@ serve(async (req) => {
 
           if (posError) {
             console.error("[create_express_pickup] Error creando orden POS:", JSON.stringify(posError));
+            // Intento de retry: refrescar folio desde MAX(folio) existente
+            try {
+              const { data: retryMax } = await supabase
+                .from("orders")
+                .select("folio")
+                .eq("user_id", user.id)
+                .order("folio", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              const retryFolio = (retryMax?.folio || 0) + 1;
+              if (retryFolio > 0) {
+                const retryPayload = { ...posPayload, folio: retryFolio };
+                const { data: retryResult, error: retryError } = await supabase
+                  .from("orders")
+                  .insert([retryPayload])
+                  .select()
+                  .single();
+                if (!retryError && retryResult) {
+                  posOrder = retryResult;
+                  await supabase
+                    .from("delivery_orders")
+                    .update({ pos_order_id: posOrder.id })
+                    .eq("id", order.id)
+                    .eq("user_id", user.id);
+                  const { error: retryItemError } = await supabase
+                    .from("order_items")
+                    .insert([{
+                      order_id: posOrder.id,
+                      user_id: user.id,
+                      product_name: `Servicio de lavandería - ${customerName}`,
+                      quantity: 1,
+                      price: deliveryFee,
+                      pricing_type: "service",
+                      total: deliveryFee,
+                    }]);
+                  if (retryItemError) {
+                    console.error("[create_express_pickup] Error creando order_item (retry):", JSON.stringify(retryItemError));
+                  }
+                  order.pos_order_id = posOrder.id;
+                } else {
+                  console.error("[create_express_pickup] Retry también falló:", JSON.stringify(retryError));
+                }
+              }
+            } catch (retryErr) {
+              console.error("[create_express_pickup] Error en retry:", retryErr);
+            }
           } else if (posResult) {
             posOrder = posResult;
 
@@ -646,7 +862,7 @@ serve(async (req) => {
               .eq("user_id", user.id);
 
             // Create order item for the service
-            await supabase
+            const { error: itemInsertError } = await supabase
               .from("order_items")
               .insert([{
                 order_id: posOrder.id,
@@ -657,6 +873,9 @@ serve(async (req) => {
                 pricing_type: "service",
                 total: deliveryFee,
               }]);
+            if (itemInsertError) {
+              console.error("[create_express_pickup] Error creando order_item:", JSON.stringify(itemInsertError));
+            }
 
             order.pos_order_id = posOrder.id;
           }
@@ -706,6 +925,7 @@ serve(async (req) => {
                 .update({
                   paid_amount: pAmount,
                   payment_status: pAmount >= total ? "paid" : "partial",
+                  payment_method: pMethod,
                 })
                 .eq("id", posOrder.id);
             }
@@ -720,11 +940,17 @@ serve(async (req) => {
         .eq("id", order.id)
         .single();
 
-      return jsonResponse({
+      const response: Record<string, unknown> = {
         order: finalOrder || order,
         pos_order: posOrder,
         payment: payment,
-      });
+      };
+
+      if (!posOrder && payload.create_pos_order === true) {
+        response.pos_order_warning = "La orden de recolección se creó, pero la orden POS no pudo generarse. Procese desde el panel de Delivery.";
+      }
+
+      return jsonResponse(response);
     }
 
     if (action === "get_driver_stats") {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useSettings } from "../../contexts/SettingsContext";
 import { orderService } from "../../services/orderService";
 import { staffService } from "../../services/staffService";
 import { exchangeRateService } from "../../services/exchangeRateService";
@@ -8,6 +9,7 @@ import { printService } from "../../services/printService";
 import { shelvingService } from "../../services/shelvingService";
 import ShelfAssignmentModal from "../shelving/ShelfAssignmentModal";
 import TicketVenta from "./TicketVenta";
+import RemisionPreviewModal from "./RemisionPreviewModal";
 import { formatearDinero } from "../../utils";
 import * as XLSX from "xlsx";
 import Swal from "sweetalert2";
@@ -47,6 +49,7 @@ const playNewOrderSound = () => {
 
 export const Orders = () => {
   const { activeStaff } = useAuth();
+  const { settings } = useSettings();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, received, processing, ready, delivered
@@ -58,7 +61,7 @@ export const Orders = () => {
   const [exchangeRate, setExchangeRate] = useState(null);
 
   // New States for Enhancements
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'kanban'
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'kanban' | 'excel'
   const [filterEmployee, setFilterEmployee] = useState("");
   const [filterServiceType, setFilterServiceType] = useState(""); // 'kg' | 'unit'
   const [employees, setEmployees] = useState([]);
@@ -83,6 +86,7 @@ export const Orders = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [orderToPrint, setOrderToPrint] = useState(null);
   const ticketRef = useRef(null);
+  const [showRemisionPreview, setShowRemisionPreview] = useState(false);
   const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
   const [orderToUpdateMethod, setOrderToUpdateMethod] = useState(null);
   const [newMethodSelection, setNewMethodSelection] = useState("");
@@ -263,6 +267,13 @@ export const Orders = () => {
         prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)),
       );
 
+      // Enviar notificacion WhatsApp cuando la orden esta lista (no bloqueante)
+      if (newStatus === 'ready') {
+        orderService.notifyOrderReady(orderId).catch((e) =>
+          console.warn('[Orders] No se pudo enviar notificacion WhatsApp de orden lista:', e)
+        );
+      }
+
       // Auto-desasignar estantería al entregar
       if (newStatus === 'delivered' && shelvingEnabled) {
         try {
@@ -383,7 +394,6 @@ export const Orders = () => {
   };
 
   const handleReprint = (order) => {
-    // Transformar los datos para que coincidan con lo que espera TicketVenta
     const assignment = shelfAssignments.find(a => a.order_id === order.id);
     const ventaData = {
       ...order,
@@ -394,10 +404,30 @@ export const Orders = () => {
         quantity: i.quantity,
         price: i.price,
         pricing_type: i.pricing_type,
+        category: i.category || null,
       })),
       shelfAssignment: assignment || null,
     };
     setOrderToPrint(ventaData);
+  };
+
+  const handleReprintNota = (order) => {
+    const assignment = shelfAssignments.find(a => a.order_id === order.id);
+    const ventaData = {
+      ...order,
+      cliente: order.customers,
+      metodo_pago: order.payment_method,
+      productos: order.order_items.map((i) => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        price: i.price,
+        pricing_type: i.pricing_type,
+        category: i.category || null,
+      })),
+      shelfAssignment: assignment || null,
+    };
+    setOrderToPrint(ventaData);
+    setShowRemisionPreview(true);
   };
 
   const handleUpdateMethod = (order) => {
@@ -508,10 +538,8 @@ export const Orders = () => {
 
   const imprimirTicket = async () => {
     if (!ticketRef.current || !businessSettings || isPrinting) return;
-
     setIsPrinting(true);
     try {
-      // Modo imagen: Envia el elemento DOM directamente para captura pixel-perfect
       await printService.print(ticketRef.current, businessSettings.printer_name, {
         copies: 1,
         settings: businessSettings,
@@ -605,11 +633,12 @@ export const Orders = () => {
   });
 
   const getEmployeeName = (order) => {
-    // Usar el nombre del staff desde el join (ordenes nuevas)
+    if (order.assigned_staff && order.assigned_staff.name) {
+      return order.assigned_staff.name;
+    }
     if (order.staff && order.staff.name) {
       return order.staff.name;
     }
-    // Fallback para ordenes antiguas sin informacion de staff
     return "Sistema";
   };
 
@@ -686,6 +715,17 @@ export const Orders = () => {
                     print
                   </span>
                 </button>
+                {businessSettings?.enable_remision_print && (
+                  <button
+                    onClick={() => handleReprintNota(order)}
+                    className="p-1 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded text-amber-500"
+                    title="Imprimir nota de remisión"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      receipt_long
+                    </span>
+                  </button>
+                )}
                 {order.status !== "delivered" && (
                   <button
                     onClick={() => handleUpdateMethod(order)}
@@ -811,6 +851,17 @@ export const Orders = () => {
               view_kanban
             </span>
           </button>
+          {settings?.express_workflow_enabled && (
+            <button
+              onClick={() => setViewMode("excel")}
+              className={`p-2 rounded-lg transition-all ${viewMode === "excel" ? "bg-emerald-100 text-emerald-600" : "text-slate-400 hover:text-emerald-500"}`}
+              title="Vista Excel"
+            >
+              <span className="material-symbols-outlined text-xl">
+                table_view
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -993,6 +1044,64 @@ export const Orders = () => {
           <KanbanColumn status="processing" title="En Lavado" />
           <KanbanColumn status="ready" title="Listo P/ Entrega" />
           <KanbanColumn status="delivered" title="Entregado" />
+        </div>
+      ) : viewMode === "excel" ? (
+        <div className="orders-excel-view">
+          <div className="orders-excel-table-wrapper">
+            <table className="orders-excel-table">
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>Cliente</th>
+                  <th>Servicio</th>
+                  <th>Total</th>
+                  <th>A Cuenta</th>
+                  <th>Resta</th>
+                  <th>Día Entrega</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="empty-cell">
+                      No hay órdenes que coincidan con los filtros.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const firstItem = order.items?.[0];
+                    const serviceName = firstItem?.product_name || "-";
+                    const paid = parseFloat(order.paid_amount || 0);
+                    const total = parseFloat(order.total || 0);
+                    const reste = total - paid;
+                    const promisedDate = order.promised_at
+                      ? new Date(order.promised_at).toLocaleDateString("es-MX")
+                      : "-";
+
+                    return (
+                      <tr key={order.id}>
+                        <td className="folio-cell">{order.folio}</td>
+                        <td>{order.customers?.name || "-"}</td>
+                        <td>{serviceName}</td>
+                        <td className="amount-cell">{formatearDinero(total)}</td>
+                        <td className="paid-cell">{formatearDinero(paid)}</td>
+                        <td className={`balance-cell ${reste > 0 ? "text-red" : ""}`}>
+                          {formatearDinero(reste)}
+                        </td>
+                        <td>{promisedDate}</td>
+                        <td>
+                          <span className={`status-badge status-${order.status}`}>
+                            {statusLabels[order.status]?.label || order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="orders-list flex flex-col gap-4">
@@ -1197,6 +1306,17 @@ export const Orders = () => {
                         print
                       </span>
                     </button>
+                    {businessSettings?.enable_remision_print && (
+                      <button
+                        onClick={() => handleReprintNota(order)}
+                        className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Nota de Remisión"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          receipt_long
+                        </span>
+                      </button>
+                    )}
 
                     {order.status !== "delivered" &&
                       order.status !== "cancelled" && (
@@ -1517,9 +1637,7 @@ export const Orders = () => {
                 onClick={imprimirTicket}
                 disabled={isPrinting}
               >
-                <span
-                  className={`material-symbols-outlined ${isPrinting ? "animate-spin" : ""}`}
-                >
+                <span className={`material-symbols-outlined ${isPrinting ? "animate-spin" : ""}`}>
                   {isPrinting ? "sync" : "print"}
                 </span>
                 {isPrinting ? "IMPRIMIENDO..." : "IMPRIMIR TICKET"}
@@ -1533,6 +1651,15 @@ export const Orders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL NOTA DE REMISIÓN */}
+      {showRemisionPreview && orderToPrint && (
+        <RemisionPreviewModal
+          venta={orderToPrint}
+          settings={businessSettings}
+          onClose={() => setShowRemisionPreview(false)}
+        />
       )}
 
       {/* MODAL DE ASIGNACIÓN DE ESTANTERÍA */}

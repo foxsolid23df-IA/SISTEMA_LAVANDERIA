@@ -337,6 +337,7 @@ export const AuthProvider = ({ children }) => {
   const canVoidSales = p.can_void_sales ?? canAccessAdmin;
   const canProcessOrders = p.can_process_orders ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "operador");
   const canDeliverOrders = p.can_deliver_orders ?? (canAccessAdmin || activeRole === "gerente" || activeRole === "repartidor" || activeRole === "cajero");
+  const canAccessProduccionDiaria = p.can_access_produccion_diaria ?? (canAccessAdmin || activeRole === "gerente");
   const hasDeliveryModule = profile?.delivery_enabled === true;
 
   const memoizedUser = React.useMemo(
@@ -377,6 +378,7 @@ export const AuthProvider = ({ children }) => {
       canVoidSales,
       canViewCashReports,
       canViewCancellations,
+      canAccessProduccionDiaria,
       canViewPendingAccounts,
       hasDeliveryModule,
       activeRole,
@@ -408,7 +410,7 @@ export const AuthProvider = ({ children }) => {
       canAccessReports, canManageInventory, canViewSupplies,
       canManageStaff, canDeleteOrders, canProcessOrders,
       canDeliverOrders, canVoidSales, canViewCashReports,
-      canViewCancellations, canViewPendingAccounts, hasDeliveryModule, activeRole,
+      canViewCancellations, canViewPendingAccounts, canAccessProduccionDiaria, hasDeliveryModule, activeRole,
       activeStaff, isLocked, cashSession, needsCashFund,
       adminMode, profile?.store_name, profile?.master_pin,
     ],

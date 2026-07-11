@@ -11,12 +11,15 @@ import { exchangeRateService } from "../../services/exchangeRateService";
 import { printService } from "../../services/printService";
 import { expressServicesService } from "../../services/expressServicesService";
 import { deliveryService } from "../../services/deliveryService";
+import { shelvingService } from "../../services/shelvingService";
+import { staffService } from "../../services/staffService";
 import { useKeepAwake } from "../../hooks/useKeepAwake";
 
 import { useSettings } from "../../contexts/SettingsContext";
 import { formatearDinero } from "../../utils";
 import Swal from "sweetalert2";
 import TicketVenta from "./TicketVenta";
+import RemisionPreviewModal from "./RemisionPreviewModal";
 import Modal from "../common/Modal";
 import { CashFundModal } from "../auth/CashFundModal";
 import { ClientRegistrationModal } from "./ClientRegistrationModal";
@@ -102,6 +105,20 @@ export const Sales = () => {
     notes: "",
   });
 
+  const { settings } = useSettings();
+  const [staffList, setStaffList] = useState([]);
+  const [assignedStaffId, setAssignedStaffId] = useState("");
+
+  useEffect(() => {
+    if (settings?.employee_production_enabled) {
+      staffService.getStaff()
+        .then(data => setStaffList(data || []))
+        .catch(console.error);
+    }
+  }, [settings?.employee_production_enabled]);
+
+  const activeStaffList = staffList.filter(s => s.active);
+
   const [configuredExpressServices, setConfiguredExpressServices] = useState([]);
 
   useEffect(() => {
@@ -124,6 +141,7 @@ export const Sales = () => {
         
         // 1. Limpiar carrito existente para evitar mezclas
         vaciarCarrito();
+        setAssignedStaffId("");
         
         // 2. Crear item ficticio para representar el servicio de lavanderia del pedido delivery.
         const garmentDetail = data.garment_summary || data.customer_item_description || 'PRENDAS';
@@ -201,6 +219,7 @@ export const Sales = () => {
 
   // Referencias
   const ticketRef = useRef(null);
+  const [showRemisionPreview, setShowRemisionPreview] = useState(false);
 
 
 
@@ -406,6 +425,15 @@ export const Sales = () => {
       return;
     }
 
+    if (settings?.employee_production_enabled && !assignedStaffId) {
+      Swal.fire(
+        "Encargado requerido",
+        "Selecciona un encargado para la orden",
+        "warning",
+      );
+      return;
+    }
+
     setCashPayments({}); // Reset change calculator
     setWantsInvoice(false);
     if (!deliveryContext) {
@@ -419,13 +447,18 @@ export const Sales = () => {
     try {
       const orderData = {
         customer_id: clienteSeleccionado.id,
-        items: carrito.map((item) => ({
-          product_id: String(item.id).startsWith("common-") ? null : item.id,
-          product_name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          pricing_type: item.pricing_type || "unit",
-        })),
+        items: carrito.map((item) => {
+          const prod = productos.find(p => p.id === item.id);
+          return {
+            product_id: (String(item.id).startsWith("common-") || String(item.id).startsWith("express-") || String(item.id).startsWith("delivery-")) ? null : item.id,
+            product_name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            pricing_type: item.pricing_type || "unit",
+            cost_price: prod?.cost_price || 0,
+            category: prod?.category || null,
+          };
+        }),
         total: finalTotal,
         has_tax: wantsInvoice,
         tax_amount: taxAmount,
@@ -443,6 +476,8 @@ export const Sales = () => {
         cash_session_id: cashSession?.id,
         // Registrar que empleado creo la orden
         created_by_staff_id: activeStaff?.id || null,
+        // Encargado de la orden (para Rendimiento de Staff)
+        assigned_staff_id: settings?.employee_production_enabled ? (assignedStaffId || null) : null,
       };
 
       const result = await orderService.createOrder(orderData);
@@ -452,6 +487,23 @@ export const Sales = () => {
           await deliveryService.linkDeliveryToPosOrder(deliveryContext.delivery_order_id, result.id);
         } catch (deliveryLinkError) {
           console.warn("No se pudo vincular delivery con orden POS:", deliveryLinkError);
+        }
+      }
+
+      // AUTO-ASIGNAR ESTANTERIA (si esta habilitado)
+      let shelfAssignment = null;
+      if (businessSettings?.shelving_enabled && businessSettings?.shelving_auto_assign) {
+        try {
+          await shelvingService.autoAssignShelf(result.id, activeStaff?.name || "Sistema");
+          shelfAssignment = await shelvingService.getOrderShelf(result.id);
+        } catch (shelfErr) {
+          console.warn("Error auto-asignando estanteria:", shelfErr);
+        }
+      } else if (businessSettings?.shelving_enabled) {
+        try {
+          shelfAssignment = await shelvingService.getOrderShelf(result.id);
+        } catch (e) {
+          // No assignment yet, that's fine
         }
       }
 
@@ -466,12 +518,14 @@ export const Sales = () => {
         monto_recibido: recibidoMXN || (parseFloat(anticipo) || finalTotal),
         pagos_multimoneda: cashPayments,
         metodo_pago: metodoPago,
+        shelfAssignment: shelfAssignment || null,
       });
 
       Swal.fire("Exito!", "Orden registrada correctamente", "success");
       loadProducts(true); // Refrescar stock
       setIsPaymentModalOpen(false);
       vaciarCarrito();
+      setAssignedStaffId("");
       setClienteSeleccionado(null);
       setBusquedaCliente("");
       setNotas("");
@@ -494,7 +548,6 @@ export const Sales = () => {
       if (ticketRef.current) {
         const copies = businessSettings.ticket_double_print ? 2 : 1;
 
-        // Modo imagen: Envia el elemento DOM directamente para captura pixel-perfect
         await printService.print(ticketRef.current, businessSettings.printer_name, {
           copies,
           settings: businessSettings,
@@ -505,6 +558,11 @@ export const Sales = () => {
     } finally {
       setIsPrinting(false);
     }
+  };
+
+  const handleOpenRemisionPreview = () => {
+    if (!ventaCompletada || !businessSettings) return;
+    setShowRemisionPreview(true);
   };
 
   return (
@@ -959,7 +1017,7 @@ export const Sales = () => {
         </div>
 
         {/* SECCION CLIENTE (Movido arriba) */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-20">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-30">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-black dark:text-slate-400 uppercase tracking-widest">
               Cliente (OBLIGATORIO)
@@ -1013,6 +1071,32 @@ export const Sales = () => {
             </div>
           </div>
         </div>
+
+        {settings?.employee_production_enabled && (
+          <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-950/20 z-20">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
+                Encargado (OBLIGATORIO)
+              </label>
+              {activeStaffList.length === 0 ? (
+                <p className="text-[11px] text-amber-600 italic">
+                  No hay empleados activos. Cree uno en Admin → Staff.
+                </p>
+              ) : (
+                <select
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border-2 border-amber-300 dark:border-amber-600 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-black dark:text-white font-bold"
+                  value={assignedStaffId}
+                  onChange={(e) => setAssignedStaffId(e.target.value)}
+                >
+                  <option value="">Seleccionar encargado...</option>
+                  {activeStaffList.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Lista de Carrito */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -1426,6 +1510,17 @@ export const Sales = () => {
                   </span>
                   {isPrinting ? "IMPRIMIENDO..." : "IMPRIMIR TICKET"}
                 </button>
+                {businessSettings?.enable_remision_print && (
+                  <button
+                    onClick={handleOpenRemisionPreview}
+                    className="w-full py-4 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all bg-amber-600 shadow-amber-600/20"
+                  >
+                    <span className="material-symbols-outlined">
+                      receipt_long
+                    </span>
+                    NOTA DE REMISIÓN
+                  </button>
+                )}
                 <button
                   onClick={() => setVentaCompletada(null)}
                   className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors"
@@ -1436,6 +1531,15 @@ export const Sales = () => {
             </div>
           </div>
         )
+      )}
+
+      {/* MODAL NOTA DE REMISIÓN */}
+      {showRemisionPreview && ventaCompletada && (
+        <RemisionPreviewModal
+          venta={ventaCompletada}
+          settings={businessSettings}
+          onClose={() => setShowRemisionPreview(false)}
+        />
       )}
 
       {/* MODAL NUEVO CLIENTE */}

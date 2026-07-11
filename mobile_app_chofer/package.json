@@ -1,0 +1,32 @@
+{
+  "name": "mobile_app_chofer",
+  "version": "1.0.0",
+  "description": "APK independiente para repartidores/choferes",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync:android": "npx cap sync android",
+    "apk:debug": "cd android && gradlew.bat assembleDebug",
+    "apk:release": "cd android && gradlew.bat assembleRelease"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.1.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capgo/capacitor-printer": "^8.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0"
+  }
+}

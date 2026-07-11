@@ -1,4 +1,4 @@
-﻿import { supabase } from '../supabase';
+import { supabase } from '../supabase';
 import { terminalService } from './terminalService';
 import { config } from '../config';
 
@@ -444,14 +444,19 @@ export const salesService = {
         };
     },
 
-    // Obtener top productos mÃ¡s vendidos
+    // Obtener top productos más vendidos (últimos 30 días para optimización)
     getTopProducts: async (limit = 5, signal) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
         let query = supabase
             .from('sale_items')
-            .select('product_name, quantity, price, total');
+            .select('product_name, quantity, price, total, sales!inner(created_at)')
+            .eq('user_id', user.id)
+            .gte('sales.created_at', thirtyDaysAgo.toISOString());
 
         if (signal) {
             query = query.abortSignal(signal);
@@ -490,43 +495,40 @@ export const salesService = {
         return topProductos;
     },
 
-    // Obtener ventas por dÃ­a de la semana actual
+    // Obtener ventas por día de la semana actual (Optimizado con filtro en memoria consistente)
     getWeeklySalesData: async (signal) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [0, 0, 0, 0, 0, 0, 0];
 
         const ahora = new Date();
-
-        // Calcular inicio de la semana (Lunes)
         const diaActual = ahora.getDay();
         const diasHastaLunes = diaActual === 0 ? 6 : diaActual - 1;
         const inicioSemana = new Date(ahora);
         inicioSemana.setDate(ahora.getDate() - diasHastaLunes);
         inicioSemana.setHours(0, 0, 0, 0);
 
-        // Obtener ventas de la semana
         let query = supabase
             .from('sales')
             .select('total, created_at')
-            .gte('created_at', inicioSemana.toISOString());
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(2000);
 
         if (signal) {
             query = query.abortSignal(signal);
         }
 
         const { data: ventas, error } = await query;
-
         if (error) throw error;
 
-        // Agrupar ventas por dÃ­a de la semana (0 = Lunes, 6 = Domingo)
         const ventasPorDia = [0, 0, 0, 0, 0, 0, 0]; // Lun, Mar, Mie, Jue, Vie, Sab, Dom
-
         ventas.forEach(venta => {
             const fechaVenta = new Date(venta.created_at);
-            const diaSemana = fechaVenta.getDay();
-            // Convertir: Domingo(0) -> 6, Lunes(1) -> 0, etc.
-            const indice = diaSemana === 0 ? 6 : diaSemana - 1;
-            ventasPorDia[indice] += parseFloat(venta.total) || 0;
+            if (fechaVenta >= inicioSemana) {
+                const diaSemana = fechaVenta.getDay();
+                const indice = diaSemana === 0 ? 6 : diaSemana - 1;
+                ventasPorDia[indice] += parseFloat(venta.total) || 0;
+            }
         });
 
         return ventasPorDia;

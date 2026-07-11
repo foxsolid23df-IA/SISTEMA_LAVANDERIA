@@ -183,7 +183,12 @@ const buildSaleTicket = (ticketData, settings) => {
   if (venta.paid_amount !== undefined) writer.keyValue("Anticipo", money(venta.paid_amount));
   const balance = Number(venta.total || 0) - Number(venta.paid_amount || venta.total || 0);
   if (balance > 0) writer.keyValue("Pendiente", money(balance));
-  if (venta.metodo_pago || venta.payment_method) writer.keyValue("Pago", venta.metodo_pago || venta.payment_method);
+  const metodoRaw = venta.metodo_pago || venta.payment_method;
+  const metodo = metodoRaw === 'cash' ? 'EFECTIVO' :
+                 metodoRaw === 'card' ? 'TARJETA' :
+                 metodoRaw === 'transferencia' ? 'TRANSFERENCIA' :
+                 metodoRaw || 'N/A';
+  writer.keyValue("Pago", metodo);
   if (venta.notes || venta.notas) {
     writer.separator();
     writer.wrap(`Notas: ${venta.notes || venta.notas}`);

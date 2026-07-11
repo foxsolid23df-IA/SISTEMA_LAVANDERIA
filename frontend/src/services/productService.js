@@ -75,6 +75,7 @@ export const productService = {
                     .from('products')
                     .select('*')
                     .eq('user_id', currentUserId)
+                    .eq('is_active', true)
                     .order('name', { ascending: true });
 
                 if (!error && Array.isArray(data)) {
@@ -192,6 +193,12 @@ export const productService = {
             insertData.category = product.category;
         }
 
+        if (product.catalog_source) {
+            insertData.catalog_source = product.catalog_source;
+        } else if (insertData.type === 'SERVICE') {
+            insertData.catalog_source = 'inventory';
+        }
+
         const { data, error } = await supabase
             .from('products')
             .insert([insertData])
@@ -225,6 +232,7 @@ export const productService = {
         if (updates.pricing_type !== undefined) dbUpdates.pricing_type = updates.pricing_type;
         if (updates.type !== undefined) dbUpdates.type = updates.type;
         if (updates.merma !== undefined) dbUpdates.merma = parseInt(updates.merma);
+        if (updates.catalog_source !== undefined) dbUpdates.catalog_source = updates.catalog_source;
 
         const { data, error } = await supabase
             .from('products')
@@ -250,8 +258,27 @@ export const productService = {
 
         if (error) throw error;
 
-        // Actualizar cachÃ© local
+        // Actualizar caché local
         productService.updateCache({ id }, 'DELETE');
+    },
+
+    // Eliminar múltiples productos/servicios (soft delete)
+    deleteProducts: async (ids) => {
+        if (!ids || ids.length === 0) return;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No hay sesión activa.");
+
+        const { error } = await supabase
+            .from('products')
+            .update({ is_active: false })
+            .in('id', ids)
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // Invalidar caché
+        productsCache = null;
     },
 
     // Buscar producto por cÃ³digo de barras
@@ -322,6 +349,58 @@ export const productService = {
         productsCache = null;
 
         return data;
+    },
+
+    // Limpiar todos los productos fisicos del inventario (soft delete)
+    deleteAllProducts: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No hay sesion activa.");
+
+        const { error } = await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('user_id', user.id)
+            .eq('type', 'PRODUCT');
+
+        if (error) throw error;
+
+        // Invalidar cache
+        productsCache = null;
+
+        return true;
+    },
+
+    // Limpiar servicios del inventario (no Catálogo Express)
+    deleteAllInventoryServices: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No hay sesion activa.");
+
+        const { error } = await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('user_id', user.id)
+            .eq('type', 'SERVICE')
+            .eq('catalog_source', 'inventory');
+
+        if (error) throw error;
+
+        productsCache = null;
+
+        return true;
+    },
+
+    // Reactivar un producto o servicio
+    reactivateProduct: async (id) => {
+        const { error } = await supabase
+            .from('products')
+            .update({ is_active: true })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        productsCache = null;
+
+        return true;
     }
 };
 

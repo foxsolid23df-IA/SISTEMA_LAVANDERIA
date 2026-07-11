@@ -50,7 +50,9 @@ export const orderService = {
         invoice_requested: orderData.invoice_requested || false,
         folio: folio,
         // Guardar el ID del empleado que creó la orden
-        created_by_staff_id: orderData.created_by_staff_id || null
+        created_by_staff_id: orderData.created_by_staff_id || null,
+        // Encargado de la orden (para Rendimiento de Staff)
+        assigned_staff_id: orderData.assigned_staff_id || null
       }])
       .select()
       .single();
@@ -58,6 +60,7 @@ export const orderService = {
     if (orderError) throw orderError;
 
     // 3. Insertar los items de la orden
+    const assignedStaffId = orderData.assigned_staff_id || null;
     const items = orderData.items.map(item => ({
       order_id: order.id,
       user_id: user.id,
@@ -66,7 +69,10 @@ export const orderService = {
       quantity: item.quantity,
       price: item.price,
       pricing_type: item.pricing_type || 'unit',
-      total: item.price * item.quantity
+      total: item.price * item.quantity,
+      cost_price: item.cost_price != null ? parseFloat(item.cost_price) : null,
+      category: item.category || null,
+      staff_id: assignedStaffId
     }));
 
     const { error: itemsError } = await supabase
@@ -102,7 +108,8 @@ export const orderService = {
         customers (name, phone),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
-        cancelled_by_staff:cancelled_by_staff_id (id, name, role)
+        cancelled_by_staff:cancelled_by_staff_id (id, name, role),
+        assigned_staff:assigned_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
       .is('deleted_at', null)
@@ -123,7 +130,8 @@ export const orderService = {
         *,
         customers (name, phone),
         order_items (*),
-        staff:created_by_staff_id (id, name, role)
+        staff:created_by_staff_id (id, name, role),
+        assigned_staff:assigned_staff_id (id, name, role)
       `)
       .eq('user_id', user.id)
       .eq('status', status)
@@ -172,13 +180,47 @@ export const orderService = {
       return true;
     }
 
+    const updatePayload = { status: newStatus };
+
+    if (newStatus === 'ready') {
+      const { data: prevOrder } = await supabase
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      const isTransitioningToReady = !prevOrder || prevOrder.status !== 'ready';
+      if (isTransitioningToReady) {
+        updatePayload.ready_at = new Date().toISOString();
+        updatePayload.ready_reminder_stage = null;
+        updatePayload.last_ready_reminder_at = null;
+      }
+    }
+
     const { error } = await supabase
       .from('orders')
-      .update({ status: newStatus })
+      .update(updatePayload)
       .eq('id', orderId);
 
     if (error) throw error;
     return true;
+  },
+
+  // Notificar al cliente via WhatsApp cuando su orden esta lista
+  async notifyOrderReady(orderId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user');
+
+    const { data, error } = await supabase.functions.invoke('send-ready-reminders', {
+      body: { trigger: 'ready', order_id: orderId },
+    });
+
+    if (error) {
+      console.warn('[orderService] Error al invocar send-ready-reminders:', error);
+      return { success: false, error };
+    }
+
+    return data;
   },
 
   // Eliminar una orden (soft delete - no se borra de la base de datos)
@@ -271,7 +313,8 @@ export const orderService = {
         *,
         customers (name, phone),
         order_items (*),
-        staff:created_by_staff_id (id, name, role)
+        staff:created_by_staff_id (id, name, role),
+        assigned_staff:assigned_staff_id (id, name, role)
       `)
       .gte('created_at', startTime)
       .lte('created_at', endTime)
@@ -301,7 +344,8 @@ export const orderService = {
         *,
         customers (name, phone),
         order_items (*),
-        staff:created_by_staff_id (id, name, role)
+        staff:created_by_staff_id (id, name, role),
+        assigned_staff:assigned_staff_id (id, name, role)
       `)
       .gte('created_at', startTime)
       .is('deleted_at', null)
@@ -330,7 +374,8 @@ export const orderService = {
         *,
         customers (name, phone),
         order_items (*),
-        staff:created_by_staff_id (id, name, role)
+        staff:created_by_staff_id (id, name, role),
+        assigned_staff:assigned_staff_id (id, name, role)
       `)
       .eq('cash_session_id', sessionId)
       .is('deleted_at', null);
@@ -400,15 +445,19 @@ export const orderService = {
     };
   },
 
-  // Obtener top servicios más solicitados
+  // Obtener top servicios más solicitados (últimos 30 días para optimización)
   async getTopServices(limit = 5, signal) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     let query = supabase
       .from('order_items')
-      .select('product_name, quantity, price, total')
-      .eq('user_id', user.id);
+      .select('product_name, quantity, price, total, orders!inner(created_at)')
+      .eq('user_id', user.id)
+      .gte('orders.created_at', thirtyDaysAgo.toISOString());
 
     if (signal) query = query.abortSignal(signal);
 
@@ -431,7 +480,7 @@ export const orderService = {
       .map((s, i) => ({ id: i + 1, ...s }));
   },
 
-  // Ventas semanales de órdenes
+  // Ventas semanales de órdenes (Optimizadas con filtro en memoria consistente)
   async getWeeklyOrdersData(signal) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [0, 0, 0, 0, 0, 0, 0];
@@ -448,7 +497,8 @@ export const orderService = {
       .select('total, created_at')
       .eq('user_id', user.id)
       .is('deleted_at', null)
-      .gte('created_at', inicioSemana.toISOString());
+      .order('created_at', { ascending: false })
+      .limit(2000);
 
     if (signal) query = query.abortSignal(signal);
 
@@ -457,8 +507,11 @@ export const orderService = {
 
     const data = [0, 0, 0, 0, 0, 0, 0];
     orders.forEach(o => {
-      const d = (new Date(o.created_at).getDay() + 6) % 7; // Lun=0...Dom=6
-      data[d] += parseFloat(o.total) || 0;
+      const fechaOrden = new Date(o.created_at);
+      if (fechaOrden >= inicioSemana) {
+        const d = (fechaOrden.getDay() + 6) % 7; // Lun=0...Dom=6
+        data[d] += parseFloat(o.total) || 0;
+      }
     });
     return data;
   },

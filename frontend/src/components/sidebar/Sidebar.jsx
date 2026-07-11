@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useSettings } from "../../contexts/SettingsContext";
 import { useConnectivity } from "../../hooks/useConnectivity";
 import { terminalService } from "../../services/terminalService";
 import { productService } from "../../services/productService";
@@ -47,6 +48,7 @@ export const Sidebar = () => {
     canManageInventory,
     hasDeliveryModule,
   } = useAuth();
+  const { settings } = useSettings();
 
   const [showCashCut, setShowCashCut] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
@@ -363,6 +365,59 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
+          {settings?.shelving_enabled && canManageOrders && (
+            <NavLink
+              to="/estanterias"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px] shrink-0">grid_on</span>
+              <span className="text-sm font-bold whitespace-nowrap">Estanterías</span>
+            </NavLink>
+          )}
+
+          {settings?.shelving_enabled && isAdmin && (
+            <>
+              <NavLink
+                to="/historial-estanterias"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px] shrink-0">history</span>
+                <span className="text-sm font-bold whitespace-nowrap">Historial Estanterías</span>
+              </NavLink>
+              <NavLink
+                to="/reportes-estanterias"
+                className={({ isActive }) => `
+                                flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                                ${
+                                  isActive
+                                    ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                                }
+                            `}
+                onClick={() => setIsOpen(false)}
+              >
+                <span className="material-icons-outlined text-[20px] shrink-0">bar_chart</span>
+                <span className="text-sm font-bold whitespace-nowrap">Reportes Estanterías</span>
+              </NavLink>
+            </>
+          )}
+
           {canAccessDriverPortal && (
             <NavLink
               to="/chofer"
@@ -383,7 +438,7 @@ export const Sidebar = () => {
             </NavLink>
           )}
 
-          {canAccessServices && (
+          {canAccessServices && !settings?.service_catalog_enabled && (
             <NavLink
               to="/servicios"
               className={({ isActive }) => `
@@ -400,6 +455,29 @@ export const Sidebar = () => {
                 local_laundry_service
               </span>
               <span className="text-sm font-bold">Catalogo de Servicios</span>
+            </NavLink>
+          )}
+
+          {canAccessServices && settings?.service_catalog_enabled && (
+            <NavLink
+              to="/servicios-express"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                local_laundry_service
+              </span>
+              <span className="text-sm font-bold">Catalogo Express</span>
+              <span className="bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
+                NUEVO
+              </span>
             </NavLink>
           )}
 
@@ -573,6 +651,75 @@ export const Sidebar = () => {
                 account_balance_wallet
               </span>
               <span className="text-sm font-bold">Cuentas por Cobrar</span>
+            </NavLink>
+          )}
+
+          {isAdmin && settings?.express_workflow_enabled && (
+            <NavLink
+              to="/gastos"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                trending_down
+              </span>
+              <span className="text-sm font-bold">Gastos</span>
+              <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
+                NUEVO
+              </span>
+            </NavLink>
+          )}
+
+          {isAdmin && settings?.employee_production_enabled && (
+            <NavLink
+              to="/rendimiento-staff"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                groups
+              </span>
+              <span className="text-sm font-bold">Rendimiento Staff</span>
+              <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
+                NUEVO
+              </span>
+            </NavLink>
+          )}
+
+          {isAdmin && settings?.daily_production_enabled && (
+            <NavLink
+              to="/produccion-diaria"
+              className={({ isActive }) => `
+                              flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200
+                              ${
+                                isActive
+                                  ? "bg-slate-100 dark:bg-white/10 text-primary dark:text-white shadow-sm"
+                                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-primary dark:hover:text-white"
+                              }
+                          `}
+              onClick={() => setIsOpen(false)}
+            >
+              <span className="material-icons-outlined text-[20px]">
+                assignment
+              </span>
+              <span className="text-sm font-bold">Produccion Diaria</span>
+              <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[9px] px-1.5 py-0.5 rounded-md font-black tracking-tighter ml-auto">
+                NUEVO
+              </span>
             </NavLink>
           )}
 

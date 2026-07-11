@@ -149,7 +149,7 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
       />
 
       <div className="ticket-productos">
-        {venta.productos.map((item, idx) => (
+        {venta.productos?.length > 0 ? venta.productos.map((item, idx) => (
           <div
             key={idx}
             className="ticket-producto"
@@ -184,6 +184,11 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
             </div>
           </div>
         ))}
+        ) : (
+          <div style={{textAlign: "center", fontStyle: "italic", fontSize: "0.9em", padding: "5px 0"}}>
+            Sin artículos registrados
+          </div>
+        )}
       </div>
 
       <div
@@ -249,13 +254,13 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
         >
           <span>MÉTODO PAGO:</span>
           <span>
-            {venta.metodo_pago === "cash"
+            {(venta.metodo_pago || venta.payment_method) === "cash"
               ? "EFECTIVO"
-              : venta.metodo_pago === "card"
+              : (venta.metodo_pago || venta.payment_method) === "card"
                 ? "TARJETA"
-                : venta.metodo_pago === "transferencia"
+                : (venta.metodo_pago || venta.payment_method) === "transferencia"
                   ? "TRANSFERENCIA"
-                  : venta.metodo_pago || "N/A"}
+                  : (venta.metodo_pago || venta.payment_method) || "N/A"}
           </span>
         </div>
         <div
@@ -515,6 +520,57 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
           Válido durante el mes de compra.
         </div>
       </div>
+      )}
+
+      {/* SECCIÓN DE ESTANTERÍA - QR DE LOCALIZACIÓN */}
+      {settings?.shelving_enabled && venta.shelfAssignment && (
+        <div
+          className="ticket-shelving-section"
+          style={{
+            border: "1.5px solid #10b981",
+            padding: "8px 6px",
+            marginTop: "12px",
+            textAlign: "center",
+            borderRadius: "6px",
+            backgroundColor: "#f0fdf4",
+          }}
+        >
+          <div style={{ fontWeight: "900", fontSize: "0.95em", marginBottom: "6px", color: "#065f46" }}>
+            UBICACIÓN DE ROPA
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+            <div style={{ background: "white", padding: "5px", borderRadius: "4px" }}>
+              <QRCodeSVG
+                value={`${window.location.origin}${window.location.pathname}#/shelving/scan?orderId=${venta.id}&shelf=${venta.shelfAssignment?.shelf?.label || ''}`}
+                size={90}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px dashed #10b981", margin: "6px 0" }}></div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9em", marginBottom: "2px" }}>
+            <span>ESTANTERÍA:</span>
+            <span style={{ fontWeight: "900", color: "#065f46", fontSize: "1.1em" }}>
+              {venta.shelfAssignment?.shelf?.label || 'N/A'}
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8em" }}>
+            <span>FILA:</span>
+            <span style={{ fontWeight: "700" }}>{venta.shelfAssignment?.shelf?.row_label || 'N/A'}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8em" }}>
+            <span>COLUMNA:</span>
+            <span style={{ fontWeight: "700" }}>{venta.shelfAssignment?.shelf?.column_number || 'N/A'}</span>
+          </div>
+
+          <div style={{ fontSize: "0.7em", marginTop: "6px", color: "#64748b" }}>
+            Escanea el QR para localizar la ropa
+          </div>
+        </div>
       )}
 
       <div

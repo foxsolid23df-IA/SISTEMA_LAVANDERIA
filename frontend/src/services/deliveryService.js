@@ -441,6 +441,7 @@ export const deliveryService = {
                 amount,
                 payment_method: paymentData.payment_method,
                 reference: paymentData.reference || null,
+                proof_photo_path: paymentData.proof_photo_path || null,
                 status: 'driver_collected'
             }])
             .select()
@@ -666,7 +667,8 @@ export const deliveryService = {
             driver_session_token: driver?.session_token,
             amount,
             payment_method: paymentData.payment_method,
-            reference: paymentData.reference || ''
+            reference: paymentData.reference || '',
+            proof_photo_path: paymentData.proof_photo_path || null
         });
         const payment = result.payment;
 
@@ -787,5 +789,74 @@ export const deliveryService = {
             return { success: false, error };
         }
         return data;
+    },
+
+    // Probar conexión con el gateway de WhatsApp configurado
+    testWhatsAppConnection: async (gatewayType, sessionToken, instanceName) => {
+        const { data, error } = await supabase.functions.invoke('test-whatsapp-connection', {
+            body: {
+                gateway_type: gatewayType,
+                session_token: sessionToken,
+                instance_name: instanceName || undefined
+            }
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    // Conciliar todos los pagos pendientes de chofer
+    reconcileAllPayments: async () => {
+        const result = await runDeliveryAction('reconcile_all_payments', {});
+        return result;
+    },
+
+    // --- Pickup Zones ---
+
+    getPickupZones: async (storeId) => {
+        const { data, error } = await supabase
+            .from('pickup_zones')
+            .select('*')
+            .eq('user_id', storeId)
+            .order('sort_order', { ascending: true });
+        if (error) throw error;
+        return data || [];
+    },
+
+    savePickupZone: async (zoneData) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("No autenticado");
+        
+        const payload = {
+            ...zoneData,
+            user_id: user.id
+        };
+
+        if (payload.id) {
+            const { data, error } = await supabase
+                .from('pickup_zones')
+                .update(payload)
+                .eq('id', payload.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            const { data, error } = await supabase
+                .from('pickup_zones')
+                .insert([payload])
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+    },
+
+    deletePickupZone: async (id) => {
+        const { error } = await supabase
+            .from('pickup_zones')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        return true;
     }
 };

@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const NOTIFY_ORDER_VERSION = "delivery-quote-v3-20260528";
+const NOTIFY_ORDER_VERSION = "delivery-quote-v4-20260708";
 
 type DispatchConfig = {
   whatsappGatewayType: string;
@@ -261,7 +261,7 @@ serve(async (req) => {
       );
     }
 
-    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://sistema-ventas-topaz.vercel.app";
+    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://sistema-lavanderia-nu.vercel.app";
     const trackingUrl = `${appBaseUrl}/#/tracking/${tracking_token}`;
     const driverPortalUrl = `${appBaseUrl}/#/chofer`;
     const mapsUrl = customer_address
@@ -272,7 +272,7 @@ serve(async (req) => {
     let customerMessage = "";
     switch (status) {
       case "quoted":
-        customerMessage = `Hola ${customer_name}! *${store_name}* ya reviso tu solicitud.\n\nTarifa de recogida / delivery: $${Number(delivery_fee || 0).toFixed(2)} MXN.${quote_notes ? `\nNota: ${quote_notes}` : ""}\n\nEl costo del lavado se calcula despues en sucursal segun tus prendas. Revisa el detalle y confirma como prefieres pagar aqui: ${trackingUrl}`;
+        customerMessage = `Hola ${customer_name}! *${store_name}* ya revisó tu solicitud.\n\n📦 Tarifa de recogida: $${Number(delivery_fee || 0).toFixed(2)} MXN${quote_notes ? `\n📝 Nota: ${quote_notes}` : ""}\n\nEl costo del lavado se calcula después en sucursal según tus prendas.\n\n¿Aceptas? Responde *SI* o *NO*\nO revisa el detalle aquí: ${trackingUrl}`;
         break;
       case "accepted":
       case "assigned":
@@ -310,6 +310,55 @@ serve(async (req) => {
 
     const customerResult = await sendMessage(customer_phone, customerMessage, config);
     let driverResult: DispatchResult | null = null;
+
+    // ── Si es cotización, activar estado awaiting_client_approval en chatbot ──
+    if (status === "quoted" && user_id && customer_phone && order_id) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+        if (supabaseUrl && serviceRoleKey) {
+          const supabaseChatbot = createClient(supabaseUrl, serviceRoleKey);
+          const chatContext = {
+            pending_approval_order_id: order_id,
+            quoted_fee: Number(delivery_fee) || 0,
+            quoted_service_cost: Number(service_cost) || 0,
+          };
+
+          // Buscar conversación existente
+          const { data: existingConv } = await supabaseChatbot
+            .from("whatsapp_conversations")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("customer_phone", customer_phone)
+            .maybeSingle();
+
+          if (existingConv) {
+            await supabaseChatbot
+              .from("whatsapp_conversations")
+              .update({
+                current_state: "awaiting_client_approval",
+                context: chatContext,
+                last_message_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingConv.id);
+          } else {
+            await supabaseChatbot
+              .from("whatsapp_conversations")
+              .insert([{
+                user_id: user_id,
+                customer_phone: customer_phone,
+                customer_name: customer_name,
+                current_state: "awaiting_client_approval",
+                context: chatContext,
+              }]);
+          }
+          console.log(`[notify-order] Chatbot state set to awaiting_client_approval for order #${order_id}`);
+        }
+      } catch (chatErr) {
+        console.warn("[notify-order] No se pudo actualizar estado del chatbot:", chatErr);
+      }
+    }
 
     await logNotification({
       user_id,

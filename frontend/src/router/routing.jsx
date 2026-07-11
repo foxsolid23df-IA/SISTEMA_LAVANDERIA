@@ -16,6 +16,9 @@ import { ProductProvider } from "../contexts/ProductContext";
 import { SettingsProvider } from "../contexts/SettingsContext";
 import { platform } from "../utils/platform";
 
+// Modo driver: APK independiente solo para repartidores
+const IS_DRIVER_MODE = import.meta.env.VITE_BUILD_MODE === 'driver';
+
 import { ScrollToTop } from "../components/common/ScrollToTop";
 import { ScrollTopButton } from "../components/common/ScrollTopButton";
 import { LicenseGuard } from "../components/common/LicenseGuard";
@@ -48,12 +51,23 @@ const DriverPortal = lazy(() => import("../components/delivery/DriverPortal").th
 const OrderTracking = lazy(() => import("../components/delivery/OrderTracking").then(m => ({ default: m.OrderTracking })));
 const MobileCapture = lazy(() => import("../components/ai/MobileCapture"));
 const AdminPanel = lazy(() => import("../components/admin/AdminPanel").then(m => ({ default: m.AdminPanel })));
+const AIKnowledgeBase = lazy(() => import("../components/admin/AIKnowledgeBase"));
 const CashReportsView = lazy(() => import("../components/reports/CashReportsView").then(m => ({ default: m.CashReportsView })));
 const CancellationsReport = lazy(() => import("../components/reports/CancellationsReport"));
 const CuentasPorCobrar = lazy(() => import("../components/accounts/CuentasPorCobrar").then(m => ({ default: m.CuentasPorCobrar })));
 const MasterLicenseManager = lazy(() => import("../components/admin/MasterLicenseManager").then(m => ({ default: m.MasterLicenseManager })));
 const SuperAdminLogin = lazy(() => import("../components/auth/SuperAdminLogin").then(m => ({ default: m.SuperAdminLogin })));
 const SuperAdminLayout = lazy(() => import("../components/common/SuperAdminLayout").then(m => ({ default: m.SuperAdminLayout })));
+const ShelvingDashboard = lazy(() => import("../components/shelving/ShelvingDashboard").then(m => ({ default: m.ShelvingDashboard })));
+const ShelvingConfiguration = lazy(() => import("../components/admin/ShelvingConfiguration").then(m => ({ default: m.ShelvingConfiguration })));
+const ShelfScanner = lazy(() => import("../components/shelving/ShelfScanner").then(m => ({ default: m.ShelfScanner })));
+const QRScanResult = lazy(() => import("../components/shelving/QRScanResult").then(m => ({ default: m.QRScanResult })));
+const ShelvingHistory = lazy(() => import("../components/shelving/ShelvingHistory").then(m => ({ default: m.ShelvingHistory })));
+const ShelvingReports = lazy(() => import("../components/shelving/ShelvingReports").then(m => ({ default: m.ShelvingReports })));
+const Expenses = lazy(() => import("../components/expenses/Expenses").then(m => ({ default: m.Expenses })));
+const SimpleServiceCatalog = lazy(() => import("../components/inventory/SimpleServiceCatalog").then(m => ({ default: m.SimpleServiceCatalog })));
+const RendimientoStaff = lazy(() => import("../components/reports/RendimientoStaff").then(m => ({ default: m.RendimientoStaff })));
+const ProduccionDiaria = lazy(() => import("../components/reports/ProduccionDiaria").then(m => ({ default: m.ProduccionDiaria })));
 
 const ModuleFallback = () => (
   <div className="flex items-center justify-center min-h-[60dvh] text-slate-400 text-sm font-medium">
@@ -87,8 +101,9 @@ const PrivateLayout = ({ children, chrome = true }) => {
   );
   const [isValidating, setIsValidating] = useState(false);
 
+  // En modo driver: skip terminal validation, lock screen, cash session
   useEffect(() => {
-    if (!user || isValidating) return;
+    if (IS_DRIVER_MODE || !user || isValidating) return;
 
     const terminalValidatedSession =
       sessionStorage.getItem("terminal_validated");
@@ -116,13 +131,13 @@ const PrivateLayout = ({ children, chrome = true }) => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (
-      user &&
-      activeStaff &&
-      !isLocked &&
-      isTerminalConfigured &&
-      !isValidating &&
-      !adminMode
+    if (!IS_DRIVER_MODE &&
+        user &&
+        activeStaff &&
+        !isLocked &&
+        isTerminalConfigured &&
+        !isValidating &&
+        !adminMode
     ) {
       checkCashSession();
     }
@@ -135,26 +150,29 @@ const PrivateLayout = ({ children, chrome = true }) => {
     adminMode,
   ]);
 
-  if (loading || isValidating)
+  if (loading || (!IS_DRIVER_MODE && isValidating))
     return <div className="loading-screen">Verificando configuraci\u00f3n...</div>;
   if (!user) return <Navigate to="/login" />;
 
-  if (!isTerminalConfigured && !adminMode) {
-    return (
+  // En modo driver: skip terminal setup, lock screen, cash fund
+  if (!IS_DRIVER_MODE) {
+    if (!isTerminalConfigured && !adminMode) {
+      return (
+        <Suspense fallback={<ModuleFallback />}>
+          <TerminalSetup
+            onTerminalConfigured={() => setIsTerminalConfigured(true)}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
+      );
+    }
+
+    if (isLocked) return (
       <Suspense fallback={<ModuleFallback />}>
-        <TerminalSetup
-          onTerminalConfigured={() => setIsTerminalConfigured(true)}
-          isAdmin={isAdmin}
-        />
+        <LockScreen />
       </Suspense>
     );
   }
-
-  if (isLocked) return (
-    <Suspense fallback={<ModuleFallback />}>
-      <LockScreen />
-    </Suspense>
-  );
 
   if (!chrome) {
     return <LicenseGuard>{children}</LicenseGuard>;
@@ -198,6 +216,10 @@ const InventoryRoute = ({ children }) => {
 };
 
 const DefaultRoute = () => {
+  // En modo driver: siempre redirigir a /chofer
+  if (IS_DRIVER_MODE) {
+    return <Navigate to="/chofer" replace />;
+  }
   if (!platform.isNativePos) {
     return <Navigate to="/estadisticas" replace />;
   }
@@ -362,40 +384,63 @@ export const Routing = () => {
                     <Route path="/login" element={wrapLazy(Login)} />
                     <Route path="/register/:invitationCode?" element={wrapLazy(Login)} />
 
-                    <Route path="/" element={<PrivateLayout><DefaultRoute /></PrivateLayout>} />
-                    <Route path="/ventas" element={<PrivateLayout>{wrapLazy(Sales)}</PrivateLayout>} />
-                    <Route path="/servicios" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="SERVICE" />)}</InventoryRoute></PrivateLayout>} />
-                    <Route path="/productos" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="PRODUCT" />)}</InventoryRoute></PrivateLayout>} />
-                    <Route path="/insumos" element={<PrivateLayout><InventoryRoute>{wrapLazy(SupplyInventory)}</InventoryRoute></PrivateLayout>} />
-                    <Route path="/historial" element={<PrivateLayout>{wrapLazy(Historial)}</PrivateLayout>} />
-                    <Route path="/ordenes" element={<PrivateLayout>{wrapLazy(Orders)}</PrivateLayout>} />
-                    <Route path="/estadisticas" element={<PrivateLayout>{wrapLazy(Stats)}</PrivateLayout>} />
-                    <Route path="/clientes" element={<PrivateLayout>{wrapLazy(ClientManager)}</PrivateLayout>} />
-                    <Route path="/delivery" element={<PrivateLayout><DeliveryModuleRoute /></PrivateLayout>} />
-                    <Route path="/chofer" element={<PrivateLayout chrome={false}><DriverPortalRoute /></PrivateLayout>} />
-                    <Route path="/configuracion" element={<PrivateLayout>{wrapLazy(ConfiguracionPortal)}</PrivateLayout>} />
-                    <Route path="/reportes-caja" element={<PrivateLayout><CashReportsRoute>{wrapLazy(CashReportsView)}</CashReportsRoute></PrivateLayout>} />
-                    <Route path="/reporte-cancelaciones" element={<PrivateLayout><CancellationsRoute>{wrapLazy(CancellationsReport)}</CancellationsRoute></PrivateLayout>} />
-                    <Route path="/cuentas-por-cobrar" element={<PrivateLayout><PendingAccountsRoute>{wrapLazy(CuentasPorCobrar)}</PendingAccountsRoute></PrivateLayout>} />
-                    <Route path="/admin" element={<PrivateLayout><AdminRoute>{wrapLazy(AdminPanel)}</AdminRoute></PrivateLayout>} />
-                    <Route path="/usuarios" element={<PrivateLayout><AdminRoute>{wrapLazy(UserManager)}</AdminRoute></PrivateLayout>} />
-                    <Route path="/configuracion-dolares" element={<PrivateLayout>{wrapLazy(ExchangeRateSettings)}</PrivateLayout>} />
-                    <Route path="/configuracion-impuestos" element={<PrivateLayout>{wrapLazy(TaxSettings)}</PrivateLayout>} />
-                    <Route path="/configuracion-pagos" element={<PrivateLayout>{wrapLazy(PaymentMethodsSettings)}</PrivateLayout>} />
-                    <Route path="/configuracion-servicios-express" element={<PrivateLayout>{wrapLazy(ServiciosExpressSettings)}</PrivateLayout>} />
-                    <Route path="/precios" element={<PrivateLayout>{wrapLazy(PriceConfiguration)}</PrivateLayout>} />
-                    <Route path="/configuracion-ticket" element={<PrivateLayout>{wrapLazy(TicketConfiguration)}</PrivateLayout>} />
-                    <Route path="/config-emisores" element={<PrivateLayout><AdminRoute>{wrapLazy(BillingIssuers)}</AdminRoute></PrivateLayout>} />
-                    <Route path="/cancelar-factura" element={<PrivateLayout><AdminRoute>{wrapLazy(InvoiceCancellation)}</AdminRoute></PrivateLayout>} />
-                    <Route path="/soporte-tecnico-especializado-nexusprolavanderia" element={<PrivateLayout><AdminRoute>{wrapLazy(Maintenance)}</AdminRoute></PrivateLayout>} />
+                    {IS_DRIVER_MODE ? (
+                      // Modo driver: solo rutas /chofer y login
+                      <>
+                        <Route path="/" element={<PrivateLayout chrome={false}><DefaultRoute /></PrivateLayout>} />
+                        <Route path="/chofer" element={<PrivateLayout chrome={false}><DriverPortalRoute /></PrivateLayout>} />
+                        <Route path="*" element={<Navigate to="/chofer" replace />} />
+                      </>
+                    ) : (
+                      // Modo normal: todas las rutas
+                      <>
+                        <Route path="/" element={<PrivateLayout><DefaultRoute /></PrivateLayout>} />
+                        <Route path="/ventas" element={<PrivateLayout>{wrapLazy(Sales)}</PrivateLayout>} />
+                        <Route path="/servicios" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="SERVICE" />)}</InventoryRoute></PrivateLayout>} />
+                        <Route path="/servicios-express" element={<PrivateLayout><AdminRoute>{wrapLazy(SimpleServiceCatalog)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/productos" element={<PrivateLayout><InventoryRoute>{wrapLazy(() => <Inventory mode="PRODUCT" />)}</InventoryRoute></PrivateLayout>} />
+                        <Route path="/insumos" element={<PrivateLayout><InventoryRoute>{wrapLazy(SupplyInventory)}</InventoryRoute></PrivateLayout>} />
+                        <Route path="/historial" element={<PrivateLayout>{wrapLazy(Historial)}</PrivateLayout>} />
+                        <Route path="/ordenes" element={<PrivateLayout>{wrapLazy(Orders)}</PrivateLayout>} />
+                        <Route path="/estadisticas" element={<PrivateLayout>{wrapLazy(Stats)}</PrivateLayout>} />
+                        <Route path="/clientes" element={<PrivateLayout>{wrapLazy(ClientManager)}</PrivateLayout>} />
+                        <Route path="/delivery" element={<PrivateLayout><DeliveryModuleRoute /></PrivateLayout>} />
+                        <Route path="/chofer" element={<PrivateLayout chrome={false}><DriverPortalRoute /></PrivateLayout>} />
+                        <Route path="/configuracion" element={<PrivateLayout>{wrapLazy(ConfiguracionPortal)}</PrivateLayout>} />
+                        <Route path="/reportes-caja" element={<PrivateLayout><CashReportsRoute>{wrapLazy(CashReportsView)}</CashReportsRoute></PrivateLayout>} />
+                        <Route path="/reporte-cancelaciones" element={<PrivateLayout><CancellationsRoute>{wrapLazy(CancellationsReport)}</CancellationsRoute></PrivateLayout>} />
+                        <Route path="/cuentas-por-cobrar" element={<PrivateLayout><PendingAccountsRoute>{wrapLazy(CuentasPorCobrar)}</PendingAccountsRoute></PrivateLayout>} />
+                        <Route path="/gastos" element={<PrivateLayout><AdminRoute>{wrapLazy(Expenses)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/rendimiento-staff" element={<PrivateLayout><AdminRoute>{wrapLazy(RendimientoStaff)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/produccion-diaria" element={<PrivateLayout><AdminRoute>{wrapLazy(ProduccionDiaria)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/estanterias" element={<PrivateLayout>{wrapLazy(ShelvingDashboard)}</PrivateLayout>} />
+                        <Route path="/configuracion-estanterias" element={<PrivateLayout>{wrapLazy(ShelvingConfiguration)}</PrivateLayout>} />
+                        <Route path="/escanear-estanteria" element={<PrivateLayout>{wrapLazy(ShelfScanner)}</PrivateLayout>} />
+                        <Route path="/historial-estanterias" element={<PrivateLayout>{wrapLazy(ShelvingHistory)}</PrivateLayout>} />
+                        <Route path="/reportes-estanterias" element={<PrivateLayout>{wrapLazy(ShelvingReports)}</PrivateLayout>} />
+                        <Route path="/shelving/scan" element={wrapLazy(QRScanResult)} />
+                        <Route path="/admin" element={<PrivateLayout><AdminRoute>{wrapLazy(AdminPanel)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/admin/ia-conocimiento" element={<PrivateLayout><AdminRoute>{wrapLazy(AIKnowledgeBase)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/usuarios" element={<PrivateLayout><AdminRoute>{wrapLazy(UserManager)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/configuracion-dolares" element={<PrivateLayout>{wrapLazy(ExchangeRateSettings)}</PrivateLayout>} />
+                        <Route path="/configuracion-impuestos" element={<PrivateLayout>{wrapLazy(TaxSettings)}</PrivateLayout>} />
+                        <Route path="/configuracion-pagos" element={<PrivateLayout>{wrapLazy(PaymentMethodsSettings)}</PrivateLayout>} />
+                        <Route path="/configuracion-servicios-express" element={<PrivateLayout>{wrapLazy(ServiciosExpressSettings)}</PrivateLayout>} />
+                        <Route path="/precios" element={<PrivateLayout>{wrapLazy(PriceConfiguration)}</PrivateLayout>} />
+                        <Route path="/configuracion-ticket" element={<PrivateLayout>{wrapLazy(TicketConfiguration)}</PrivateLayout>} />
+                        <Route path="/config-emisores" element={<PrivateLayout><AdminRoute>{wrapLazy(BillingIssuers)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/cancelar-factura" element={<PrivateLayout><AdminRoute>{wrapLazy(InvoiceCancellation)}</AdminRoute></PrivateLayout>} />
+                        <Route path="/soporte-tecnico-especializado-nexusprolavanderia" element={<PrivateLayout><AdminRoute>{wrapLazy(Maintenance)}</AdminRoute></PrivateLayout>} />
 
-                    <Route path="*" element={
-                      <div style={{ padding: "2rem", textAlign: "center" }}>
-                        <h1>Error 404</h1>
-                        <p>P\u00e1gina no encontrada</p>
-                        <Link to="/">Volver al Inicio</Link>
-                      </div>
-                    } />
+                        <Route path="*" element={
+                          <div style={{ padding: "2rem", textAlign: "center" }}>
+                            <h1>Error 404</h1>
+                            <p>P\u00e1gina no encontrada</p>
+                            <Link to="/">Volver al Inicio</Link>
+                          </div>
+                        } />
+                      </>
+                    )}
                   </Routes>
                 </ProductProvider>
               </SettingsProvider>

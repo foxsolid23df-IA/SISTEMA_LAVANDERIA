@@ -155,6 +155,7 @@ export const printService = {
     async print(content, printerName = null, options = {}) {
         const copies = options.copies || 1;
         const settings = options.settings || {};
+        const paperSize = options.paperSize || 'thermal';
         const normalizedPrinter = (printerName === 'Default' || printerName === 'default') ? null : printerName;
 
         try {
@@ -166,7 +167,7 @@ export const printService = {
             // (html2canvas generaba imÃ¡genes demasiado grandes para el buffer de impresoras tÃ©rmicas)
             if (content instanceof HTMLElement) {
                 console.log('[PrintService] Modo HTML directo â€” Extrayendo del DOM');
-                printHtml = this.extractHtmlFromElement(content, settings);
+                printHtml = this.extractHtmlFromElement(content, settings, paperSize);
             } else {
                 // Compatibilidad: si recibimos HTML string, asegurar charset UTF-8
                 console.log('[PrintService] Modo HTML (legacy) â€” Contenido string');
@@ -244,8 +245,10 @@ export const printService = {
      * @param {object} settings - ConfiguraciÃ³n del negocio
      * @returns {string} - HTML completo listo para imprimir
      */
-    extractHtmlFromElement(element, settings = {}) {
-        const width = settings.printer_width || 80;
+    extractHtmlFromElement(element, settings = {}, paperSize = 'thermal') {
+        const isRemision = paperSize === 'remision';
+        const width = isRemision ? '108' : (settings.printer_width || 80);
+        const widthMm = isRemision ? '10.8cm' : `${width}mm`;
         const fontSize = settings.printer_font_size || 12;
         const fontFamily = settings.printer_font_family || "'Courier New', Courier, monospace";
         const fontWeight = settings.printer_is_bold ? 'bold' : 'normal';
@@ -253,6 +256,10 @@ export const printService = {
 
         // Obtener el HTML renderizado directamente del componente React
         const ticketInnerHtml = element.outerHTML;
+
+        const pageSizeCss = isRemision
+          ? `@page { margin: 2mm !important; size: 10.8cm 14cm; }`
+          : `@page { margin: 0 !important; size: ${width}mm auto; }`;
 
         return `<!DOCTYPE html>
 <html>
@@ -266,16 +273,13 @@ export const printService = {
             box-sizing: border-box !important; 
         }
         
-        @page { 
-            margin: 0 !important; 
-            size: ${width}mm auto; 
-        }
+        ${pageSizeCss}
         
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: ${width}mm;
-            max-width: ${width}mm;
+            width: ${widthMm};
+            max-width: ${widthMm};
             background: white;
             color: black;
             font-family: ${fontFamily};
@@ -352,11 +356,11 @@ export const printService = {
         
         /* ===== PRINT MEDIA ===== */
         @media print {
-            @page { margin: 0 !important; size: ${width}mm auto; }
+            ${pageSizeCss}
             html, body { 
                 margin: 0 !important; 
                 padding: 0 !important; 
-                width: ${width}mm;
+                width: ${widthMm};
             }
             .ticket-venta { 
                 width: 100% !important; 

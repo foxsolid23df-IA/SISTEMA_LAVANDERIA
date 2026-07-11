@@ -32,6 +32,11 @@ const Inventory = ({ mode = 'SERVICE' }) => {
     
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Clear selection when search changes
+    useEffect(() => {
+        setSelectedIds([]);
+    }, [searchTerm]);
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 20;
@@ -51,6 +56,13 @@ const Inventory = ({ mode = 'SERVICE' }) => {
     const [showModal, setShowModal] = useState(false);
     const [showQuickEntryModal, setShowQuickEntryModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+
+    // Multi-select State
+    const [selectedIds, setSelectedIds] = useState([]);
+
+    // Inactive products toggle
+    const [showInactive, setShowInactive] = useState(false);
+    const [inactiveProducts, setInactiveProducts] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -114,6 +126,52 @@ const Inventory = ({ mode = 'SERVICE' }) => {
             });
 
         setEditingProduct(null);
+    };
+
+    // Multi-select helpers
+    const toggleSelect = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        const visibleIds = paginatedProducts.map(p => p.id);
+        const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+        } else {
+            setSelectedIds(prev => [...new Set([...prev, ...visibleIds])]);
+        }
+    };
+
+    const clearSelection = () => setSelectedIds([]);
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+
+        const result = await Swal.fire({
+            title: '¿Desactivar servicios seleccionados?',
+            html: `Se desactivarán <strong>${selectedIds.length}</strong> servicio(s) del catálogo.<br/><br/>Podrás reactivarlos desde la sección de inactivos.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: `Sí, desactivar ${selectedIds.length}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await productService.deleteProducts(selectedIds);
+                Swal.fire('Desactivados', `${selectedIds.length} servicio(s) desactivado(s)`, 'success');
+                setSelectedIds([]);
+                fetchProducts();
+            } catch (error) {
+                console.error('Error bulk deleting:', error);
+                Swal.fire('Error', 'No se pudieron desactivar los servicios seleccionados', 'error');
+            }
+        }
     };
 
 
@@ -248,6 +306,88 @@ const Inventory = ({ mode = 'SERVICE' }) => {
         } catch (error) {
             console.error('Error exporting excel:', error);
             Swal.fire('Error', 'No se pudo exportar el archivo Excel', 'error');
+        }
+    };
+
+    const handleDeleteAllProducts = async () => {
+        const result = await Swal.fire({
+            title: "¿Limpiar inventario?",
+            text: "Se desactivarán todos los productos físicos de esta tienda. Los servicios del Catálogo Express NO se verán afectados. Las órdenes históricas se conservan.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#dc2626",
+            confirmButtonText: "Sí, limpiar inventario",
+            cancelButtonText: "Cancelar"
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await productService.deleteAllProducts();
+            Swal.fire("Hecho", "Todos los productos del inventario han sido desactivados.", "success");
+            fetchProducts();
+        } catch (error) {
+            console.error("Error limpiando inventario:", error);
+            Swal.fire("Error", "No se pudo limpiar el inventario.", "error");
+        }
+    };
+
+    const handleDeleteAllInventoryServices = async () => {
+        const result = await Swal.fire({
+            title: "¿Limpiar servicios del inventario?",
+            text: "Se desactivarán los servicios del inventario general. Los servicios del Catálogo Express NO se verán afectados.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#dc2626",
+            confirmButtonText: "Sí, limpiar servicios",
+            cancelButtonText: "Cancelar"
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await productService.deleteAllInventoryServices();
+            Swal.fire("Hecho", "Los servicios del inventario han sido desactivados. Catálogo Express intacto.", "success");
+            fetchProducts();
+        } catch (error) {
+            console.error("Error limpiando servicios del inventario:", error);
+            Swal.fire("Error", "No se pudo limpiar los servicios.", "error");
+        }
+    };
+
+    const loadInactiveProducts = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('type', isServiceMode ? 'SERVICE' : 'PRODUCT')
+                .eq('is_active', false)
+                .order('name', { ascending: true });
+            if (error) throw error;
+            setInactiveProducts(data || []);
+        } catch (error) {
+            console.error("Error cargando productos inactivos:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (showInactive) {
+            loadInactiveProducts();
+        }
+    }, [showInactive, isServiceMode]);
+
+    const handleReactivate = async (id) => {
+        try {
+            await productService.reactivateProduct(id);
+            Swal.fire("Reactivado", "El producto/servicio ha sido reactivado.", "success");
+            loadInactiveProducts();
+            fetchProducts();
+        } catch (error) {
+            console.error("Error reactivando:", error);
+            Swal.fire("Error", "No se pudo reactivar.", "error");
         }
     };
 
@@ -477,6 +617,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
             [name]: value
         }));
         setCurrentPage(1);
+        setSelectedIds([]);
     };
 
     const handleClearFilters = () => {
@@ -486,6 +627,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
             maxPrice: ''
         });
         setCurrentPage(1);
+        setSelectedIds([]);
     };
 
     // Aplicar filtros, búsqueda y MODO (Service vs Product)
@@ -655,6 +797,34 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                         <span className="material-symbols-outlined text-[18px]">dark_mode</span>
                         <span className="hidden sm:inline">Tema</span>
                     </button>
+                    {!isServiceMode && (
+                        <button 
+                            onClick={handleDeleteAllProducts}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
+                            title="Desactivar todos los productos del inventario"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">cleaning_services</span>
+                            <span className="hidden sm:inline">Limpiar inventario</span>
+                        </button>
+                    )}
+                    {isServiceMode && (
+                        <button 
+                            onClick={handleDeleteAllInventoryServices}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg transition-all font-bold text-xs"
+                            title="Desactivar servicios del inventario. Catálogo Express no se verá afectado."
+                        >
+                            <span className="material-symbols-outlined text-[18px]">cleaning_services</span>
+                            <span className="hidden sm:inline">Limpiar serv. inventario</span>
+                        </button>
+                    )}
+                    <button 
+                        onClick={() => { setShowInactive(!showInactive); if (!showInactive) setInactiveProducts([]); }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl shadow-sm hover:shadow-md transition-all font-bold text-xs border ${showInactive ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-900/30 dark:border-rose-700 dark:text-rose-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}
+                        title="Mostrar productos y servicios inactivos"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">{showInactive ? 'visibility_off' : 'visibility'}</span>
+                        <span className="hidden sm:inline">{showInactive ? 'Ocultar inactivos' : 'Mostrar inactivos'}</span>
+                    </button>
                 </div>
             </header>
 
@@ -731,10 +901,40 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                 {loading ? (
                     <div className="loading-state">Cargando catálogo...</div>
                 ) : (
-                    <div className="table-container">
+                    <>
+                        {isServiceMode && selectedIds.length > 0 && (
+                            <div className="bulk-actions-bar">
+                                <span className="selected-count">
+                                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>check_circle</span>
+                                    {selectedIds.length} servicio(s) seleccionado(s)
+                                </span>
+                                <div className="bulk-actions-buttons">
+                                    <button className="bulk-clear-btn" onClick={clearSelection}>
+                                        <FiX style={{ fontSize: '14px' }} />
+                                        Limpiar
+                                    </button>
+                                    <button className="bulk-delete-btn" onClick={handleBulkDelete}>
+                                        <FiTrash2 style={{ fontSize: '14px' }} />
+                                        Desactivar ({selectedIds.length})
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <div className="table-container">
                         <table className="products-table">
                             <thead>
                                 <tr>
+                                    {isServiceMode && (
+                                        <th className="checkbox-col">
+                                            <input
+                                                type="checkbox"
+                                                className="table-checkbox"
+                                                checked={paginatedProducts.length > 0 && paginatedProducts.every(p => selectedIds.includes(p.id))}
+                                                ref={el => { if (el) el.indeterminate = paginatedProducts.some(p => selectedIds.includes(p.id)) && !paginatedProducts.every(p => selectedIds.includes(p.id)); }}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
+                                    )}
                                     <th>{isServiceMode ? 'Servicio' : 'Producto'}</th>
                                     <th>Categoría</th>
                                     {!isServiceMode && <th>Costo</th>}
@@ -750,7 +950,17 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                     paginatedProducts.map(product => {
                                         const isMenuOpen = activeMenuId === product.id;
                                         return (
-                                            <tr key={product.id} className="table-row">
+                                            <tr key={product.id} className={`table-row ${selectedIds.includes(product.id) ? 'selected' : ''}`}>
+                                                {isServiceMode && (
+                                                    <td className="checkbox-col">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="table-checkbox"
+                                                            checked={selectedIds.includes(product.id)}
+                                                            onChange={() => toggleSelect(product.id)}
+                                                        />
+                                                    </td>
+                                                )}
                                                 <td>
                                                     <div className="product-cell">
                                                         <div className="product-icon-placeholder">
@@ -822,10 +1032,10 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                                                         setActiveMenuId(null);
                                                                     }}
                                                                 >
-                                                                    <FiTrash2 />
-                                                                    Eliminar
-                                                                </button>
-                                                            </div>
+                                                                     <FiTrash2 />
+                                                                     Eliminar
+                                                                 </button>
+                    </div>
                                                         )}
                                                     </div>
                                                 </td>
@@ -834,7 +1044,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="empty-state-cell">
+                                        <td colSpan={isServiceMode ? 6 : 5} className="empty-state-cell">
                                             <div className="empty-state">
                                                 <p>No se encontraron {isServiceMode ? 'servicios' : 'productos'}</p>
                                             </div>
@@ -845,6 +1055,7 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                             </tbody>
                         </table>
                     </div>
+                    </>
                 )}
                 {!loading && filteredProducts.length > itemsPerPage && (
                     <div className="pagination-controls">
@@ -880,8 +1091,42 @@ const Inventory = ({ mode = 'SERVICE' }) => {
                             {filteredProducts.length} registros
                         </span>
                     </div>
-                )}
+                 )}
             </div>
+
+            {showInactive && (
+                <div className="inactive-products-section" style={{ marginTop: "20px", padding: "16px", backgroundColor: "#fef2f2", borderRadius: "16px", border: "1px solid #fecaca" }}>
+                    <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#b91c1c", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className="material-symbols-outlined">inventory_2</span>
+                        {isServiceMode ? "Servicios" : "Productos"} inactivos ({inactiveProducts.length})
+                    </h3>
+                    {inactiveProducts.length === 0 ? (
+                        <p style={{ fontSize: "12px", color: "#9ca3af" }}>No hay {isServiceMode ? "servicios" : "productos"} inactivos.</p>
+                    ) : (
+                        <div className="inventory-table-container" style={{ opacity: 0.7 }}>
+                            <table className="inventory-table">
+                                <tbody>
+                                    {inactiveProducts.map((item) => (
+                                        <tr key={item.id} style={{ backgroundColor: "#fff" }}>
+                                            <td style={{ textDecoration: "line-through", color: "#9ca3af" }}>{item.name}</td>
+                                            <td><span style={{ color: "#ef4444", fontWeight: 700, fontSize: "11px", background: "#fee2e2", padding: "2px 8px", borderRadius: "8px" }}>INACTIVO</span></td>
+                                            <td>
+                                                <button
+                                                    onClick={() => handleReactivate(item.id)}
+                                                    className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition-all"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                                                    Reactivar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {showModal && (
                 <div className="new-product-modal-overlay" onClick={handleCloseModal}>

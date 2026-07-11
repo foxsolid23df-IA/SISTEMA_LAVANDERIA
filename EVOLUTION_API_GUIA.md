@@ -258,6 +258,114 @@ En la app (`http://localhost:5173`), ve a:
 
 Esto guarda `whatsapp_gateway_type = 'qr_linked'` y `whatsapp_session_token = 'TU_API_KEY'` en la tabla `profiles` de Supabase.
 
+### 3. Probar la Conexión
+
+1. Haz clic en el botón **"Probar"** junto al campo de API Key.
+2. **Resultado esperado:** Aparece un cuadro verde con "Conectado" y el número de teléfono vinculado.
+3. Si aparece "Desconectado", verifica que:
+   - La instancia esté en estado `"open"` en el Manager
+   - La API Key sea exactamente igual a `AUTHENTICATION_API_KEY`
+   - La URL de `EVOLUTION_API_URL` en los Secrets de Supabase sea correcta
+
+---
+
+## 🤖 Chatbot Conversacional Automático
+
+El sistema incluye un chatbot que responde automáticamente cuando un cliente envía un mensaje por WhatsApp. Configúralo desde el modal de **"Mensajería"** en el dashboard de Delivery.
+
+### Cómo Activar
+
+1. Abre el modal de **"Mensajería"** en `/#/delivery`.
+2. Activa el toggle **"Chatbot Automático"**.
+3. Personaliza los mensajes de respuesta (opcional).
+4. Haz clic en **"Guardar Cambios"**.
+
+### Flujo del Chatbot
+
+```
+Cliente envía "Hola"
+  └→ Responde menú principal:
+     1️⃣ Solicitar recogida de ropa
+     2️⃣ Consultar mi pedido
+     3️⃣ Hablar con atención al cliente
+
+Cliente responde "1" (o "solicitar recogida")
+  └→ "Envía tu dirección o ubicación..."
+  └→ Estado: awaiting_address
+
+Cliente envía dirección
+  └→ Crea orden automáticamente
+  └→ Responde confirmación con link de tracking
+  └→ Estado: idle
+
+Cliente responde "2" (o "consultar pedido")
+  └→ "Envía tu folio o link de tracking..."
+  └→ Estado: awaiting_tracking
+
+Cliente envía folio/token
+  └→ Busca pedido en BD
+  └→ Responde con estatus actual
+  └→ Estado: idle
+
+Cliente responde "3" (o "hablar con agente")
+  └→ "Te comunicamos con atención al cliente..."
+  └→ Estado: agent_mode (el chatbot no responde más)
+
+Cliente escribe "menu" en cualquier momento
+  └→ Resetea a idle y muestra menú principal
+```
+
+### Variables Disponibles en Plantillas
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `{nombre}` | Nombre del cliente (pushName de WhatsApp) | "María García" |
+| `{tienda}` | Nombre de la tienda | "Lavandería Express" |
+| `{telefono}` | Teléfono del cliente | "5218112345678" |
+| `{direccion}` | Dirección detectada/confirmada | "Calle 10 #123, Col. Centro" |
+| `{tracking_url}` | Link de tracking de la orden | "https://sistema-lavanderia-nu.vercel.app/#/tracking/uuid..." |
+| `{folio}` | Número de ID de la orden | "42" |
+| `{estatus}` | Estado actual del pedido | "Solicitado", "Asignado a repartidor", "En sucursal" |
+
+### Mensajes Configurables
+
+| Mensaje | Cuándo se envía |
+|---------|-----------------|
+| **Bienvenida** | Cliente envía "Hola" o cualquier mensaje sin opción válida |
+| **Opción 1 (Recogida)** | Cliente elige solicitar recogida |
+| **Opción 2 (Tracking)** | Cliente quiere consultar su pedido |
+| **Opción 3 (Agente)** | Cliente quiere hablar con atención al cliente |
+| **Sin dirección** | No se detectó dirección en el mensaje |
+| **Confirmación de orden** | Se creó el pedido automáticamente |
+| **Tracking encontrado** | Se encontró el pedido con el folio/token |
+| **Tracking no encontrado** | No se encontró el pedido |
+| **Desactivado** | La tienda tiene delivery apagado |
+
+### Tabla de Conversaciones
+
+Las conversaciones activas se almacenan en la tabla `whatsapp_conversations`:
+
+```sql
+-- Ver conversaciones activas
+SELECT customer_phone, customer_name, current_state, last_message_at
+FROM whatsapp_conversations
+WHERE user_id = 'TU_STORE_ID'
+  AND current_state != 'idle'
+ORDER BY last_message_at DESC;
+
+-- Limpiar conversaciones abandonadas (>24h)
+SELECT cleanup_stale_conversations();
+```
+
+### Troubleshooting del Chatbot
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| El chatbot no responde | `whatsapp_chatbot_enabled = false` | Actívalo desde el modal de Mensajería |
+| Responde con texto por defecto en vez de plantilla personalizada | `whatsapp_auto_replies` está vacío | Guarda las plantillas desde el modal de Mensajería |
+| No crea la orden cuando el cliente envía dirección | El webhook no tiene la lógica de chatbot | Verifica que la Edge Function `handle-whatsapp-webhook` esté desplegada con la versión chatbot (`chatbot-v1-20260707`) |
+| El cliente queda en "agent_mode" y no recibe respuestas | El cliente pidió hablar con agente | El chatbot intentionally no responde en este modo. El cliente debe escribir "menu" para salir |
+
 ---
 
 ## 🔐 Variables de Entorno en Supabase Edge Functions
@@ -269,7 +377,7 @@ Las Edge Functions necesitan conocer tu URL de Evolution API. Configúralas en:
 ```
 EVOLUTION_API_URL       = https://abc123-xyz.ngrok-free.app   # o tu URL de Railway
 EVOLUTION_INSTANCE_NAME = lavanderia-demo
-APP_BASE_URL            = https://sistema-ventas-topaz.vercel.app
+APP_BASE_URL            = https://sistema-lavanderia-nu.vercel.app
 ```
 
 Si usas Twilio como fallback:
@@ -288,7 +396,32 @@ cd "c:\SISTEMA_ LAVANDERIA"
 
 npx supabase secrets set EVOLUTION_API_URL="https://abc123-xyz.ngrok-free.app"
 npx supabase secrets set EVOLUTION_INSTANCE_NAME="lavanderia-demo"
-npx supabase secrets set APP_BASE_URL="https://sistema-ventas-topaz.vercel.app"
+npx supabase secrets set APP_BASE_URL="https://sistema-lavanderia-nu.vercel.app"
+```
+
+#### Desplegar Edge Functions
+
+```powershell
+cd "c:\SISTEMA_ LAVANDERIA"
+
+# Funciones principales
+npx supabase functions deploy handle-whatsapp-webhook
+npx supabase functions deploy notify-order
+
+# Función de prueba de conexión
+npx supabase functions deploy test-whatsapp-connection
+
+# Otras funciones del módulo
+npx supabase functions deploy delivery-actions
+npx supabase functions deploy verify-driver-pin
+npx supabase functions deploy get-delivery-tracking
+npx supabase functions deploy update-delivery-request
+```
+
+#### Aplicar migraciones (incluye chatbot)
+
+```powershell
+npx supabase db push
 ```
 
 ---
@@ -382,6 +515,19 @@ npx supabase functions deploy notify-order
 npx supabase functions deploy handle-whatsapp-webhook
 ```
 
+### Botón "Probar Conexión" muestra "Desconectado"
+1. Verifica que la función esté desplegada: `npx supabase functions deploy test-whatsapp-connection`
+2. Verifica que `config.toml` tenga `[functions.test-whatsapp-connection] verify_jwt = false`
+3. Revisa los logs en Supabase Dashboard → Edge Functions → `test-whatsapp-connection` → Logs
+
+### Chatbot no responde automáticamente
+1. Verifica que `whatsapp_chatbot_enabled = true` en la tabla `profiles`:
+   ```sql
+   SELECT whatsapp_chatbot_enabled FROM profiles WHERE id = 'TU_STORE_ID';
+   ```
+2. Verifica que la Edge Function `handle-whatsapp-webhook` esté desplegada con la versión chatbot
+3. Revisa los logs: debe mostrar `[Webhook Chatbot] Estado actual: idle`
+
 ---
 
 ## ✅ Checklist Final
@@ -390,9 +536,13 @@ npx supabase functions deploy handle-whatsapp-webhook
 - [ ] Instancia creada y QR escaneado → `state: "open"`
 - [ ] Webhook configurado apuntando a Supabase con `?store_id=...`
 - [ ] Secrets `EVOLUTION_API_URL` e `EVOLUTION_INSTANCE_NAME` en Supabase
-- [ ] Edge Functions `notify-order` y `handle-whatsapp-webhook` desplegadas
+- [ ] Edge Functions desplegadas: `notify-order`, `handle-whatsapp-webhook`, `test-whatsapp-connection`
+- [ ] Migraciones aplicadas: `npx supabase db push` (incluye chatbot)
 - [ ] `whatsapp_gateway_type = 'qr_linked'` en el perfil de la tienda
 - [ ] `whatsapp_session_token = 'TU_API_KEY'` en el perfil de la tienda
+- [ ] Botón "Probar" en el modal de Mensajería muestra "Conectado"
 - [ ] `delivery_enabled = true` para la tienda desde el Portal Maestro
+- [ ] (Opcional) Chatbot habilitado y plantillas personalizadas
 - [ ] Prueba de mensaje entrante: pedido creado en `delivery_orders`
 - [ ] Prueba de notificación saliente: cliente recibe WhatsApp con link de tracking
+- [ ] Prueba de chatbot: cliente envía "Hola" y recibe menú de opciones

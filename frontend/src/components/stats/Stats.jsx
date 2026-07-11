@@ -94,19 +94,23 @@ export const Stats = () => {
         setTopProductos(null);
         setEstadisticasRango(null);
 
-        // Cargar estadísticas según el modo de reporte
+        // Cargar estadísticas según el modo de reporte en paralelo (Optimización)
         let statsData, topData, weeklyData;
 
         if (reportMode === "SERVICES") {
           // MODO LAVANDERÍA (TABLA ORDERS)
-          statsData = await orderService.getStatistics();
-          topData = await orderService.getTopServices(5);
-          weeklyData = await orderService.getWeeklyOrdersData();
+          [statsData, topData, weeklyData] = await Promise.all([
+            orderService.getStatistics(),
+            orderService.getTopServices(5),
+            orderService.getWeeklyOrdersData()
+          ]);
         } else {
           // MODO PRODUCTOS (TABLA SALES)
-          statsData = await salesService.getStatistics();
-          topData = await salesService.getTopProducts(5);
-          weeklyData = await salesService.getWeeklySalesData();
+          [statsData, topData, weeklyData] = await Promise.all([
+            salesService.getStatistics(),
+            salesService.getTopProducts(5),
+            salesService.getWeeklySalesData()
+          ]);
         }
 
         if (isMounted) {
@@ -253,7 +257,7 @@ export const Stats = () => {
           "Ingresos Formateado": formatearDinero(
             estadisticas.ingresosDeHoy || 0,
           ),
-          Ventas: estadisticas.ventasDeHoy || 0,
+          Ventas: estadisticas.ventasDeHoy ?? estadisticas.ordenesDeHoy ?? 0,
         },
         {
           Período: "Esta Semana",
@@ -261,7 +265,7 @@ export const Stats = () => {
           "Ingresos Formateado": formatearDinero(
             estadisticas.ingresosSemana || 0,
           ),
-          Ventas: estadisticas.ventasSemana || 0,
+          Ventas: estadisticas.ventasSemana ?? estadisticas.ordenesSemana ?? 0,
         },
         {
           Período: "Este Mes",
@@ -275,7 +279,7 @@ export const Stats = () => {
           "Ingresos Formateado": formatearDinero(
             estadisticas.ingresosTotales || 0,
           ),
-          Ventas: estadisticas.ventasTotales || 0,
+          Ventas: estadisticas.ventasTotales ?? estadisticas.ordenesTotales ?? 0,
         },
       ],
     });
@@ -286,9 +290,9 @@ export const Stats = () => {
         name: "Top Productos",
         data: topProductos.map((prod, index) => ({
           Ranking: index + 1,
-          "Producto/Artículo": prod.name,
-          "Cantidad Vendida": prod.cantidadVendida,
-          Ingresos: prod.ingresos,
+          "Producto/Artículo": prod.name || "N/A",
+          "Cantidad Vendida": prod.cantidadVendida ?? prod.cantidad ?? 0,
+          Ingresos: prod.ingresos || 0,
           "Ingresos Formateado": formatearDinero(prod.ingresos || 0),
         })),
       });
@@ -299,9 +303,9 @@ export const Stats = () => {
       sheets.push({
         name: "Productos Poco Stock",
         data: productosPocoStock.map((prod) => ({
-          "Producto/Artículo": prod.name,
-          "Stock Actual": prod.stock,
-          Precio: prod.price,
+          "Producto/Artículo": prod.name || "N/A",
+          "Stock Actual": prod.stock ?? 0,
+          Precio: prod.price ?? 0,
           "Precio Formateado": formatearDinero(prod.price || 0),
         })),
       });
@@ -313,10 +317,10 @@ export const Stats = () => {
         name: "Estadísticas Rango",
         data: [
           {
-            "Fecha Inicio": estadisticasRango.fechaInicio,
-            "Fecha Fin": estadisticasRango.fechaFin,
-            "Ventas en Rango": estadisticasRango.ventasEnRango,
-            "Ingresos en Rango": estadisticasRango.ingresosEnRango,
+            "Fecha Inicio": estadisticasRango.fechaInicio || "",
+            "Fecha Fin": estadisticasRango.fechaFin || "",
+            "Ventas en Rango": estadisticasRango.ventasEnRango ?? 0,
+            "Ingresos en Rango": estadisticasRango.ingresosEnRango ?? 0,
           },
         ],
       });

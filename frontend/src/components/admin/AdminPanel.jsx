@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useSettings } from "../../contexts/SettingsContext";
 import { productService } from "../../services/productService";
 import { salesService } from "../../services/salesService";
 import { orderService } from "../../services/orderService";
@@ -81,6 +82,9 @@ export const AdminPanel = () => {
     { id: "staff", label: "Personal", icon: "badge" },
     { id: "cashcuts", label: "Cortes de Caja", icon: "account_balance_wallet" },
     { id: "kardex", label: "Kardex / Inventario", icon: "inventory" },
+    { id: "ai", label: "IA Chatbot", icon: "smart_toy" },
+    { id: "workflow", label: "Workflow Express", icon: "speed" },
+    { id: "notifications", label: "Notificaciones Listo", icon: "notifications_active" },
     { id: "settings", label: "Configuración", icon: "settings" },
   ];
 
@@ -140,6 +144,21 @@ export const AdminPanel = () => {
           {activeSection === "staff" && <StaffView />}
           { activeSection === "cashcuts" && <CashCutsView /> }
           { activeSection === "kardex" && <KardexView /> }
+          { activeSection === "ai" && (
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">  IA Chatbot</h2>
+              <p className="text-gray-600 mb-6">Administra la base de conocimiento de tu chatbot IA</p>
+              <button
+                onClick={() => navigate('/admin/ia-conocimiento')}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              >
+                <span className="material-icons-outlined">smart_toy</span>
+                Abrir Base de Conocimiento IA
+              </button>
+            </div>
+          )}
+          { activeSection === "workflow" && <WorkflowExpressView /> }
+          { activeSection === "notifications" && <ReadyNotificationsView /> }
           { activeSection === "settings" && <SettingsView /> }
         </div>
       </main>
@@ -1113,6 +1132,489 @@ const SettingsView = () => {
               help_outline
             </span>
           </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const WorkflowExpressView = () => {
+  const { settings, updateSettings } = useSettings();
+
+  const handleToggleExpress = async () => {
+    const newValue = !settings?.express_workflow_enabled;
+    try {
+      await updateSettings({ express_workflow_enabled: newValue });
+      Swal.fire({
+        title: newValue ? "Workflow Express Activado" : "Workflow Express Desactivado",
+        text: newValue
+          ? "Gastos y Vista Excel de Órdenes habilitados."
+          : "Gastos y Vista Excel de Órdenes deshabilitados.",
+        icon: newValue ? "success" : "info",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    } catch (err) {
+      Swal.fire("Error", "No se pudo guardar la configuración", "error");
+    }
+  };
+
+  const handleToggleCatalog = async () => {
+    const newValue = !settings?.service_catalog_enabled;
+    try {
+      await updateSettings({ service_catalog_enabled: newValue });
+      Swal.fire({
+        title: newValue ? "Catálogo Express Activado" : "Catálogo Express Desactivado",
+        text: newValue
+          ? "Catálogo simplificado de servicios habilitado."
+          : "Catálogo simplificado de servicios deshabilitado.",
+        icon: newValue ? "success" : "info",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    } catch (err) {
+      Swal.fire("Error", "No se pudo guardar la configuración", "error");
+    }
+  };
+
+  const handleToggleProduction = async () => {
+    const newValue = !settings?.employee_production_enabled;
+    try {
+      await updateSettings({ employee_production_enabled: newValue });
+      Swal.fire({
+        title: newValue ? "Rendimiento de Staff Activado" : "Rendimiento de Staff Desactivado",
+        text: newValue
+          ? "Asignación de empleados por servicio y reporte de ganancia neta habilitados."
+          : "Asignación de empleados por servicio y reporte de ganancia neta deshabilitados.",
+        icon: newValue ? "success" : "info",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    } catch (err) {
+      Swal.fire("Error", "No se pudo guardar la configuración", "error");
+    }
+  };
+
+  const handleToggleProduccionDiaria = async () => {
+    const newValue = !settings?.daily_production_enabled;
+    try {
+      await updateSettings({ daily_production_enabled: newValue });
+      Swal.fire({
+        title: newValue ? "Producción Diaria Activada" : "Producción Diaria Desactivada",
+        text: newValue
+          ? "Planilla diaria de producción por empleado disponible en el menú."
+          : "Planilla diaria de producción por empleado deshabilitada.",
+        icon: newValue ? "success" : "info",
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end"
+      });
+    } catch (err) {
+      Swal.fire("Error", "No se pudo guardar la configuración", "error");
+    }
+  };
+
+  return (
+    <div className="settings-container">
+      <div className="settings-card">
+        <h3>Workflow Express</h3>
+        <p className="text-slate-400 mb-4 font-size-sm">
+          Activa funciones estilo Excel: Gastos, Vista Excel de Órdenes y Catálogo Simplificado.
+        </p>
+
+        <div className="settings-grid">
+          <div className="setting-item">
+            <span className="setting-label">
+              <span className="material-icons-outlined" style={{ verticalAlign: 'middle', marginRight: 8 }}>receipt_long</span>
+              Modo Express (Gastos + Vista Excel)
+            </span>
+            <span className="setting-value">
+              <button
+                className={`toggle-btn ${settings?.express_workflow_enabled ? 'active' : ''}`}
+                onClick={handleToggleExpress}
+              >
+                <div className="toggle-knob" />
+              </button>
+            </span>
+          </div>
+
+          <div className="setting-item">
+            <span className="setting-label">
+              <span className="material-icons-outlined" style={{ verticalAlign: 'middle', marginRight: 8 }}>inventory_2</span>
+              Catálogo de Servicios Simplificado
+            </span>
+            <span className="setting-value">
+              <button
+                className={`toggle-btn ${settings?.service_catalog_enabled ? 'active' : ''}`}
+                onClick={handleToggleCatalog}
+              >
+                <div className="toggle-knob" />
+              </button>
+            </span>
+          </div>
+          <div className="setting-item">
+            <span className="setting-label">
+              <span className="material-icons-outlined" style={{ verticalAlign: 'middle', marginRight: 8 }}>groups</span>
+              Rendimiento de Staff
+            </span>
+            <span className="setting-value">
+              <button
+                className={`toggle-btn ${settings?.employee_production_enabled ? 'active' : ''}`}
+                onClick={handleToggleProduction}
+              >
+                <div className="toggle-knob" />
+              </button>
+            </span>
+          </div>
+          <div className="setting-item">
+            <span className="setting-label">
+              <span className="material-icons-outlined" style={{ verticalAlign: 'middle', marginRight: 8 }}>assignment</span>
+              Producción Diaria (Planilla)
+            </span>
+            <span className="setting-value">
+              <button
+                className={`toggle-btn ${settings?.daily_production_enabled ? 'active' : ''}`}
+                onClick={handleToggleProduccionDiaria}
+              >
+                <div className="toggle-knob" />
+              </button>
+            </span>
+          </div>
+        </div>
+
+        {settings?.employee_production_enabled && (
+          <div className="p-4 mt-4 rounded-xl" style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)' }}>
+            <span className="material-icons-outlined" style={{ color: '#a855f7', verticalAlign: 'middle', marginRight: 8 }}>check_circle</span>
+            <span style={{ color: '#a855f7', fontWeight: 500 }}>Rendimiento de Staff activo</span>
+            <p className="text-slate-400 mt-2" style={{ fontSize: '0.8rem' }}>
+              Asignación de empleados por servicio y reporte de ganancia neta están disponibles.
+            </p>
+          </div>
+        )}
+
+        {settings?.express_workflow_enabled && (
+          <div className="p-4 mt-4 rounded-xl" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+            <span className="material-icons-outlined" style={{ color: '#10b981', verticalAlign: 'middle', marginRight: 8 }}>check_circle</span>
+            <span style={{ color: '#10b981', fontWeight: 500 }}>Modo Express activo</span>
+            <p className="text-slate-400 mt-2" style={{ fontSize: '0.8rem' }}>
+              Los módulos de Gastos y Vista Excel de Órdenes están disponibles en el menú lateral.
+            </p>
+          </div>
+        )}
+
+        {settings?.service_catalog_enabled && (
+          <div className="p-4 mt-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <span className="material-icons-outlined" style={{ color: '#3b82f6', verticalAlign: 'middle', marginRight: 8 }}>check_circle</span>
+            <span style={{ color: '#3b82f6', fontWeight: 500 }}>Catálogo Express activo</span>
+            <p className="text-slate-400 mt-2" style={{ fontSize: '0.8rem' }}>
+              El catálogo simplificado de servicios está disponible en el menú lateral.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ReadyNotificationsView = () => {
+  const { settings, updateSettings } = useSettings();
+  const [templates, setTemplates] = useState({
+    t1: settings?.ready_msg_template_1 || '',
+    t2: settings?.ready_msg_template_2 || '',
+    t3: settings?.ready_msg_template_3 || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [previews, setPreviews] = useState({ t1: false, t2: false, t3: false });
+
+  useEffect(() => {
+    setTemplates({
+      t1: settings?.ready_msg_template_1 || '',
+      t2: settings?.ready_msg_template_2 || '',
+      t3: settings?.ready_msg_template_3 || '',
+    });
+  }, [settings?.ready_msg_template_1, settings?.ready_msg_template_2, settings?.ready_msg_template_3]);
+
+  const handleToggle = async () => {
+    const newValue = !settings?.ready_notifications_enabled;
+    try {
+      await updateSettings({ ready_notifications_enabled: newValue });
+      Swal.fire({
+        title: newValue ? 'Notificaciones Activadas' : 'Notificaciones Desactivadas',
+        text: newValue
+          ? 'Se enviara WhatsApp automaticamente al marcar ordenes como Listas.'
+          : 'No se enviaran notificaciones WhatsApp de ordenes listas.',
+        icon: newValue ? 'success' : 'info',
+        timer: 3000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo guardar la configuracion', 'error');
+    }
+  };
+
+  const handleSaveTemplates = async () => {
+    setSaving(true);
+    try {
+      await updateSettings({
+        ready_msg_template_1: templates.t1,
+        ready_msg_template_2: templates.t2,
+        ready_msg_template_3: templates.t3,
+      });
+      Swal.fire({
+        title: 'Plantillas Guardadas',
+        text: 'Las plantillas de mensajes se actualizaron correctamente.',
+        icon: 'success',
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+    } catch (err) {
+      Swal.fire('Error', 'No se pudieron guardar las plantillas', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const togglePreview = (key) => {
+    setPreviews((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const resolvePreview = (template) => {
+    if (!template || !template.trim()) {
+      return null;
+    }
+    const parts = template.split(/(\{customer_name\}|\{store_name\}|\{order_folio\})/g);
+    const map = {
+      '{customer_name}': 'Maria Garcia',
+      '{store_name}': 'Lavanderia Centro',
+      '{order_folio}': '#A-1234',
+    };
+    return parts.map((part, i) => {
+      if (map[part]) {
+        return (
+          <span key={i} className="rn-var-highlight">
+            {map[part]}
+          </span>
+        );
+      }
+      return <React.Fragment key={i}>{part}</React.Fragment>;
+    });
+  };
+
+  const MESSAGE_DEFS = [
+    {
+      key: 't1',
+      variant: 'immediate',
+      icon: 'check_circle',
+      title: 'Mensaje 1 — Inmediato (ropa lista)',
+      subtitle: 'Se envia al momento de marcar la orden como Lista.',
+      placeholder:
+        'Hola {customer_name}! Tu ropa ya esta lista para recoger en {store_name}. Folio: {order_folio}',
+    },
+    {
+      key: 't2',
+      variant: 'reminder',
+      icon: 'schedule',
+      title: 'Mensaje 2 — Recordatorio (24 h)',
+      subtitle: 'Se envia si la orden sigue sin recogerse despues de 24 horas.',
+      placeholder:
+        'Recordatorio: tu ropa sigue lista en {store_name}. Folio: {order_folio}',
+    },
+    {
+      key: 't3',
+      variant: 'final',
+      icon: 'warning',
+      title: 'Mensaje 3 — Aviso Final (48 h / Dia 2)',
+      subtitle:
+        'Se envia si la orden lleva 48 h sin recogerse (24 h despues del segundo mensaje).',
+      placeholder:
+        'Tu pedido lleva 2 dias listo en {store_name}. Folio: {order_folio}. Por favor recoge pronto.',
+    },
+  ];
+
+  const isActive = settings?.ready_notifications_enabled;
+  const MAX_CHARS = 500;
+
+  return (
+    <div className="settings-container">
+      <div className="settings-card">
+        <h3>Notificaciones WhatsApp — Ordenes Listas</h3>
+        <p className="text-slate-400 mb-4 font-size-sm">
+          Envia automaticamente un mensaje WhatsApp al cliente cuando su orden se
+          marca como Lista para entregar, con recordatorios a las 24 h y 48 h si
+          no se recoge.
+        </p>
+
+        {/* ── Toggle row ── */}
+        <div className="rn-toggle-row">
+          <span className="rn-toggle-label">
+            <span className="material-icons-outlined">notifications_active</span>
+            Notificaciones de Ordenes Listas
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              className={`rn-toggle-status ${isActive ? 'rn-toggle-status--on' : 'rn-toggle-status--off'}`}
+            >
+              {isActive && <span className="rn-pulse-dot" />}
+              {isActive ? 'Activado' : 'Desactivado'}
+            </span>
+            <button
+              className={`toggle-btn ${isActive ? 'active' : ''}`}
+              onClick={handleToggle}
+              role="switch"
+              aria-checked={isActive}
+              aria-label="Activar notificaciones de ordenes listas"
+            >
+              <div className="toggle-knob" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Status banner ── */}
+        <div
+          className={`rn-status-banner ${isActive ? 'rn-status-banner--active' : 'rn-status-banner--inactive'}`}
+        >
+          <span
+            className={`material-icons-outlined rn-status-icon ${isActive ? 'rn-status-icon--active' : 'rn-status-icon--inactive'}`}
+          >
+            {isActive ? 'check_circle' : 'notifications_off'}
+          </span>
+          <div className="rn-status-text">
+            <div className="rn-status-title">
+              {isActive ? 'Notificaciones activas' : 'Notificaciones desactivadas'}
+            </div>
+            <div className="rn-status-desc">
+              {isActive
+                ? 'Los clientes recibiran WhatsApp al estar lista su ropa + recordatorios automaticos.'
+                : 'Activa el interruptor para empezar a enviar notificaciones WhatsApp automaticas.'}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Message cards ── */}
+        {isActive && (
+          <>
+            <div className="rn-timeline">
+              {MESSAGE_DEFS.map((def) => (
+                <div
+                  key={def.key}
+                  className={`rn-message-card rn-message-card--${def.variant}`}
+                >
+                  <div className="rn-message-card__accent" />
+                  <div className="rn-message-card__header">
+                    <div className="rn-message-card__icon">
+                      <span className="material-icons-outlined">{def.icon}</span>
+                    </div>
+                    <div>
+                      <div className="rn-message-card__title">{def.title}</div>
+                      <div className="rn-message-card__subtitle">
+                        {def.subtitle}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rn-message-card__body">
+                    <label
+                      htmlFor={`rn-template-${def.key}`}
+                      className="ui-label"
+                      style={{ marginBottom: 6 }}
+                    >
+                      Plantilla del mensaje
+                    </label>
+                    <textarea
+                      id={`rn-template-${def.key}`}
+                      className="rn-textarea"
+                      value={templates[def.key]}
+                      onChange={(e) =>
+                        setTemplates((prev) => ({
+                          ...prev,
+                          [def.key]: e.target.value,
+                        }))
+                      }
+                      rows={3}
+                      maxLength={MAX_CHARS}
+                      placeholder={def.placeholder}
+                    />
+                    <div className="rn-char-counter">
+                      {templates[def.key].length}/{MAX_CHARS}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="rn-preview-toggle"
+                      onClick={() => togglePreview(def.key)}
+                      aria-expanded={previews[def.key]}
+                    >
+                      <span className="material-icons-outlined">
+                        {previews[def.key] ? 'visibility_off' : 'visibility'}
+                      </span>
+                      {previews[def.key]
+                        ? 'Ocultar vista previa'
+                        : 'Ver vista previa'}
+                    </button>
+
+                    {previews[def.key] && (
+                      <div className="rn-preview-content">
+                        {resolvePreview(templates[def.key]) || (
+                          <span
+                            style={{
+                              color: 'var(--admin-text-muted)',
+                              fontStyle: 'italic',
+                            }}
+                          >
+                            La plantilla esta vacia. Escribe un mensaje para
+                            previsualizarlo.
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Variables hint ── */}
+            <div className="rn-variables-hint">
+              <strong>Variables disponibles:</strong>{' '}
+              <code className="rn-var-code">{'{customer_name}'}</code>,{' '}
+              <code className="rn-var-code">{'{store_name}'}</code>,{' '}
+              <code className="rn-var-code">{'{order_folio}'}</code>
+            </div>
+
+            {/* ── Save ── */}
+            <div className="rn-save-bar">
+              <button
+                className="ui-btn ui-btn--primary ui-btn--lg"
+                onClick={handleSaveTemplates}
+                disabled={saving}
+              >
+                {saving ? (
+                  <>
+                    <span className="material-icons-outlined ui-btn-spinner">
+                      sync
+                    </span>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons-outlined ui-btn-icon">
+                      save
+                    </span>
+                    Guardar Plantillas
+                  </>
+                )}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

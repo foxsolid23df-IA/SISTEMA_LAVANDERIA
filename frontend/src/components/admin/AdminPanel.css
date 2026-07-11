@@ -821,3 +821,374 @@
 .ap-recovery-code {
   font-size: 1.1rem;
 }
+
+/* ========== Toggle Switch (Workflow Express) ========== */
+.toggle-btn {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition: background 0.3s;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.toggle-btn.active {
+  background: var(--admin-accent, #10b981);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s;
+}
+
+.toggle-btn.active .toggle-knob {
+  transform: translateX(24px);
+}
+
+/* ═══════════════════════════════════════════════════
+   READY NOTIFICATIONS — WhatsApp Órdenes Listas
+   Consumes --admin-* tokens for automatic dark mode
+   ═══════════════════════════════════════════════════ */
+
+.rn-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Status banner (active/inactive) ── */
+.rn-status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--admin-radius-md);
+  transition: all var(--admin-transition);
+  margin-top: 1rem;
+}
+.rn-status-banner--active {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.rn-status-banner--inactive {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+.dark .rn-status-banner--active {
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.18);
+}
+.dark .rn-status-banner--inactive {
+  background: rgba(248, 113, 113, 0.06);
+  border-color: rgba(248, 113, 113, 0.15);
+}
+
+.rn-status-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.rn-status-icon--active {
+  color: var(--admin-success);
+}
+.rn-status-icon--inactive {
+  color: var(--admin-danger);
+}
+.rn-status-text {
+  flex: 1;
+}
+.rn-status-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--admin-text-main);
+}
+.rn-status-desc {
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+/* ── Toggle row ── */
+.rn-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: var(--admin-radius-md);
+}
+.rn-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--admin-text-main);
+}
+.rn-toggle-label .material-icons-outlined {
+  font-size: 1.25rem;
+  color: var(--admin-accent);
+}
+.rn-toggle-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.rn-toggle-status--on {
+  color: var(--admin-success);
+}
+.rn-toggle-status--off {
+  color: var(--admin-text-muted);
+}
+
+/* ── Pulsing live dot ── */
+.rn-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--admin-success);
+  display: inline-block;
+  animation: rn-pulse 2s ease-in-out infinite;
+  margin-right: 2px;
+}
+@keyframes rn-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.5);
+  }
+}
+
+/* ── Timeline cards (stacked, connected) ── */
+.rn-timeline {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.5rem;
+}
+
+.rn-message-card {
+  position: relative;
+  background: var(--admin-card-bg);
+  border: 1px solid var(--admin-card-border);
+  transition: all var(--admin-transition);
+}
+.rn-message-card:first-child {
+  border-radius: var(--admin-radius-md) var(--admin-radius-md) 0 0;
+}
+.rn-message-card:last-child {
+  border-radius: 0 0 var(--admin-radius-md) var(--admin-radius-md);
+}
+.rn-message-card:only-child {
+  border-radius: var(--admin-radius-md);
+}
+.rn-message-card + .rn-message-card {
+  margin-top: -1px;
+}
+.rn-message-card:hover {
+  border-color: var(--admin-accent);
+  box-shadow: var(--admin-card-shadow);
+}
+
+/* Accent left border (stage color) */
+.rn-message-card__accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+.rn-message-card--immediate .rn-message-card__accent {
+  background: var(--admin-success);
+}
+.rn-message-card--reminder .rn-message-card__accent {
+  background: var(--admin-warning);
+}
+.rn-message-card--final .rn-message-card__accent {
+  background: var(--admin-danger);
+}
+
+/* Card header */
+.rn-message-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.5rem 1.5rem;
+}
+.rn-message-card__icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--admin-radius-sm);
+  flex-shrink: 0;
+}
+.rn-message-card--immediate .rn-message-card__icon {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+.rn-message-card--reminder .rn-message-card__icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+.rn-message-card--final .rn-message-card__icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+.dark .rn-message-card--immediate .rn-message-card__icon {
+  color: #4ade80;
+}
+.dark .rn-message-card--reminder .rn-message-card__icon {
+  color: #fbbf24;
+}
+.dark .rn-message-card--final .rn-message-card__icon {
+  color: #f87171;
+}
+
+.rn-message-card__icon .material-icons-outlined {
+  font-size: 1.1rem;
+}
+
+.rn-message-card__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--admin-text-main);
+}
+.rn-message-card__subtitle {
+  font-size: 0.72rem;
+  color: var(--admin-text-muted);
+  margin-top: 1px;
+}
+
+/* Card body */
+.rn-message-card__body {
+  padding: 0.5rem 1.25rem 1rem 1.5rem;
+}
+
+/* ── Textarea ── */
+.rn-textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--admin-input-bg);
+  border: 1px solid var(--admin-card-border);
+  border-radius: var(--admin-radius-sm);
+  color: var(--admin-text-main);
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: all var(--admin-transition);
+  outline: none;
+}
+.rn-textarea:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-input-focus-ring);
+}
+.rn-textarea::placeholder {
+  color: var(--admin-text-muted);
+  opacity: 0.55;
+}
+
+.rn-char-counter {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.7rem;
+  color: var(--admin-text-muted);
+  margin-top: 4px;
+  padding-right: 2px;
+}
+
+/* ── Preview toggle + body ── */
+.rn-preview-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--admin-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 6px;
+  font-family: inherit;
+  transition: opacity var(--admin-transition);
+}
+.rn-preview-toggle:hover {
+  opacity: 0.75;
+}
+.rn-preview-toggle .material-icons-outlined {
+  font-size: 1rem;
+}
+
+.rn-preview-content {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--admin-input-bg);
+  border: 1px dashed var(--admin-card-border);
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.82rem;
+  color: var(--admin-text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.rn-var-highlight {
+  background: var(--admin-accent-subtle);
+  color: var(--admin-accent);
+  font-weight: 600;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+/* ── Variables hint ── */
+.rn-variables-hint {
+  padding: 10px 14px;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: var(--admin-radius-sm);
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  line-height: 1.6;
+}
+.dark .rn-variables-hint {
+  background: rgba(96, 165, 250, 0.05);
+  border-color: rgba(96, 165, 250, 0.1);
+}
+.rn-variables-hint strong {
+  color: var(--admin-info);
+}
+.rn-var-code {
+  background: var(--admin-input-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--admin-accent);
+  font-weight: 600;
+}
+
+/* ── Save bar ── */
+.rn-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}

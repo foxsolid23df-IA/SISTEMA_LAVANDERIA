@@ -24,6 +24,7 @@ import Swal from "sweetalert2";
 import { DELIVERY_PAYMENT_METHODS, DELIVERY_PAYMENT_PREFERENCES, deliveryService } from "../../services/deliveryService";
 import { printerService } from "../../services/printerService";
 import { supabase } from "../../supabase";
+import { App } from "@capacitor/app";
 import "./DriverPortal.css";
 
 const DELIVERY_DRIVER_ROLES = ["repartidor", "chofer"];
@@ -66,6 +67,7 @@ const initialExpressForm = {
     notes: "",
     delivery_fee: 0,
     payment_preference: "",
+    payment_option: "dejar_todo",
     register_payment: false,
     payment_amount: 0,
     payment_method: "efectivo",
@@ -186,6 +188,35 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             supabase.removeChannel(channel);
         };
     }, [driver]);
+
+    useEffect(() => {
+        const IS_DRIVER = import.meta.env?.VITE_BUILD_MODE === "driver";
+        if (!IS_DRIVER) return undefined;
+
+        const handler = App.addListener("backButton", ({ canGoBack }) => {
+            if (showExpressForm) {
+                setShowExpressForm(false);
+            } else if (selectedOrderId) {
+                setSelectedOrderId(null);
+            } else if (authenticated) {
+                Swal.fire({
+                    title: "Salir de la app?",
+                    icon: "question",
+                    showCancelButton: true,
+                    confirmButtonColor: "#0891b2",
+                    cancelButtonColor: "#64748b",
+                    confirmButtonText: "Si, salir",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) App.exitApp();
+                });
+            } else {
+                App.exitApp();
+            }
+        });
+
+        return () => handler.remove();
+    }, [showExpressForm, selectedOrderId, authenticated]);
 
     const handleLogout = () => {
         storage.remove("driver_session");
@@ -319,6 +350,10 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
                     <label style="font-weight:700; font-size:12px; display:block; margin-top:10px;">Referencia / autorizacion</label>
                     <input id="driver-payment-reference" class="swal2-input" placeholder="Obligatoria en transferencia/tarjeta" style="width:85%; margin-top:4px;">
+
+                    <label style="font-weight:700; font-size:12px; display:block; margin-top:10px;">Foto comprobante (opcional)</label>
+                    <input id="driver-payment-proof" type="file" accept="image/*" capture="environment" style="width:85%; margin-top:4px;">
+                    <small style="color:#64748b;">Adjunta foto de transferencia, deposito o referencia.</small>
                 </div>
             `,
             showCancelButton: true,
@@ -329,6 +364,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                 const amount = document.getElementById("driver-payment-amount").value;
                 const payment_method = document.getElementById("driver-payment-method").value;
                 const reference = document.getElementById("driver-payment-reference").value;
+                const proofFile = document.getElementById("driver-payment-proof").files?.[0] || null;
                 if (!amount || Number(amount) <= 0) {
                     Swal.showValidationMessage("Ingresa un monto valido.");
                     return false;
@@ -337,7 +373,11 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                     Swal.showValidationMessage("La referencia es obligatoria para transferencia o tarjeta.");
                     return false;
                 }
-                return { amount, payment_method, reference };
+                if (proofFile && proofFile.size > 8 * 1024 * 1024) {
+                    Swal.showValidationMessage("La imagen no debe pesar mas de 8 MB.");
+                    return false;
+                }
+                return { amount, payment_method, reference, proofFile };
             }
         });
 
@@ -345,7 +385,30 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
         try {
             setLoading(true);
-            await deliveryService.createDriverPayment(order, formValues, driver);
+            // Upload proof photo if provided
+            let proofPhotoPath = null;
+            if (formValues.proofFile) {
+                try {
+                    const fileExt = formValues.proofFile.name.split('.').pop() || 'jpg';
+                    const fileName = `payment-proof-${order.id}-${Date.now()}.${fileExt}`;
+                    const { data: uploadData, error: uploadErr } = await supabase.storage
+                        .from('delivery-evidence')
+                        .upload(fileName, formValues.proofFile, { upsert: false });
+                    if (uploadErr) {
+                        console.warn("Error subiendo foto comprobante:", uploadErr);
+                    } else {
+                        proofPhotoPath = uploadData?.path || fileName;
+                    }
+                } catch (uploadErr) {
+                    console.warn("No se pudo subir foto comprobante:", uploadErr);
+                }
+            }
+            await deliveryService.createDriverPayment(order, {
+                amount: formValues.amount,
+                payment_method: formValues.payment_method,
+                reference: formValues.reference,
+                proof_photo_path: proofPhotoPath
+            }, driver);
             Swal.fire("Pago registrado", "El pago quedo pendiente de conciliacion en sucursal.", "success");
             await loadDriverOrders(driver.id, driver.session_token);
         } catch (err) {
@@ -451,11 +514,19 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             setShowExpressForm(false);
             setExpressForm(initialExpressForm);
 
+            // Verificar si la orden POS se creó correctamente
+            const posOrderCreated = result.pos_order != null;
+            const posWarning = result.pos_order_warning || (!posOrderCreated && "La orden POS no se pudo generar. Procese desde el panel de Delivery.");
+
             // Offer to print
+            const successText = posOrderCreated
+                ? `Pedido #${result.order.id} y orden POS Folio #${result.pos_order.folio} creados correctamente.`
+                : `Pedido #${result.order.id} creado correctamente.${posWarning ? '\n' + posWarning : ''}`;
+
             const printResult = await Swal.fire({
                 title: "Recoleccion registrada",
-                text: `Pedido #${result.order.id} creado correctamente.`,
-                icon: "success",
+                text: successText,
+                icon: posOrderCreated ? "success" : "warning",
                 showCancelButton: true,
                 confirmButtonText: "Imprimir comprobante",
                 cancelButtonText: "Cerrar",
@@ -548,8 +619,9 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                     }} title="Actualizar">
                         <FiRefreshCw />
                     </button>
-                    <button className="driver-icon-button" onClick={handleLogout} title="Salir">
+                    <button className="driver-icon-button driver-logout-button" onClick={handleLogout} title="Cerrar sesión">
                         <FiLogOut />
+                        <span>Salir</span>
                     </button>
                 </div>
             </header>
@@ -729,22 +801,37 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
                             <div className="driver-form-divider" />
 
-                            <label className="driver-form-checkbox">
-                                <input type="checkbox"
-                                    checked={expressForm.register_payment}
-                                    onChange={(e) => handleExpressFormChange("register_payment", e.target.checked)}
-                                    disabled={expressLoading} />
-                                <span>Registrar pago / anticipo</span>
-                            </label>
+                            <label className="driver-form-label">Monto a pagar ahora</label>
+                            <div className="driver-payment-options">
+                                {[
+                                    { key: "completo", label: "Completo", sub: "100%" },
+                                    { key: "50", label: "50%", sub: "mitad" },
+                                    { key: "dejar_todo", label: "Dejar todo", sub: "despues" }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.key}
+                                        type="button"
+                                        className={`driver-payment-option-btn ${expressForm.payment_option === opt.key ? 'active' : ''}`}
+                                        onClick={() => {
+                                            const fee = Number(expressForm.delivery_fee) || 0;
+                                            let amount = 0;
+                                            let register = false;
+                                            if (opt.key === "completo") { amount = fee; register = fee > 0; }
+                                            else if (opt.key === "50") { amount = Math.round(fee * 0.5 * 100) / 100; register = fee > 0; }
+                                            handleExpressFormChange("payment_option", opt.key);
+                                            handleExpressFormChange("payment_amount", amount);
+                                            handleExpressFormChange("register_payment", register);
+                                        }}
+                                        disabled={expressLoading}
+                                    >
+                                        <div className="driver-payment-option-label">{opt.label}</div>
+                                        <div className="driver-payment-option-sub">{opt.sub}</div>
+                                    </button>
+                                ))}
+                            </div>
 
-                            {expressForm.register_payment && (
+                            {expressForm.payment_option !== "dejar_todo" && (
                                 <div className="driver-form-payment-fields">
-                                    <label className="driver-form-label">Monto recibido ($)</label>
-                                    <input className="driver-form-input" type="number" min="0" step="0.01" placeholder="0.00"
-                                        value={expressForm.payment_amount}
-                                        onChange={(e) => handleExpressFormChange("payment_amount", e.target.value)}
-                                        disabled={expressLoading} />
-
                                     <label className="driver-form-label">Metodo de pago</label>
                                     <select className="driver-form-select"
                                         value={expressForm.payment_method}
@@ -828,7 +915,9 @@ const DriverOrderDetail = ({ order, loading, onBack, onPayment, onNextAction, on
                 <InfoBlock
                     icon={<FiPackage />}
                     label="Servicio lavanderia"
-                    value={Number(order.service_cost || 0) > 0 ? money(order.service_cost) : "Pendiente de pesaje en sucursal"}
+                    value={Number(order.service_cost || 0) > 0
+                        ? `${money(order.service_cost)}${order.auto_quoted ? ' (auto)' : ''}`
+                        : "Pendiente de pesaje en sucursal"}
                 />
                 {order.garment_summary && (
                     <InfoBlock icon={<FiCheckSquare />} label="Recogido / validado" value={order.garment_summary} tone="success" />

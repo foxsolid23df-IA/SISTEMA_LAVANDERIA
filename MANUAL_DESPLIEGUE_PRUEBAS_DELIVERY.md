@@ -55,7 +55,7 @@ Las Edge Functions de Supabase en la nube necesitan comunicarse con tu Evolution
     ngrok http 8080
     ```
 3.  Copia la URL pública generada de tipo **`https://abc123-xyz.ngrok-free.app`**.
-    > ⚠️ **Nota:** Si usas la versión gratuita de ngrok, esta URL cambiará cada vez que detengas y vuelvas a iniciar el comando.
+    > **Nota:** Si usas la versión gratuita de ngrok, esta URL cambiará cada vez que detengas y vuelvas a iniciar el comando.
 
 ---
 
@@ -93,6 +93,14 @@ cd "c:\SISTEMA_ LAVANDERIA"
 npx supabase db push
 ```
 
+**Migraciones incluidas (automáticas con `db push`):**
+- `20260527120000` — Tablas `customers`, `delivery_orders`
+- `20260528002000` — Preferencias de pago, tabla `delivery_payments`
+- `20260528004000` — Evidencia fotográfica del repartidor
+- `20260528005000` — Feature flag `delivery_enabled` por tienda
+- `20260528006000` — Constraints, índices, logs de notificaciones
+- `20260707000000` — **Chatbot WhatsApp**: tabla `whatsapp_conversations`, columnas `whatsapp_chatbot_enabled`, `whatsapp_auto_replies` en profiles
+
 ### 2. Bucket de Almacenamiento (Storage)
 1.  En tu panel de Supabase, ve a **Storage**.
 2.  Crea un bucket **Privado** llamado exactamente: **`delivery-evidence`**.
@@ -116,12 +124,17 @@ npx supabase secrets set APP_BASE_URL="http://localhost:5173"
 Sube el código de las funciones a tu nube de Supabase:
 ```powershell
 cd "c:\SISTEMA_ LAVANDERIA"
+
+# Funciones principales del módulo de delivery
 npx supabase functions deploy delivery-actions
 npx supabase functions deploy verify-driver-pin
 npx supabase functions deploy get-delivery-tracking
 npx supabase functions deploy update-delivery-request
 npx supabase functions deploy notify-order
 npx supabase functions deploy handle-whatsapp-webhook
+
+# Función de prueba de conexión WhatsApp (nueva)
+npx supabase functions deploy test-whatsapp-connection
 ```
 
 ---
@@ -147,14 +160,48 @@ Por defecto, las tiendas tienen el módulo desactivado. Para activarlo:
 2.  Entra al módulo en: `http://localhost:5173/#/delivery`.
 3.  Haz clic en **"Mensajería"** (icono de engrane arriba a la derecha).
 4.  Selecciona: **WhatsApp Vinculado por QR (Evolution API)**.
-5.  En **API Token de la Sesión QR**, ingresa la clave de Evolution: `ClavePruebaSaaS2026`.
-6.  Haz clic en **"Guardar Cambios"**.
+5.  En **API Key de Evolution API**, ingresa la clave: `ClavePruebaSaaS2026`.
+6.  Haz clic en **"Probar"** para verificar la conexión (debe mostrar "Conectado" en verde).
+7.  Haz clic en **"Guardar Cambios"**.
+
+### 4. Configurar el Chatbot Automático (Opcional)
+El chatbot responde automáticamente cuando un cliente envía un mensaje por WhatsApp:
+
+1.  En el modal de **Mensajería**, activa el toggle **"Chatbot Automático"**.
+2.  Personaliza los mensajes de respuesta:
+    - **Mensaje de Bienvenida** — Menú principal con opciones 1/2/3
+    - **Opción 1 (Recogida)** — Respuesta al querer solicitar recogida
+    - **Opción 2 (Tracking)** — Respuesta al consultar pedido
+    - **Opción 3 (Agente)** — Respuesta al querer hablar con atención al cliente
+    - **Sin dirección** — Cuando no se detecta dirección
+    - **Confirmación de orden** — Al crear el pedido automáticamente
+    - **Tracking encontrado/no encontrado** — Al consultar estatus
+    - **Desactivado** — Cuando la tienda tiene delivery apagado
+3.  Haz clic en **"Guardar Cambios"**.
+
+**Variables disponibles en los mensajes:**
+| Variable | Descripción |
+|----------|-------------|
+| `{nombre}` | Nombre del cliente (pushName de WhatsApp) |
+| `{tienda}` | Nombre de la tienda |
+| `{telefono}` | Teléfono del cliente |
+| `{direccion}` | Dirección detectada/confirmada |
+| `{tracking_url}` | Link de tracking de la orden |
+| `{folio}` | Número de ID de la orden |
+| `{estatus}` | Estado actual del pedido |
 
 ---
 
 ## 🧪 Fase 6: Guía Paso a Paso para Pruebas de Flujo Completo
 
 Realiza esta prueba de extremo a extremo para verificar que todo está correctamente configurado:
+
+### 0. Verificar Conexión WhatsApp
+1.  Entra al dashboard de Delivery (`/#/delivery`).
+2.  Haz clic en **"Mensajería"**.
+3.  Selecciona **WhatsApp Vinculado por QR (Evolution API)**.
+4.  Ingresa tu API Key y haz clic en **"Probar"**.
+5.  **Resultado esperado:** Aparece un cuadro verde con "Conectado" y el número de teléfono.
 
 ### 1. Preparar un Repartidor
 1.  En el sistema, ve a **Usuarios** (Dashboard lateral).
@@ -174,14 +221,22 @@ Realiza esta prueba de extremo a extremo para verificar que todo está correctam
     *   El cliente de prueba recibirá un mensaje de WhatsApp automático con el link de tracking:
         `https://localhost:5173/#/tracking/UUID_DEL_PEDIDO`
 
-### 3. Gestionar Pedido en el Dashboard de Sucursal (`/#/delivery`)
+### 3. Probar el Chatbot (Si está habilitado)
+1.  Desde el teléfono del cliente, envía **"Hola"** al número de la lavandería.
+2.  **Resultado esperado:** Recibes el menú con 3 opciones.
+3.  Responde **"1"** → Te pide la dirección.
+4.  Envía una dirección → Se crea el pedido automáticamente.
+5.  Responde **"2"** → Te pide el folio o link de tracking.
+6.  Responde **"3"** → Te dice que te comunicarás con atención al cliente.
+
+### 4. Gestionar Pedido en el Dashboard de Sucursal (`/#/delivery`)
 1.  Abre el panel en `http://localhost:5173/#/delivery`. Verás la solicitud en la columna **Pendientes de Recogida**.
 2.  Haz clic en **"Cotizar"** y define la tarifa de envío (ej. `$50.00` o `$0.00` para gratis). Guarda.
 3.  El cliente de prueba recibirá una notificación por WhatsApp indicando el costo y solicitando que confirme su método de pago.
 4.  **Confirmación del cliente:** Abre el enlace de tracking que recibió el cliente, describe las prendas a enviar (ej. *2 bolsas de ropa de color*) y selecciona pagar al recibir.
-5.  En tu dashboard de sucursal, haz clic en **"Aceptar y Asignar"** sobre la tarjeta del pedido. Selecciona a tu repartidor de pruebas.
+5.  En tu dashboard de sucursal, haz clic en **"Asignar"** sobre la tarjeta del pedido. Selecciona a tu repartidor de pruebas.
 
-### 4. Ejecución del Repartidor (`/#/chofer`)
+### 5. Ejecución del Repartidor (`/#/chofer`)
 1.  Entra en `http://localhost:5173/#/chofer` (simula la pantalla del celular del repartidor).
 2.  Introduce el PIN: `1234`.
 3.  Verás la lista de viajes asignados. Haz clic en el pedido correspondiente.
@@ -192,7 +247,7 @@ Realiza esta prueba de extremo a extremo para verificar que todo está correctam
     *   Haz clic en **"Marcar como Recogido"**.
 5.  Al regresar a la tienda con la ropa, el repartidor marca el botón **"Recibido en Sucursal"**.
 
-### 5. Finalización y Conciliación del Pedido
+### 6. Finalización y Conciliación del Pedido
 1.  Vuelve al panel de administración de sucursal (`http://localhost:5173/#/delivery`).
 2.  El pedido ahora se encuentra en la columna **En Sucursal (Listo para Cobro)**.
 3.  Podrás ver la evidencia fotográfica que subió el repartidor haciendo clic en **"Ver evidencia de recogida"**.
@@ -210,3 +265,39 @@ Realiza esta prueba de extremo a extremo para verificar que todo está correctam
 | **El webhook no dispara pedidos** | El túnel de ngrok está apagado o la URL cambió. | Abre una terminal, ejecuta `ngrok http 8080`, copia la nueva dirección https y actualízala en los Settings del Webhook en tu Evolution Manager e inyéctala como secret en Supabase. |
 | **Error: "Módulo no disponible"** | La tienda no está activada en el sistema. | Entra a `http://localhost:5173/#/portal-maestro` con el PIN `2026SOP` y activa la tienda. |
 | **Los mensajes no se envían** | La sesión de WhatsApp se desconectó. | Abre el manager, ve a tu instancia `lavanderia-demo` y asegúrate de que el estado figure como **"open"**. Si dice "closed", dale "Connect" y escanea de nuevo el QR. |
+| **Botón "Probar" muestra "Desconectado"** | La función `test-whatsapp-connection` no está desplegada o la API Key es incorrecta. | Ejecuta `npx supabase functions deploy test-whatsapp-connection` y verifica que la API Key coincida con `AUTHENTICATION_API_KEY` del Docker. |
+| **Chatbot no responde** | `whatsapp_chatbot_enabled` es `false` o la función webhook no tiene la lógica de chatbot. | Verifica en Supabase SQL Editor: `SELECT whatsapp_chatbot_enabled, whatsapp_auto_replies FROM profiles WHERE id = 'TU_STORE_ID'`. Si es false, actívalo desde el modal de Mensajería. |
+| **Error "Edge Function returned non-2xx"** | La función no está en `config.toml` o no está desplegada. | Verifica `supabase/config.toml` que la función tenga `verify_jwt = false`. Luego ejecuta `npx supabase functions deploy NOMBRE_FUNCION`. |
+
+---
+
+## 📋 Comandos Rápidos de Referencia
+
+```powershell
+# === DESARROLLO LOCAL ===
+cd frontend && npm install && npm run dev    # Frontend en :5173
+
+# === EVOLUTION API ===
+docker compose up -d                         # Iniciar Evolution API
+ngrok http 8080                              # Exponer a internet
+
+# === SUPABASE MIGRATIONS ===
+npx supabase db push                         # Aplicar migraciones pendientes
+
+# === SUPABASE SECRETS ===
+npx supabase secrets set EVOLUTION_API_URL="https://xxx.ngrok-free.app"
+npx supabase secrets set EVOLUTION_INSTANCE_NAME="lavanderia-demo"
+npx supabase secrets set APP_BASE_URL="http://localhost:5173"
+
+# === DESPLEGAR EDGE FUNCTIONS ===
+npx supabase functions deploy handle-whatsapp-webhook
+npx supabase functions deploy notify-order
+npx supabase functions deploy test-whatsapp-connection
+npx supabase functions deploy delivery-actions
+npx supabase functions deploy verify-driver-pin
+npx supabase functions deploy get-delivery-tracking
+npx supabase functions deploy update-delivery-request
+
+# === VERIFICAR ESTADO ===
+npx supabase functions list --project-ref jugyosyrbixwsmzvdksp
+```

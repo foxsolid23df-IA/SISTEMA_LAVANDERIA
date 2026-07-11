@@ -38,6 +38,7 @@ const ROLES = {
       can_process_orders: true,
       can_deliver_orders: true,
       can_void_sales: true,
+      can_access_produccion_diaria: true,
     },
   },
   gerente: {
@@ -71,6 +72,7 @@ const ROLES = {
       can_process_orders: true,
       can_deliver_orders: true,
       can_void_sales: false,
+      can_access_produccion_diaria: true,
     },
   },
   cajero: {
@@ -102,6 +104,7 @@ const ROLES = {
       can_void_sales: false,
       can_view_supplies: true,
       can_view_cancellations: true,
+      can_access_produccion_diaria: false,
     },
   },
   operador: {
@@ -134,6 +137,7 @@ const ROLES = {
       can_deliver_orders: false,
       can_void_sales: false,
       can_view_cancellations: false,
+      can_access_produccion_diaria: false,
     },
   },
   repartidor: {
@@ -166,6 +170,7 @@ const ROLES = {
       can_deliver_orders: true,
       can_void_sales: false,
       can_view_cancellations: false,
+      can_access_produccion_diaria: false,
     },
   },
 };
@@ -259,6 +264,10 @@ const PERMISSION_LABELS = {
   can_manage_staff: {
     label: "Persona & Seguridad",
     desc: "Crear o editar usuarios",
+  },
+  can_access_produccion_diaria: {
+    label: "Produccion Diaria",
+    desc: "Acceso a la planilla diaria de produccion por empleado",
   },
 };
 
@@ -649,7 +658,7 @@ export const UserManager = () => {
                     ],
                   },
                   {
-                    title: "Administración y Reportes",
+                    title: "Administraci\u00f3n y Reportes",
                     icon: "analytics",
                     keys: [
                       "can_view_dashboard",
@@ -658,6 +667,7 @@ export const UserManager = () => {
                       "can_see_reports",
                       "can_view_cash_reports",
                       "can_view_cancellations",
+                      "can_access_produccion_diaria",
                     ],
                   },
                   {

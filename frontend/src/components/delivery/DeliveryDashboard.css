@@ -1,14 +1,14 @@
 /* ========================================================
-   ESTILOS PREMIUM: DELIVERY DASHBOARD (POS)
+   ESTILOS: DELIVERY DASHBOARD — GRID DE TARJETAS
    ======================================================== */
 
 .delivery-dashboard-container {
-    padding: 2rem;
+    padding: 1.25rem 1.5rem;
     background-color: transparent;
     min-height: calc(100dvh - 4rem);
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
 }
 
 /* Header */
@@ -17,7 +17,7 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-    padding-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
 }
 
 .dark .delivery-dash-header {
@@ -25,7 +25,7 @@
 }
 
 .delivery-dash-header h1 {
-    font-size: 1.75rem;
+    font-size: 1.35rem;
     font-weight: 850;
     color: #0f172a;
     margin: 0;
@@ -35,18 +35,23 @@
     color: #ffffff;
 }
 
+.delivery-dash-header p {
+    font-size: 0.8rem;
+    margin: 0.15rem 0 0;
+}
+
 /* Botones */
 .btn-primary {
     background-color: #0f172a;
     color: #ffffff;
     border: none;
-    padding: 0.65rem 1.25rem;
-    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary:hover {
@@ -67,10 +72,10 @@
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
     color: #334155;
-    padding: 0.65rem 1.25rem;
-    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -90,24 +95,24 @@
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Kanban Grid */
+/* ─── GRID PRINCIPAL ────────────────────────────────────────────── */
+
 .kanban-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
 }
+
+/* ─── COLUMNA / SECCIÓN DE ESTADO ──────────────────────────────── */
 
 .kanban-column {
     background-color: #f8fafc;
     border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 20px;
-    padding: 1.25rem;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    min-height: 500px;
-    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+    gap: 0.65rem;
 }
 
 .dark .kanban-column {
@@ -115,21 +120,16 @@
     border-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Cabeceras de Columna */
+/* Cabecera de Sección (compacta) */
 .column-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    border-bottom: 2px solid rgba(226, 232, 240, 0.5);
-    padding-bottom: 0.75rem;
-}
-
-.dark .column-header {
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+    gap: 0.6rem;
+    padding-bottom: 0;
 }
 
 .column-header h2 {
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 800;
     color: #1e293b;
     margin: 0;
@@ -140,39 +140,44 @@
 }
 
 .badge-count {
-    min-width: 1.5rem;
-    height: 1.5rem;
+    min-width: 1.35rem;
+    height: 1.35rem;
     border-radius: 9999px;
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 800;
-    padding: 0 0.4rem;
+    padding: 0 0.35rem;
 }
 
-/* Cuerpo de Columna */
+/* ─── GRID DE TARJETAS ────────────────────────────────────────── */
+
 .column-body {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    overflow-y: auto;
-    max-height: calc(100dvh - 16rem);
+    gap: 0;
 }
 
-/* Tarjetas de Pedido */
+.orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.65rem;
+}
+
+/* ─── TARJETAS DE PEDIDO (compactas) ───────────────────────────── */
+
 .order-kanban-card {
     background-color: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 16px;
-    padding: 1.25rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    transition: all 0.2s ease;
+    border-radius: 12px;
+    padding: 0.75rem 0.85rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.15s ease;
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.4rem;
 }
 
 .dark .order-kanban-card {
@@ -181,8 +186,7 @@
 }
 
 .order-kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     border-color: #94a3b8;
 }
 
@@ -197,23 +201,24 @@
 }
 
 .card-id {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 800;
     color: #64748b;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.02em;
 }
 
 .card-time {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #94a3b8;
 }
 
 .order-kanban-card h3 {
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     font-weight: 850;
     color: #0f172a;
     margin: 0;
+    line-height: 1.2;
 }
 
 .dark .order-kanban-card h3 {
@@ -221,34 +226,42 @@
 }
 
 .phone-row, .address-row {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: #64748b;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
+    line-height: 1.3;
 }
 
 .dark .phone-row, .dark .address-row {
     color: #9ca3af;
 }
 
+.address-row {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .notes-box {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-style: italic;
     color: #ea580c;
     background-color: rgba(234, 88, 12, 0.05);
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.4rem;
+    border-radius: 6px;
     margin: 0;
+    line-height: 1.3;
 }
 
 .garment-summary-box {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: #334155;
     background-color: #f1f5f9;
-    padding: 0.65rem;
-    border-radius: 10px;
+    padding: 0.45rem;
+    border-radius: 8px;
     margin: 0;
 }
 
@@ -260,22 +273,22 @@
 .driver-assigned-row {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.8rem;
+    gap: 0.3rem;
+    font-size: 0.72rem;
     color: #0ea5e9;
     background-color: rgba(14, 165, 233, 0.05);
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.4rem;
+    border-radius: 6px;
     font-weight: 600;
 }
 
 .payment-info-box,
 .payment-warning-box {
-    font-size: 0.75rem;
-    padding: 0.55rem;
-    border-radius: 8px;
+    font-size: 0.68rem;
+    padding: 0.4rem;
+    border-radius: 6px;
     margin: 0;
-    line-height: 1.35;
+    line-height: 1.3;
 }
 
 .payment-info-box {
@@ -293,28 +306,29 @@
 
 .payment-list-box {
     display: grid;
-    gap: 0.4rem;
+    gap: 0.3rem;
 }
 
 .payment-row-box {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 8px;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    border-radius: 6px;
     background-color: #f8fafc;
     border: 1px solid #e2e8f0;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
 }
 
 .payment-row-box button {
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
     background-color: #0f172a;
     color: #ffffff;
-    padding: 0.3rem 0.45rem;
+    padding: 0.2rem 0.35rem;
     font-weight: 800;
+    font-size: 0.6rem;
     cursor: pointer;
 }
 
@@ -327,15 +341,16 @@
     border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Footer de Tarjeta y Botones Internos */
+/* ─── FOOTER DE TARJETA Y BOTONES ─────────────────────────────── */
+
 .card-footer {
     display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
 }
 
 .card-footer-single {
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 .btn-action-accept {
@@ -343,26 +358,26 @@
     background-color: #10b981;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 7px;
+    font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.5rem;
+    padding: 0.4rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
 }
 
 .btn-action-quote {
     background-color: #0ea5e9;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 7px;
+    font-size: 0.68rem;
     font-weight: 800;
-    padding: 0.5rem 0.65rem;
+    padding: 0.4rem 0.5rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -373,8 +388,8 @@
 
 .btn-quote-full {
     width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.65rem;
+    margin-top: 0.3rem;
+    padding: 0.45rem;
 }
 
 .btn-action-accept:hover {
@@ -385,9 +400,9 @@
     background-color: #f1f5f9;
     color: #ef4444;
     border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    padding: 0.5rem;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    padding: 0.4rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -414,10 +429,10 @@
     background-color: #0ea5e9;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 7px;
+    font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.6rem;
+    padding: 0.45rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -431,30 +446,31 @@
     background-color: #10b981;
     color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-size: 0.75rem;
+    border-radius: 7px;
+    font-size: 0.68rem;
     font-weight: 800;
-    padding: 0.65rem;
+    padding: 0.45rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
 }
 
 .btn-action-charge:hover {
     background-color: #059669;
 }
 
-/* Status Pills */
+/* ─── STATUS PILLS ─────────────────────────────────────────────── */
+
 .status-pill {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 800;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
+    padding: 0.2rem 0.4rem;
+    border-radius: 5px;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.02em;
 }
 
 .pill-assigned {
@@ -473,43 +489,45 @@
 }
 
 .price-tag {
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 900;
     color: #10b981;
 }
 
-/* Vacíos */
+/* ─── ESTADOS VACÍOS ──────────────────────────────────────────── */
+
 .empty-column-state {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
-    gap: 0.75rem;
-    padding: 3rem 1rem;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
     text-align: center;
-    color: #64748b;
-    font-size: 0.85rem;
+    color: #94a3b8;
+    font-size: 0.78rem;
     font-weight: 600;
 }
 
 .dark .empty-column-state {
-    color: #9ca3af;
+    color: #6b7280;
 }
 
-/* Loader */
+/* ─── LOADER ───────────────────────────────────────────────────── */
+
 .delivery-loader {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
     min-height: calc(100dvh - 10rem);
 }
 
 .spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 4px solid rgba(15, 23, 42, 0.05);
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid rgba(15, 23, 42, 0.05);
     border-top-color: #0f172a;
     border-radius: 50%;
     animation: spin 1s infinite linear;
@@ -524,7 +542,8 @@
     to { transform: rotate(360deg); }
 }
 
-/* Modal de Configuración */
+/* ─── MODAL DE CONFIGURACIÓN ───────────────────────────────────── */
+
 .config-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -538,9 +557,9 @@
 
 .config-modal-card {
     background-color: #ffffff;
-    border-radius: 20px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 500px;
+    max-width: 480px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     border: 1px solid rgba(226, 232, 240, 0.8);
     display: flex;
@@ -557,7 +576,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 
@@ -566,7 +585,7 @@
 }
 
 .modal-header h2 {
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 800;
     color: #0f172a;
     margin: 0;
@@ -588,14 +607,14 @@
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.65rem;
 }
 
 .input-label {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 750;
     color: #334155;
 }
@@ -608,9 +627,9 @@
     width: 100%;
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 0.65rem;
-    font-size: 0.85rem;
+    border-radius: 8px;
+    padding: 0.55rem;
+    font-size: 0.8rem;
     font-family: inherit;
     color: #334155;
     outline: none;
@@ -623,7 +642,7 @@
 }
 
 .input-help {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #64748b;
     margin: 0;
 }
@@ -635,9 +654,9 @@
     background-color: rgba(14, 165, 233, 0.05);
     border: 1px solid rgba(14, 165, 233, 0.1);
     color: #0284c7;
-    padding: 0.75rem;
-    border-radius: 10px;
-    font-size: 0.8rem;
+    padding: 0.65rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
     line-height: 1.4;
     margin: 0.5rem 0 0 0;
 }
@@ -645,8 +664,8 @@
 .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1.25rem 1.5rem;
+    gap: 0.65rem;
+    padding: 1rem 1.25rem;
     background-color: #f8fafc;
     border-top: 1px solid rgba(226, 232, 240, 0.8);
 }
@@ -656,21 +675,7 @@
     border-top-color: rgba(255, 255, 255, 0.05);
 }
 
-/* ========================================================
-   RESPONSIVIDAD
-   ======================================================== */
-
-@media (max-width: 1100px) {
-    .kanban-grid {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-    .kanban-column {
-        min-height: auto;
-    }
-}
-
-/* ─── EXPRESS BADGE ────────────────────────────────────────────────── */
+/* ─── EXPRESS BADGE ────────────────────────────────────────────── */
 
 .card-express {
     border-color: #f59e0b !important;
@@ -681,16 +686,264 @@
     display: inline-block;
     background: #f59e0b;
     color: #ffffff;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 900;
     text-transform: uppercase;
-    padding: 2px 6px;
-    border-radius: 6px;
-    margin-right: 6px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-right: 4px;
     vertical-align: middle;
 }
 
 .express-order {
     border-color: #f59e0b !important;
     background: #fffbeb !important;
+}
+
+/* ─── MODAL MEJORADO: CONFIGURACIÓN DE MENSAJERÍA ─────────────── */
+
+.config-modal-wide {
+    max-width: 600px;
+}
+
+.modal-body-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.config-divider {
+    height: 1px;
+    background-color: rgba(226, 232, 240, 0.6);
+    margin: 0.5rem 0;
+}
+
+.dark .config-divider {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.config-row-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.input-with-button {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.input-with-button .text-input {
+    flex: 1;
+}
+
+.btn-test-connection {
+    background-color: #0ea5e9;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-test-connection:hover {
+    background-color: #0284c7;
+}
+
+.btn-test-connection:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Estado de conexión */
+.connection-status-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    margin-top: 0.35rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.status-ok {
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #065f46;
+}
+
+.status-ok .status-dot {
+    background-color: #10b981;
+}
+
+.status-error {
+    background-color: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #991b1b;
+}
+
+.status-error .status-dot {
+    background-color: #ef4444;
+}
+
+.status-number {
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.dark .status-number {
+    color: #ffffff;
+}
+
+.status-error-text {
+    margin: 0.25rem 0 0;
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.2s;
+    border-radius: 22px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.2s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #10b981;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+/* Chatbot Config */
+.chatbot-config {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    background-color: rgba(14, 165, 233, 0.04);
+    border: 1px solid rgba(14, 165, 233, 0.1);
+    border-radius: 10px;
+}
+
+.dark .chatbot-config {
+    background-color: rgba(14, 165, 233, 0.06);
+    border-color: rgba(14, 165, 233, 0.12);
+}
+
+.textarea-input {
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    color: #334155;
+    outline: none;
+    resize: vertical;
+    min-height: 50px;
+    transition: border-color 0.2s;
+}
+
+.textarea-input:focus {
+    border-color: #0ea5e9;
+}
+
+.dark .textarea-input {
+    background-color: #374151;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #f3f4f6;
+}
+
+.config-columns-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+}
+
+/* ─── RESPONSIVIDAD ────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .delivery-dashboard-container {
+        padding: 0.75rem;
+    }
+
+    .orders-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .delivery-dash-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
+    }
+
+    .delivery-dash-header .flex {
+        width: 100%;
+    }
+
+    .config-columns-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .config-modal-wide {
+        max-width: 95vw;
+    }
+
+    .modal-body-scroll {
+        max-height: 80vh;
+    }
 }

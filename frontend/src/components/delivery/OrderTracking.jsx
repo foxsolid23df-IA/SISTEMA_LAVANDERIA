@@ -7,7 +7,12 @@ import {
     FiMapPin,
     FiPackage,
     FiRefreshCw,
-    FiTruck
+    FiTruck,
+    FiShare2,
+    FiCamera,
+    FiStar,
+    FiMessageCircle,
+    FiCalendar
 } from "react-icons/fi";
 import { DELIVERY_PAYMENT_METHODS, DELIVERY_PAYMENT_PREFERENCES, deliveryService } from "../../services/deliveryService";
 import "./OrderTracking.css";
@@ -26,33 +31,105 @@ const statusSteps = [
 const statusCopy = {
     requested: {
         title: "Solicitud recibida",
-        detail: "Estamos revisando tu pedido para asignar un repartidor."
+        detail: "Estamos revisando tu pedido para asignar un repartidor.",
+        color: "#b7791f"
     },
     accepted: {
         title: "Pedido aceptado",
-        detail: "La sucursal ya acepto tu solicitud de recogida."
+        detail: "La sucursal ya acepto tu solicitud de recogida.",
+        color: "#0f8fb8"
     },
     assigned: {
         title: "Repartidor en camino",
-        detail: "Tu repartidor ya fue asignado y va hacia tu domicilio."
+        detail: "Tu repartidor ya fue asignado y va hacia tu domicilio.",
+        color: "#0f8fb8"
     },
     picked_up: {
         title: "Ropa recogida",
-        detail: "Tus prendas ya fueron recogidas y van camino a la sucursal."
+        detail: "Tus prendas ya fueron recogidas y van camino a la sucursal.",
+        color: "#0f8fb8"
     },
     delivered_to_store: {
         title: "En lavanderia",
-        detail: "Tu ropa ya esta en la sucursal para su proceso de lavado."
+        detail: "Tu ropa ya esta en la sucursal para su proceso de lavado.",
+        color: "#0f8fb8"
     },
     completed: {
         title: "Pedido completado",
-        detail: "Gracias por confiar en nosotros."
+        detail: "Gracias por confiar en nosotros.",
+        color: "#19956b"
     }
 };
 
 const money = (value) => `$${Number(value || 0).toFixed(2)} MXN`;
 
 const isServicePending = (status) => ["requested", "accepted", "assigned"].includes(status);
+
+const formatTimeAgo = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "Hace un momento";
+    if (diffMin < 60) return `Hace ${diffMin} min`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `Hace ${diffHrs}h ${diffMin % 60}min`;
+    const diffDays = Math.floor(diffHrs / 24);
+    return `Hace ${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+};
+
+const getWhatsAppShareUrl = (order) => {
+    const trackingUrl = `${window.location.origin}/tracking/${order.tracking_token}`;
+    const text = encodeURIComponent(
+        `📦 Seguimiento de tu pedido en ${order.store_name || "Lavanderia"}\n\n` +
+        `Estado: ${statusCopy[order.status]?.title || order.status}\n` +
+        `Orden: #${order.id}\n\n` +
+        `Consultalo aqui:\n${trackingUrl}`
+    );
+    return `https://wa.me/?text=${text}`;
+};
+
+const SkeletonBlock = ({ className }) => (
+    <div className={`tracking-skeleton ${className || ""}`} />
+);
+
+const SkeletonLoader = () => (
+    <main className="tracking-page tracking-page-centered">
+        <div className="tracking-skeleton-wrapper">
+            <div className="tracking-skeleton-hero">
+                <SkeletonBlock className="sk-store" />
+                <SkeletonBlock className="sk-title" />
+                <SkeletonBlock className="sk-detail" />
+            </div>
+            <div className="tracking-skeleton-card">
+                <SkeletonBlock className="sk-icon" />
+                <div className="tracking-skeleton-lines">
+                    <SkeletonBlock className="sk-badge" />
+                    <SkeletonBlock className="sk-line-lg" />
+                    <SkeletonBlock className="sk-line-sm" />
+                </div>
+            </div>
+            <div className="tracking-skeleton-layout">
+                <div className="tracking-skeleton-timeline">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="tracking-skeleton-step">
+                            <SkeletonBlock className="sk-circle" />
+                            <div className="tracking-skeleton-lines">
+                                <SkeletonBlock className="sk-line-md" />
+                                <SkeletonBlock className="sk-line-sm" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="tracking-skeleton-aside">
+                    <SkeletonBlock className="sk-panel" />
+                    <SkeletonBlock className="sk-panel" />
+                </div>
+            </div>
+        </div>
+    </main>
+);
 
 export const OrderTracking = () => {
     const { token } = useParams();
@@ -64,7 +141,12 @@ export const OrderTracking = () => {
     const [itemDescription, setItemDescription] = useState("");
     const [paymentPreference, setPaymentPreference] = useState("");
     const [savingPreference, setSavingPreference] = useState(false);
+    const [showShareTooltip, setShowShareTooltip] = useState(false);
+    const [serviceRating, setServiceRating] = useState(0);
+    const [ratingSubmitted, setRatingSubmitted] = useState(false);
+    const [submittingRating, setSubmittingRating] = useState(false);
     const formDirtyRef = useRef(false);
+    const shareTimeoutRef = useRef(null);
 
     useEffect(() => {
         if (!token) {
@@ -119,7 +201,8 @@ export const OrderTracking = () => {
     const currentStep = statusSteps[activeIndex] || statusSteps[0];
     const currentCopy = statusCopy[order?.status] || {
         title: currentStep.label,
-        detail: "Tu pedido esta en seguimiento."
+        detail: "Tu pedido esta en seguimiento.",
+        color: "#0f8fb8"
     };
     const totalPaid = Number(order?.paid_amount || 0);
     const balanceDue = Number(order?.balance_due ?? Math.max(0, Number(order?.total_cost || 0) - totalPaid));
@@ -127,6 +210,30 @@ export const OrderTracking = () => {
     const hasPickupQuote = Boolean(order?.pickup_quote_confirmed_at);
     const canConfirmPreference = hasPickupQuote;
     const needsPreference = order && !order.payment_preference_confirmed_at && !["completed", "cancelled"].includes(order.status);
+
+    const estimatedTime = useMemo(() => {
+        if (!order?.created_at) return null;
+        const created = new Date(order.created_at);
+        const now = new Date();
+        const elapsedMin = Math.floor((now - created) / 60000);
+
+        const estimates = {
+            requested: 30,
+            accepted: 20,
+            assigned: 15,
+            picked_up: 45,
+            delivered_to_store: 120,
+            completed: 0
+        };
+
+        const totalEstimate = estimates[order.status] || 0;
+        const remaining = Math.max(0, totalEstimate - elapsedMin);
+
+        if (remaining === 0 && order.status !== "completed") return "Cualquier momento";
+        if (remaining === 0) return null;
+        if (remaining < 60) return `~${remaining} min`;
+        return `~${Math.floor(remaining / 60)}h ${remaining % 60}min`;
+    }, [order?.created_at, order?.status]);
 
     const handleSavePreference = async (event) => {
         event.preventDefault();
@@ -159,16 +266,39 @@ export const OrderTracking = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <main className="tracking-page tracking-page-centered">
-                <section className="tracking-loader-card">
-                    <div className="tracking-spinner" />
-                    <p>Cargando seguimiento...</p>
-                </section>
-            </main>
-        );
-    }
+    const handleShare = () => {
+        const url = getWhatsAppShareUrl(order);
+        window.open(url, "_blank");
+        setShowShareTooltip(true);
+        if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+        shareTimeoutRef.current = setTimeout(() => setShowShareTooltip(false), 2500);
+    };
+
+    const handleSubmitRating = async () => {
+        if (serviceRating === 0 || ratingSubmitted || submittingRating) return;
+        try {
+            setSubmittingRating(true);
+            await deliveryService.updatePublicDeliveryRequest(token, {
+                customer_rating: serviceRating,
+                customer_rating_submitted_at: new Date().toISOString()
+            });
+            setRatingSubmitted(true);
+        } catch (err) {
+            console.error("Error enviando calificacion:", err);
+            setSyncError("No pudimos guardar tu calificacion. Intentalo de nuevo.");
+        } finally {
+            setSubmittingRating(false);
+        }
+    };
+
+    useEffect(() => {
+        if (order?.customer_rating_submitted_at) {
+            setRatingSubmitted(true);
+            setServiceRating(order.customer_rating || 0);
+        }
+    }, [order?.customer_rating_submitted_at, order?.customer_rating]);
+
+    if (loading) return <SkeletonLoader />;
 
     if (error || !order) {
         return (
@@ -183,18 +313,36 @@ export const OrderTracking = () => {
         );
     }
 
+    const isCompleted = order.status === "completed";
+    const isCancelled = order.status === "cancelled";
+
     return (
         <main className="tracking-page">
             <section className="tracking-shell">
                 <header className="tracking-hero">
-                    <div>
-                        <p className="tracking-store">{order.store_name || "Lavanderia"}</p>
+                    <div className="tracking-hero-content">
+                        <div className="tracking-store-badge">
+                            <FiPackage />
+                            <span>{order.store_name || "Lavanderia"}</span>
+                        </div>
                         <h1>{currentCopy.title}</h1>
                         <p className="tracking-hero-detail">{currentCopy.detail}</p>
+                        {estimatedTime && (
+                            <div className="tracking-eta">
+                                <FiCalendar />
+                                <span>Tiempo estimado: <strong>{estimatedTime}</strong></span>
+                            </div>
+                        )}
                     </div>
-                    <div className="tracking-order-pill">
-                        <span>Orden</span>
-                        <strong>#{order.id}</strong>
+                    <div className="tracking-hero-actions">
+                        <div className="tracking-order-pill">
+                            <span>Orden</span>
+                            <strong>#{order.id}</strong>
+                        </div>
+                        <button type="button" className="tracking-share-btn" onClick={handleShare} title="Compartir por WhatsApp">
+                            <FiShare2 />
+                            {showShareTooltip && <span className="tracking-share-tooltip">Abierto</span>}
+                        </button>
                     </div>
                 </header>
 
@@ -277,9 +425,29 @@ export const OrderTracking = () => {
                     </section>
                 )}
 
+                {order.pickup_evidence_url && (
+                    <section className="tracking-evidence-card">
+                        <div className="tracking-evidence-header">
+                            <FiCamera />
+                            <h2>Evidencia de recogida</h2>
+                        </div>
+                        <div className="tracking-evidence-image-wrapper">
+                            <img
+                                src={order.pickup_evidence_url}
+                                alt="Evidencia de recogida"
+                                className="tracking-evidence-image"
+                                loading="lazy"
+                            />
+                        </div>
+                    </section>
+                )}
+
                 <section className="tracking-layout">
                     <div className="tracking-progress-card">
-                        <h2>Avance del pedido</h2>
+                        <h2>
+                            <FiClock />
+                            Avance del pedido
+                        </h2>
                         <div className="tracking-timeline">
                             {statusSteps.map((step, index) => {
                                 const done = index < activeIndex;
@@ -399,6 +567,58 @@ export const OrderTracking = () => {
                             )}
                         </section>
                     </aside>
+                </section>
+
+                {isCompleted && !isCancelled && (
+                    <section className="tracking-rating-card">
+                        <div className="tracking-rating-header">
+                            <FiStar />
+                            <h2>Como fue tu experiencia?</h2>
+                            <p>Califica el servicio para ayudarnos a mejorar</p>
+                        </div>
+                        {ratingSubmitted ? (
+                            <div className="tracking-rating-thanks">
+                                <FiCheckCircle />
+                                <span>Gracias por tu calificacion</span>
+                            </div>
+                        ) : (
+                            <div className="tracking-rating-content">
+                                <div className="tracking-stars">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            className={`tracking-star ${serviceRating >= star ? "active" : ""}`}
+                                            onClick={() => setServiceRating(star)}
+                                            disabled={submittingRating}
+                                        >
+                                            <FiStar />
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    className="tracking-rating-submit"
+                                    onClick={handleSubmitRating}
+                                    disabled={serviceRating === 0 || submittingRating}
+                                >
+                                    {submittingRating ? "Enviando..." : "Enviar calificacion"}
+                                </button>
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                <section className="tracking-whatsapp-section">
+                    <a
+                        href={`https://wa.me/521${order.customer_phone?.replace(/\D/g, "") || ""}?text=${encodeURIComponent(`Hola, tengo una consulta sobre mi pedido #${order.id}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tracking-whatsapp-btn"
+                    >
+                        <FiMessageCircle />
+                        <span>Contactar por WhatsApp</span>
+                    </a>
                 </section>
 
                 <footer className="tracking-footer">

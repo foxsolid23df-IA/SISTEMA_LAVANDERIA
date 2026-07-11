@@ -158,3 +158,123 @@ body.capacitor-android .orders-list > div {
     line-height: 1.15;
   }
 }
+
+/* ========== Vista Excel ========== */
+.orders-excel-view {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.dark .orders-excel-view {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.orders-excel-table-wrapper {
+  overflow-x: auto;
+}
+
+.orders-excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.orders-excel-table th {
+  background: #f8fafc;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.dark .orders-excel-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+.orders-excel-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1f2937;
+}
+
+.dark .orders-excel-table td {
+  border-bottom-color: #1e293b;
+  color: #e2e8f0;
+}
+
+.orders-excel-table tbody tr:hover {
+  background: #f0fdf4;
+}
+
+.dark .orders-excel-table tbody tr:hover {
+  background: #064e3b20;
+}
+
+.orders-excel-table .folio-cell {
+  font-weight: 700;
+  color: #059669;
+}
+
+.orders-excel-table .amount-cell {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.orders-excel-table .paid-cell {
+  color: #059669;
+  font-weight: 500;
+}
+
+.orders-excel-table .balance-cell {
+  font-weight: 600;
+}
+
+.orders-excel-table .balance-cell.text-red {
+  color: #dc2626;
+}
+
+.orders-excel-table .status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.status-received {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge.status-processing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-badge.status-ready {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-badge.status-delivered {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-badge.status-cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.orders-excel-table .empty-cell {
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px;
+}
