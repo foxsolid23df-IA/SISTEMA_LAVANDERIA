@@ -1,6 +1,6 @@
 {
   "name": "pos-multicajas-pro",
-  "version": "1.4.56",
+  "version": "1.4.57",
   "description": "Sistema completo de punto de venta con escaneo de cÃ³digos de barras, gestiÃ³n de inventario y estadÃ­sticas en tiempo real",
   "main": "electron-main.js",
   "scripts": {

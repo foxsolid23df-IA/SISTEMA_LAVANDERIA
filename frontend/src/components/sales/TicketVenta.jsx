@@ -183,8 +183,8 @@ const TicketVenta = forwardRef(({ venta, settings }, ref) => {
               </span>
             </div>
           </div>
-        ))}
-        ) : (
+        ))
+        : (
           <div style={{textAlign: "center", fontStyle: "italic", fontSize: "0.9em", padding: "5px 0"}}>
             Sin artículos registrados
           </div>
