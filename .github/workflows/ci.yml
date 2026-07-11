@@ -23,6 +23,10 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
+      - name: Fix rollup native modules for Linux
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+        working-directory: ./frontend
+
       - name: Run Tests
         working-directory: ./frontend
         run: npm test -- --run
