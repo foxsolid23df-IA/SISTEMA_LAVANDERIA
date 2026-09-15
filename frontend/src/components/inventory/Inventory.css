@@ -964,27 +964,46 @@ body:not(.dark) .control-btn.primary .btn-icon {
 .new-product-form-group {
   display: flex;
   flex-direction: column;
+  grid-column: span 12;
 }
 
+/* col-span-12 => full width always */
 .new-product-form-group.col-span-12 {
   grid-column: span 12;
 }
 
+/* md:col-span-8 => 8/12 on desktop, full on mobile */
+.new-product-form-group[class*="md:col-span-8"],
 .new-product-form-group.md-col-span-8 {
   grid-column: span 12;
 }
 
+/* md:col-span-4 => 4/12 on desktop, full on mobile */
+.new-product-form-group[class*="md:col-span-4"],
 .new-product-form-group.md-col-span-4 {
   grid-column: span 12;
 }
 
+/* md:col-span-6 => 6/12 on desktop, full on mobile */
+.new-product-form-group[class*="md:col-span-6"],
+.new-product-form-group.md-col-span-6 {
+  grid-column: span 12;
+}
+
 @media (min-width: 768px) {
+  .new-product-form-group[class*="md:col-span-8"],
   .new-product-form-group.md-col-span-8 {
     grid-column: span 8;
   }
 
+  .new-product-form-group[class*="md:col-span-4"],
   .new-product-form-group.md-col-span-4 {
     grid-column: span 4;
+  }
+
+  .new-product-form-group[class*="md:col-span-6"],
+  .new-product-form-group.md-col-span-6 {
+    grid-column: span 6;
   }
 }
 
