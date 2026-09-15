@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.58] - 2026-09-14
+
+### Fixed
+
+- **Catálogo de Productos:** Corrección de visibilidad del botón '+ Nuevo Producto' / '+ Nuevo Servicio' cuando está activado el tema blanco (modo claro), añadiendo respaldo de color de acento esmeralda `#10b981`, texto e icono blanco brillante con contraste óptimo.
+
 ## [1.4.56] - 2026-06-28
 
 ### Added

@@ -11,13 +11,13 @@ const syncService = require('../services/syncService');
 
 exports.getHealth = async (req, res) => {
     try {
-        await SystemLog.create({
+        SystemLog.create({
             action: 'HEALTH_CHECK',
             module: 'ADMIN_API',
             details: 'Validación de conexión a base de datos exitosa',
             ip: req.ip,
             userAgent: req.headers['user-agent']
-        });
+        }).catch(() => {});
 
         await sequelize.authenticate();
 
@@ -33,13 +33,13 @@ exports.getHealth = async (req, res) => {
 
         });
     } catch (error) {
-        await SystemLog.create({
+        SystemLog.create({
             action: 'HEALTH_CHECK_FAILED',
             module: 'ADMIN_API',
             details: `Error: ${error.message}`,
             ip: req.ip,
             userAgent: req.headers['user-agent']
-        });
+        }).catch(() => {});
 
         res.status(500).json({
             success: false,

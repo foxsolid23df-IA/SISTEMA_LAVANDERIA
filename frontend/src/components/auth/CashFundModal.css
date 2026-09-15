@@ -1,244 +1,556 @@
+/* ═══════════════════════════════════════════════════════════════
+   CASH FUND MODAL — Adaptive Light/Dark Theme
+   All functionality unchanged, only visual layer improved
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Light Mode Tokens (default) ────────────────────────────── */
+:root {
+    /* Overlay */
+    --cf-overlay-bg:
+        linear-gradient(135deg, rgba(100,116,139,0.35) 0%, rgba(71,85,105,0.3) 50%, rgba(51,65,85,0.35) 100%);
+    --cf-overlay-dot: rgba(0, 0, 0, 0.015);
+
+    /* Card */
+    --cf-card-bg: rgba(255, 255, 255, 0.88);
+    --cf-card-border: rgba(0, 0, 0, 0.07);
+    --cf-card-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.03),
+        0 4px 6px rgba(0, 0, 0, 0.05),
+        0 12px 24px rgba(0, 0, 0, 0.08),
+        0 32px 64px rgba(0, 0, 0, 0.1);
+    --cf-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    --cf-card-text: #1e293b;
+
+    /* Sections */
+    --cf-section-border: rgba(0, 0, 0, 0.06);
+
+    /* Inputs */
+    --cf-input-bg: rgba(0, 0, 0, 0.035);
+    --cf-input-border: rgba(0, 0, 0, 0.08);
+    --cf-input-focus-bg: rgba(0, 0, 0, 0.02);
+    --cf-input-focus-border: rgba(16, 185, 129, 0.4);
+    --cf-input-focus-ring: rgba(16, 185, 129, 0.06);
+    --cf-input-text: #1e293b;
+
+    /* Keypad */
+    --cf-keypad-bg: rgba(0, 0, 0, 0.04);
+    --cf-keypad-border: rgba(0, 0, 0, 0.07);
+    --cf-keypad-text: #1e293b;
+    --cf-keypad-hover-bg: rgba(0, 0, 0, 0.07);
+    --cf-keypad-hover-border: rgba(0, 0, 0, 0.12);
+    --cf-keypad-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --cf-keypad-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    --cf-keypad-active-bg: rgba(16, 185, 129, 0.08);
+    --cf-keypad-active-border: rgba(16, 185, 129, 0.25);
+
+    /* Quick Amount Chips */
+    --cf-chip-bg: rgba(0, 0, 0, 0.04);
+    --cf-chip-border: rgba(0, 0, 0, 0.08);
+    --cf-chip-text: #374151;
+    --cf-chip-hover-bg: rgba(16, 185, 129, 0.06);
+    --cf-chip-hover-border: rgba(16, 185, 129, 0.25);
+    --cf-chip-hover-text: #059669;
+    --cf-chip-hover-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+
+    /* Accent */
+    --cf-accent: #10b981;
+    --cf-accent-hover: #059669;
+    --cf-accent-glow: rgba(16, 185, 129, 0.15);
+
+    /* Muted / Secondary */
+    --cf-muted: #64748b;
+    --cf-subtle: #475569;
+
+    /* Display */
+    --cf-display-bg: rgba(16, 185, 129, 0.05);
+    --cf-display-border: rgba(16, 185, 129, 0.15);
+    --cf-display-glow: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.25), transparent);
+    --cf-display-amount: #0f172a;
+    --cf-display-symbol: #10b981;
+
+    /* Close */
+    --cf-close-bg: rgba(0, 0, 0, 0.04);
+    --cf-close-border: rgba(0, 0, 0, 0.06);
+    --cf-close-text: #64748b;
+    --cf-close-hover-bg: rgba(239, 68, 68, 0.08);
+    --cf-close-hover-border: rgba(239, 68, 68, 0.2);
+    --cf-close-hover-text: #ef4444;
+
+    /* Clear button */
+    --cf-clear-bg: rgba(239, 68, 68, 0.07);
+    --cf-clear-border: rgba(239, 68, 68, 0.18);
+    --cf-clear-text: #dc2626;
+    --cf-clear-hover-bg: rgba(239, 68, 68, 0.14);
+    --cf-clear-hover-border: rgba(239, 68, 68, 0.3);
+    --cf-clear-active-bg: rgba(239, 68, 68, 0.2);
+    --cf-clear-shadow: 0 2px 4px rgba(239, 68, 68, 0.06);
+
+    /* Note */
+    --cf-note: #64748b;
+
+    /* Skip button */
+    --cf-skip-border: rgba(0, 0, 0, 0.1);
+    --cf-skip-hover-bg: rgba(0, 0, 0, 0.03);
+    --cf-skip-hover-border: rgba(0, 0, 0, 0.15);
+    --cf-skip-text: #64748b;
+    --cf-skip-hover-text: #374151;
+}
+
+/* ── Dark Mode Tokens ───────────────────────────────────────── */
+.dark {
+    /* Overlay */
+    --cf-overlay-bg:
+        radial-gradient(ellipse at 20% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+        linear-gradient(135deg, #0b1120 0%, #111a2e 40%, #0f1d35 100%);
+    --cf-overlay-dot: rgba(255, 255, 255, 0.03);
+
+    /* Card */
+    --cf-card-bg: rgba(17, 24, 39, 0.65);
+    --cf-card-border: rgba(255, 255, 255, 0.06);
+    --cf-card-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 4px 6px rgba(0, 0, 0, 0.2),
+        0 12px 24px rgba(0, 0, 0, 0.25),
+        0 32px 64px rgba(0, 0, 0, 0.35);
+    --cf-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --cf-card-text: #f1f5f9;
+
+    /* Sections */
+    --cf-section-border: rgba(255, 255, 255, 0.06);
+
+    /* Inputs */
+    --cf-input-bg: rgba(15, 23, 42, 0.5);
+    --cf-input-border: rgba(255, 255, 255, 0.07);
+    --cf-input-focus-bg: rgba(15, 23, 42, 0.7);
+    --cf-input-focus-border: rgba(52, 211, 153, 0.4);
+    --cf-input-focus-ring: rgba(52, 211, 153, 0.08);
+    --cf-input-text: #f1f5f9;
+
+    /* Keypad */
+    --cf-keypad-bg: rgba(30, 41, 59, 0.5);
+    --cf-keypad-border: rgba(255, 255, 255, 0.05);
+    --cf-keypad-text: #e2e8f0;
+    --cf-keypad-hover-bg: rgba(40, 55, 78, 0.7);
+    --cf-keypad-hover-border: rgba(255, 255, 255, 0.1);
+    --cf-keypad-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    --cf-keypad-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --cf-keypad-active-bg: rgba(52, 211, 153, 0.1);
+    --cf-keypad-active-border: rgba(52, 211, 153, 0.2);
+
+    /* Quick Amount Chips */
+    --cf-chip-bg: rgba(30, 41, 59, 0.6);
+    --cf-chip-border: rgba(255, 255, 255, 0.06);
+    --cf-chip-text: #94a3b8;
+    --cf-chip-hover-bg: rgba(52, 211, 153, 0.1);
+    --cf-chip-hover-border: rgba(52, 211, 153, 0.25);
+    --cf-chip-hover-text: #34d399;
+    --cf-chip-hover-shadow: 0 4px 12px rgba(52, 211, 153, 0.1);
+
+    /* Accent */
+    --cf-accent: #34d399;
+    --cf-accent-hover: #10b981;
+    --cf-accent-glow: rgba(52, 211, 153, 0.15);
+
+    /* Muted / Secondary */
+    --cf-muted: #64748b;
+    --cf-subtle: #475569;
+
+    /* Display */
+    --cf-display-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0.02));
+    --cf-display-border: rgba(16, 185, 129, 0.15);
+    --cf-display-glow: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.3), transparent);
+    --cf-display-amount: #f8fafc;
+    --cf-display-symbol: #34d399;
+
+    /* Close */
+    --cf-close-bg: rgba(30, 41, 59, 0.6);
+    --cf-close-border: rgba(255, 255, 255, 0.06);
+    --cf-close-text: #64748b;
+    --cf-close-hover-bg: rgba(239, 68, 68, 0.15);
+    --cf-close-hover-border: rgba(239, 68, 68, 0.25);
+    --cf-close-hover-text: #f87171;
+
+    /* Clear button */
+    --cf-clear-bg: rgba(239, 68, 68, 0.12);
+    --cf-clear-border: rgba(239, 68, 68, 0.2);
+    --cf-clear-text: #f87171;
+    --cf-clear-hover-bg: rgba(239, 68, 68, 0.2);
+    --cf-clear-hover-border: rgba(239, 68, 68, 0.35);
+    --cf-clear-active-bg: rgba(239, 68, 68, 0.25);
+    --cf-clear-shadow: 0 2px 4px rgba(239, 68, 68, 0.08);
+
+    /* Note */
+    --cf-note: #475569;
+
+    /* Skip button */
+    --cf-skip-border: rgba(255, 255, 255, 0.06);
+    --cf-skip-hover-bg: rgba(255, 255, 255, 0.03);
+    --cf-skip-hover-border: rgba(255, 255, 255, 0.1);
+    --cf-skip-text: #64748b;
+    --cf-skip-hover-text: #94a3b8;
+}
+
+/* ── Overlay ────────────────────────────────────────────────── */
 .cash-fund-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    inset: 0;
+    background: var(--cf-overlay-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     padding: 20px;
+    overflow: hidden;
 }
 
+.cash-fund-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 1px 1px, var(--cf-overlay-dot) 1px, transparent 0);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+
+/* ── Modal Card ─────────────────────────────────────────────── */
 .cash-fund-modal {
-    background: var(--admin-card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 20px;
+    background: var(--cf-card-bg);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-radius: 24px;
+    padding: 28px 24px 22px;
     width: 100%;
     max-width: 380px;
     position: relative;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-    animation: slideUp 0.4s ease-out;
-    border: 1px solid var(--admin-card-border);
-    color: var(--admin-text-main);
+    box-shadow: var(--cf-card-shadow);
+    animation: cashFundModalIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    color: var(--cf-card-text);
+    border: 1px solid var(--cf-card-border);
 }
 
-@keyframes slideUp {
+@keyframes cashFundModalIn {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.98);
+        transform: translateY(24px) scale(0.96);
+        filter: blur(4px);
     }
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
+        filter: blur(0);
     }
 }
 
+/* ── Header ─────────────────────────────────────────────────── */
 .cash-fund-header {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--cf-section-border);
 }
 
 .header-title-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    margin-bottom: 2px;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 
 .cash-fund-icon {
-    font-size: 24px;
-    margin: 0;
+    font-size: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+    border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    animation: iconPulse 3s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.1); }
+    50% { box-shadow: 0 0 16px 4px rgba(251, 191, 36, 0.08); }
 }
 
 .cash-fund-header h1 {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 800;
-    color: var(--admin-text-main);
-    margin: 0 0 2px 0;
-    letter-spacing: -0.5px;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+/* Light mode: dark text. Dark mode: gradient text */
+:root .cash-fund-header h1 {
+    color: #1e293b;
+}
+.dark .cash-fund-header h1 {
+    background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .cash-fund-header p {
-    font-size: 0.8rem;
-    color: var(--admin-text-muted);
-    margin: 0 0 8px 0;
+    font-size: 0.78rem;
+    color: var(--cf-muted);
+    margin: 0 0 10px 0;
+    letter-spacing: 0.2px;
 }
 
 .cash-fund-staff {
-    display: inline-block;
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
-    padding: 2px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.03));
+    color: var(--cf-accent);
+    padding: 4px 14px;
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
 }
 
-/* Input Type de Cambio */
+/* ── Exchange Rate Inputs ───────────────────────────────────── */
+.exchange-rates-container {
+    margin-bottom: 14px;
+}
+
 .exchange-rate-input-container {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     text-align: left;
 }
 
 .exchange-rate-input-container label {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    color: var(--admin-text-muted);
-    margin-bottom: 4px;
-    padding-left: 4px;
+    color: var(--cf-muted);
+    margin-bottom: 5px;
+    padding-left: 2px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .rate-input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
-    background: var(--admin-input-bg);
-    border: 1px solid var(--admin-card-border);
+    background: var(--cf-input-bg);
+    border: 1px solid var(--cf-input-border);
     border-radius: 12px;
-    padding: 0 10px;
-    transition: all 0.2s ease;
+    padding: 0 12px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .rate-input-wrapper:focus-within {
-    border-color: var(--admin-accent);
-    background: var(--admin-card-bg);
+    border-color: var(--cf-input-focus-border);
+    background: var(--cf-input-focus-bg);
+    box-shadow:
+        0 0 0 3px var(--cf-input-focus-ring);
 }
 
 .rate-input-wrapper span.material-symbols-outlined {
-    color: var(--admin-accent);
+    color: var(--cf-accent);
     font-size: 18px;
+    opacity: 0.8;
 }
 
 .rate-input-wrapper input {
     width: 100%;
     border: none;
     background: transparent;
-    padding: 8px;
-    font-size: 1rem;
+    padding: 10px 8px;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--admin-text-main);
+    color: var(--cf-input-text);
     outline: none;
 }
 
-.rate-suffix {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--admin-text-muted);
-    white-space: nowrap;
+.rate-input-wrapper input::placeholder {
+    color: var(--cf-subtle);
 }
 
+.rate-suffix {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--cf-subtle);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── Cash Display ───────────────────────────────────────────── */
 .cash-fund-display {
-    background: var(--admin-input-bg);
-    border: 1px solid var(--admin-card-border);
-    border-radius: 12px;
-    padding: 10px;
+    background: var(--cf-display-bg);
+    border: 1px solid var(--cf-display-border);
+    border-radius: 16px;
+    padding: 14px 12px;
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: 4px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.cash-fund-display::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: var(--cf-display-glow);
 }
 
 .currency-symbol {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #10b981;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--cf-display-symbol);
+    opacity: 0.9;
 }
 
 .amount-value {
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 800;
-    color: var(--admin-text-main);
-    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--cf-display-amount);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
     min-width: 60px;
     text-align: center;
-    letter-spacing: -1px;
+    letter-spacing: -1.5px;
+    text-shadow: none;
+}
+
+.dark .amount-value {
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
 }
 
 .currency-code {
-    font-size: 0.75rem;
-    color: var(--admin-text-muted);
+    font-size: 0.65rem;
+    color: var(--cf-subtle);
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Montos rápidos */
+/* ── Quick Amount Chips ─────────────────────────────────────── */
 .quick-amounts {
     display: flex;
     gap: 6px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .quick-btn {
-    background: var(--admin-card-bg);
-    border: 1px solid var(--admin-card-border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 0.75rem;
+    background: var(--cf-chip-bg);
+    border: 1px solid var(--cf-chip-border);
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: var(--admin-text-secondary);
+    color: var(--cf-chip-text);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.2px;
 }
 
 .quick-btn:hover {
-    background: var(--admin-input-bg);
-    border-color: var(--admin-accent);
-    color: var(--admin-text-main);
+    background: var(--cf-chip-hover-bg);
+    border-color: var(--cf-chip-hover-border);
+    color: var(--cf-chip-hover-text);
+    transform: translateY(-1px);
+    box-shadow: var(--cf-chip-hover-shadow);
 }
 
-/* Teclado numérico */
+.quick-btn:active {
+    transform: translateY(0) scale(0.97);
+}
+
+/* ── Keypad ─────────────────────────────────────────────────── */
 .cash-fund-keypad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 15px;
+    gap: 7px;
+    margin-bottom: 16px;
 }
 
 .keypad-btn {
-    background: var(--admin-card-bg);
-    border: 1px solid var(--admin-card-border);
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 1.1rem;
+    background: var(--cf-keypad-bg);
+    border: 1px solid var(--cf-keypad-border);
+    border-radius: 14px;
+    padding: 14px 8px;
+    font-size: 1.15rem;
     font-weight: 700;
-    color: var(--admin-text-main);
+    color: var(--cf-keypad-text);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--cf-keypad-shadow);
+}
+
+.keypad-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.06), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 
 .keypad-btn:hover {
-    background: var(--admin-input-bg);
-    border-color: var(--admin-accent);
+    background: var(--cf-keypad-hover-bg);
+    border-color: var(--cf-keypad-hover-border);
+    transform: translateY(-1px);
+    box-shadow: var(--cf-keypad-hover-shadow);
+}
+
+.keypad-btn:hover::after {
+    opacity: 1;
 }
 
 .keypad-btn:active {
-    background: var(--admin-accent-subtle);
+    transform: translateY(1px) scale(0.97);
+    background: var(--cf-keypad-active-bg);
+    border-color: var(--cf-keypad-active-border);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.15),
+        inset 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .keypad-btn.clear-btn {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    background: var(--cf-clear-bg);
+    border-color: var(--cf-clear-border);
+    color: var(--cf-clear-text);
+    box-shadow: var(--cf-clear-shadow);
 }
 
-/* Botón submit */
+.keypad-btn.clear-btn:hover {
+    background: var(--cf-clear-hover-bg);
+    border-color: var(--cf-clear-hover-border);
+}
+
+.keypad-btn.clear-btn:active {
+    background: var(--cf-clear-active-bg);
+}
+
+/* ── Submit Button ──────────────────────────────────────────── */
 .cash-fund-submit {
     width: 100%;
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981, #059669);
     border: none;
-    border-radius: 12px;
-    padding: 12px 20px;
+    border-radius: 14px;
+    padding: 14px 20px;
     font-size: 1rem;
     font-weight: 800;
     color: white;
@@ -247,30 +559,135 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 4px 14px rgba(16, 185, 129, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    letter-spacing: 0.3px;
+}
+
+.cash-fund-submit::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.12),
+        transparent
+    );
+    transition: left 0.5s ease;
 }
 
 .cash-fund-submit:hover {
-    background: #059669;
+    background: linear-gradient(135deg, #34d399, #10b981);
+    transform: translateY(-1px);
+    box-shadow:
+        0 6px 20px rgba(16, 185, 129, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.cash-fund-submit:hover::before {
+    left: 100%;
+}
+
+.cash-fund-submit:active {
+    transform: translateY(1px);
+    box-shadow:
+        0 2px 8px rgba(16, 185, 129, 0.25),
+        inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .cash-fund-submit:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none;
 }
 
+.cash-fund-submit .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: cashFundSpin 0.7s linear infinite;
+}
+
+@keyframes cashFundSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Skip Button (Admin) ────────────────────────────────────── */
+.cash-fund-skip-btn {
+    margin-top: 10px !important;
+    background: transparent !important;
+    color: var(--cf-skip-text) !important;
+    border: 1px solid var(--cf-skip-border) !important;
+    padding: 10px !important;
+    border-radius: 12px !important;
+    font-size: 0.85rem !important;
+    width: 100% !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+}
+
+.cash-fund-skip-btn:hover {
+    background: var(--cf-skip-hover-bg) !important;
+    border-color: var(--cf-skip-hover-border) !important;
+    color: var(--cf-skip-hover-text) !important;
+}
+
+/* ── Note ───────────────────────────────────────────────────── */
 .cash-fund-note {
     text-align: center;
-    font-size: 0.7rem;
-    color: var(--admin-text-muted);
-    margin-top: 10px;
+    font-size: 0.68rem;
+    color: var(--cf-note);
+    margin-top: 12px;
     font-weight: 500;
+    letter-spacing: 0.2px;
 }
 
-/* Responsive */
+/* ── Close Button ───────────────────────────────────────────── */
+.cash-fund-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: var(--cf-close-bg);
+    border: 1px solid var(--cf-close-border);
+    padding: 7px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--cf-close-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+
+.cash-fund-close:hover {
+    background: var(--cf-close-hover-bg);
+    border-color: var(--cf-close-hover-border);
+    color: var(--cf-close-hover-text);
+    transform: rotate(90deg);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
     .cash-fund-modal {
-        padding: 24px 20px;
+        padding: 24px 18px 18px;
         border-radius: 20px;
     }
 
@@ -279,34 +696,13 @@
     }
 
     .keypad-btn {
-        padding: 14px;
-        font-size: 1.1rem;
+        padding: 15px 8px;
+        font-size: 1.15rem;
+        border-radius: 12px;
     }
 
     .quick-btn {
         padding: 6px 12px;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
-}
-
-.cash-fund-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: var(--admin-input-bg);
-    border: none;
-    padding: 8px;
-    border-radius: 10px;
-    cursor: pointer;
-    color: var(--admin-text-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    z-index: 10;
-}
-
-.cash-fund-close:hover {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
 }

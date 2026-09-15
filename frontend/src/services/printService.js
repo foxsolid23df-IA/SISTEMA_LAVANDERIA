@@ -312,6 +312,19 @@ export const printService = {
             word-break: break-word;
         }
         
+        /* ===== NOTA DE REMISION ===== */
+        .nota-remision {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            box-sizing: border-box !important;
+            overflow: visible !important;
+        }
+        .nota-remision * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
         /* ===== TODOS LOS HIJOS: Prevenir desbordamiento lateral ===== */
         .ticket-venta * {
             max-width: 100% !important;
@@ -362,7 +375,7 @@ export const printService = {
                 padding: 0 !important; 
                 width: ${widthMm};
             }
-            .ticket-venta { 
+            .ticket-venta, .nota-remision { 
                 width: 100% !important; 
                 overflow: visible !important;
                 padding-bottom: 30px !important; 

@@ -1,5 +1,10 @@
 import { supabase } from '../supabase';
 
+const normalizePhone = (phone) => {
+    if (!phone) return phone;
+    return phone.replace(/\D/g, "");
+};
+
 export const DELIVERY_PAYMENT_PREFERENCES = {
     pay_at_pickup: "Pagar o abonar al entregar al chofer",
     pay_on_ready_delivery: "Pagar cuando me entreguen la ropa lista",
@@ -113,7 +118,7 @@ export const deliveryService = {
             .insert([{
                 user_id: user.id,
                 name: customerData.name,
-                phone: customerData.phone,
+                phone: normalizePhone(customerData.phone),
                 address: customerData.address || ''
             }])
             .select()
@@ -702,7 +707,8 @@ export const deliveryService = {
         // data = { driver, customer_name, customer_phone, customer_address, 
         //          garment_summary, notes, delivery_fee, pickup_evidence_path,
         //          payment_preference, create_pos_order, folio,
-        //          register_payment, payment_amount, payment_method, payment_reference }
+        //          register_payment, payment_amount, payment_method, payment_reference,
+        //          order_items, service_cost }
         
         const result = await runDeliveryAction('create_express_pickup', {
             driver_id: data.driver.id,
@@ -721,7 +727,9 @@ export const deliveryService = {
             register_payment: data.register_payment === true,
             payment_amount: data.payment_amount || 0,
             payment_method: data.payment_method || 'efectivo',
-            payment_reference: data.payment_reference || ''
+            payment_reference: data.payment_reference || '',
+            order_items: data.order_items || [],
+            service_cost: data.service_cost || 0
         });
         
         // Disparar notificación en segundo plano
@@ -744,6 +752,16 @@ export const deliveryService = {
             driver_session_token: driver.session_token
         });
         return data?.stats || { total_today: 0, picked_up: 0, delivered_to_store: 0, total_collected: 0 };
+    },
+
+    // Buscar clientes por nombre o teléfono (autocomplete del chofer)
+    searchCustomers: async (query, driver) => {
+        const data = await runDeliveryAction('search_customers', {
+            query: query,
+            driver_id: driver?.id,
+            driver_session_token: driver?.session_token
+        });
+        return data?.customers || [];
     },
 
     // ─── NOTIFICACIONES AUTOMÁTICAS E INTEGRACIÓN DE APIS ──────────────

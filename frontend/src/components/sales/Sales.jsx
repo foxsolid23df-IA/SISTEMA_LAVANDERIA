@@ -1056,6 +1056,11 @@ export const Sales = () => {
                         <span className="ml-2 text-xs text-slate-400">
                           {c.phone}
                         </span>
+                        {c.address && (
+                          <span className="block text-[11px] text-slate-400 truncate max-w-[200px]">
+                            {c.address}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>

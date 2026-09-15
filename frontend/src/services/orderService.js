@@ -105,7 +105,7 @@ export const orderService = {
       .from('orders')
       .select(`
         *,
-        customers (name, phone),
+        customers (name, phone, address),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
         cancelled_by_staff:cancelled_by_staff_id (id, name, role),
@@ -128,7 +128,7 @@ export const orderService = {
       .from('orders')
       .select(`
         *,
-        customers (name, phone),
+        customers (name, phone, address),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
         assigned_staff:assigned_staff_id (id, name, role)
@@ -311,7 +311,7 @@ export const orderService = {
       .from('orders')
       .select(`
         *,
-        customers (name, phone),
+        customers (name, phone, address),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
         assigned_staff:assigned_staff_id (id, name, role)
@@ -342,7 +342,7 @@ export const orderService = {
       .from('orders')
       .select(`
         *,
-        customers (name, phone),
+        customers (name, phone, address),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
         assigned_staff:assigned_staff_id (id, name, role)
@@ -372,7 +372,7 @@ export const orderService = {
       .from('orders')
       .select(`
         *,
-        customers (name, phone),
+        customers (name, phone, address),
         order_items (*),
         staff:created_by_staff_id (id, name, role),
         assigned_staff:assigned_staff_id (id, name, role)
@@ -601,7 +601,7 @@ export const orderService = {
       .select(`
         id, folio, total, paid_amount, payment_status, status,
         promised_at, created_at, notes, payment_method,
-        customer:customers(id, name, phone)
+        customer:customers(id, name, phone, address)
       `)
       .eq('user_id', user.id)
       .neq('payment_status', 'paid')

@@ -116,6 +116,14 @@ export const DeliveryDashboard = () => {
     const [newZoneName, setNewZoneName] = useState("");
     const [savingZones, setSavingZones] = useState(false);
 
+    // Variables de Pestañas
+    const [activeTab, setActiveTab] = useState("orders"); // 'orders' | 'customers'
+
+    // Variables de Clientes
+    const [customerStats, setCustomerStats] = useState([]);
+    const [customerSearch, setCustomerSearch] = useState("");
+    const [customerSort, setCustomerSort] = useState("visits"); // 'visits' | 'date' | 'name'
+
     const loadData = async () => {
         try {
             setLoading(true);
@@ -169,6 +177,43 @@ export const DeliveryDashboard = () => {
                         setPickupZones(zonesData);
                     } catch (zonesErr) {
                         console.error("Error cargando zonas de recogida:", zonesErr);
+                    }
+
+                    // 6. Cargar estadísticas de clientes del chofer
+                    try {
+                        const { data: clients } = await supabase
+                            .from('customers')
+                            .select(`
+                                id, name, phone, address,
+                                delivery_visit_count, last_delivery_visit, source
+                            `)
+                            .eq('user_id', user.id)
+                            .order('delivery_visit_count', { ascending: false });
+
+                        // Enriquecer con datos de delivery_orders
+                        const enrichedClients = await Promise.all(
+                            (clients || []).map(async (client) => {
+                                const { data: deliveries } = await supabase
+                                    .from('delivery_orders')
+                                    .select('id, service_cost, delivery_fee, created_at, status')
+                                    .eq('customer_id', client.id);
+
+                                const totalSpent = (deliveries || []).reduce(
+                                    (sum, d) => sum + (Number(d.service_cost) || 0) + (Number(d.delivery_fee) || 0), 0
+                                );
+
+                                return {
+                                    ...client,
+                                    total_orders: (deliveries || []).length,
+                                    total_spent: totalSpent,
+                                    delivery_visits: client.delivery_visit_count || 0,
+                                };
+                            })
+                        );
+
+                        setCustomerStats(enrichedClients);
+                    } catch (custErr) {
+                        console.error("Error cargando estadísticas de clientes:", custErr);
                     }
                 }
             }
@@ -946,7 +991,24 @@ export const DeliveryDashboard = () => {
                 </div>
             </header>
 
-            {/* Kanban Columns */}
+            {/* Navegación de Pestañas */}
+            <div className="delivery-tabs">
+                <button 
+                    className={`delivery-tab ${activeTab === "orders" ? "active" : ""}`}
+                    onClick={() => setActiveTab("orders")}
+                >
+                    <FiTruck /> Pedidos
+                </button>
+                <button 
+                    className={`delivery-tab ${activeTab === "customers" ? "active" : ""}`}
+                    onClick={() => setActiveTab("customers")}
+                >
+                    <FiUser /> Clientes ({customerStats.length})
+                </button>
+            </div>
+
+            {/* Contenido de Pestañas */}
+            {activeTab === "orders" && (
             <div className="kanban-grid">
                 
                 {/* 1. Pendientes de Aceptar */}
@@ -1169,6 +1231,112 @@ export const DeliveryDashboard = () => {
                 </div>
 
             </div>
+            )}
+
+            {/* Pestaña de Clientes */}
+            {activeTab === "customers" && (
+                <div className="delivery-customers-tab">
+                    <div className="customers-header">
+                        <h2>Clientes del Delivery</h2>
+                        <div className="customers-filters">
+                            <input
+                                type="text"
+                                className="text-input"
+                                placeholder="Buscar por nombre o teléfono..."
+                                value={customerSearch}
+                                onChange={(e) => setCustomerSearch(e.target.value)}
+                            />
+                            <select
+                                className="select-input"
+                                value={customerSort}
+                                onChange={(e) => setCustomerSort(e.target.value)}
+                            >
+                                <option value="visits">Más visitas</option>
+                                <option value="date">Última visita</option>
+                                <option value="name">Nombre</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="customers-stats-summary">
+                        <div className="customer-stat-box">
+                            <strong>{customerStats.length}</strong>
+                            <small>Clientes totales</small>
+                        </div>
+                        <div className="customer-stat-box">
+                            <strong>{customerStats.filter(c => c.source === 'driver').length}</strong>
+                            <small>Del chofer</small>
+                        </div>
+                        <div className="customer-stat-box">
+                            <strong>{customerStats.reduce((sum, c) => sum + (c.delivery_visits || 0), 0)}</strong>
+                            <small>Total visitas</small>
+                        </div>
+                        <div className="customer-stat-box">
+                            <strong>${customerStats.reduce((sum, c) => sum + (c.total_spent || 0), 0).toFixed(2)}</strong>
+                            <small>Total facturado</small>
+                        </div>
+                    </div>
+
+                    <div className="customers-table-container">
+                        {customerStats.length === 0 ? (
+                            <div className="empty-column-state">
+                                <FiUser size={32} />
+                                <p>Aún no hay clientes registrados desde el chofer.</p>
+                            </div>
+                        ) : (
+                            <table className="customers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Teléfono</th>
+                                        <th>Dirección</th>
+                                        <th>Visitas</th>
+                                        <th>Última Visita</th>
+                                        <th>Total Gastado</th>
+                                        <th>Origen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {customerStats
+                                        .filter(c => {
+                                            if (!customerSearch) return true;
+                                            const search = customerSearch.toLowerCase();
+                                            return (c.name || '').toLowerCase().includes(search) ||
+                                                   (c.phone || '').includes(search);
+                                        })
+                                        .sort((a, b) => {
+                                            if (customerSort === 'visits') return (b.delivery_visits || 0) - (a.delivery_visits || 0);
+                                            if (customerSort === 'date') return new Date(b.last_delivery_visit || 0) - new Date(a.last_delivery_visit || 0);
+                                            return (a.name || '').localeCompare(b.name || '');
+                                        })
+                                        .map(customer => (
+                                            <tr key={customer.id}>
+                                                <td className="customer-name-cell">{customer.name}</td>
+                                                <td>{customer.phone}</td>
+                                                <td className="customer-address-cell">{customer.address || '-'}</td>
+                                                <td>
+                                                    <span className="visit-badge">{customer.delivery_visits || 0}</span>
+                                                </td>
+                                                <td>
+                                                    {customer.last_delivery_visit
+                                                        ? new Date(customer.last_delivery_visit).toLocaleDateString('es-MX')
+                                                        : '-'
+                                                    }
+                                                </td>
+                                                <td className="customer-amount-cell">${(customer.total_spent || 0).toFixed(2)}</td>
+                                                <td>
+                                                    <span className={`origin-badge ${customer.source || 'pos'}`}>
+                                                        {customer.source === 'driver' ? 'Chofer' : customer.source === 'whatsapp' ? 'WhatsApp' : 'POS'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Modal de Configuración de Mensajería */}
             {showConfigModal && (

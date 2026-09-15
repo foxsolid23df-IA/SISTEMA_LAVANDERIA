@@ -102,6 +102,103 @@ const getStoreFromDriverToken = async (token: string, supabase: any) => {
   return { storeId: tokenStoreId, driver };
 };
 
+// Buscar o crear cliente por teléfono (vincula chofer con clientes existentes)
+const findOrCreateCustomer = async (
+  supabase: any,
+  userId: string,
+  phone: string,
+  name: string,
+  address: string
+): Promise<number | null> => {
+  if (!phone || phone.length < 10) return null;
+
+  const cleanPhone = phone.replace(/\D/g, "");
+
+  // 1. Buscar cliente existente por teléfono (flexible: exacto o parcial)
+  const { data: existing } = await supabase
+    .from("customers")
+    .select("id, name, address, delivery_visit_count")
+    .eq("user_id", userId)
+    .or(`phone.eq.${cleanPhone},phone.ilike.%${cleanPhone}%`)
+    .order("delivery_visit_count", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    // 2. Si existe: incrementar contador de visitas
+    await supabase
+      .from("customers")
+      .update({
+        delivery_visit_count: (existing.delivery_visit_count || 0) + 1,
+        last_delivery_visit: new Date().toISOString(),
+        name: name || existing.name,
+        address: address || existing.address,
+      })
+      .eq("id", existing.id);
+
+    console.log(`[findOrCreateCustomer] Cliente existente #${existing.id}, visitas: ${(existing.delivery_visit_count || 0) + 1}`);
+    return existing.id;
+  } else {
+    // 3. Si no existe: crear registro nuevo desde el chofer
+    const { data: newCustomer, error } = await supabase
+      .from("customers")
+      .insert([{
+        user_id: userId,
+        name: name,
+        phone: cleanPhone,
+        address: address,
+        delivery_visit_count: 1,
+        last_delivery_visit: new Date().toISOString(),
+        source: "driver",
+      }])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("[findOrCreateCustomer] Error creando cliente:", error);
+      return null;
+    }
+
+    console.log(`[findOrCreateCustomer] Nuevo cliente #${newCustomer.id} desde chofer`);
+    return newCustomer.id;
+  }
+};
+
+// Buscar clientes por nombre o teléfono (para autocomplete del chofer)
+const searchCustomers = async (
+  supabase: any,
+  userId: string,
+  query: string
+): Promise<any[]> => {
+  const trimmed = (query || "").trim();
+  if (trimmed.length < 2) return [];
+
+  const cleanPhone = trimmed.replace(/\D/g, "");
+
+  // Si parece un teléfono (10+ dígitos) → buscar por teléfono
+  if (cleanPhone.length >= 10) {
+    const { data } = await supabase
+      .from("customers")
+      .select("id, name, phone, address, delivery_visit_count")
+      .eq("user_id", userId)
+      .or(`phone.eq.${cleanPhone},phone.ilike.%${cleanPhone}%`)
+      .order("delivery_visit_count", { ascending: false })
+      .limit(5);
+    return data || [];
+  }
+
+  // Si tiene texto (2+ caracteres) → buscar por nombre o teléfono
+  const { data } = await supabase
+    .from("customers")
+    .select("id, name, phone, address, delivery_visit_count")
+    .eq("user_id", userId)
+    .or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%,address.ilike.%${trimmed}%`)
+    .order("delivery_visit_count", { ascending: false })
+    .limit(10);
+
+  return data || [];
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -121,7 +218,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Actions that work with driver-only auth (no store JWT needed)
-    const DRIVER_ONLY_ACTIONS = ["create_express_pickup", "get_driver_stats"];
+    const DRIVER_ONLY_ACTIONS = ["create_express_pickup", "get_driver_stats", "search_customers"];
     let user: any = null;
     let driverContext: any = null;
 
@@ -696,6 +793,8 @@ serve(async (req) => {
       const garmentSummary = String(payload.garment_summary || "").trim();
       const notes = String(payload.notes || "").trim();
       const deliveryFee = Number(payload.delivery_fee) || 0;
+      const serviceCost = Number(payload.service_cost) || 0;
+      const orderItems = Array.isArray(payload.order_items) ? payload.order_items : [];
       const paymentPreferenceRaw = String(payload.payment_preference || "").trim();
       // Solo aceptar valores válidos según la constraint de la BD; cadena vacía → null
       const VALID_PREFERENCES = ["pay_at_pickup", "pay_on_ready_delivery", "pay_at_store_pickup"];
@@ -711,12 +810,22 @@ serve(async (req) => {
 
       console.log(`[create_express_pickup] storeId=${user.id} driverId=${driverId} phone=${customerPhone}`);
 
+      // Vincular con cliente existente o crear nuevo por teléfono
+      const customerId = await findOrCreateCustomer(
+        supabase,
+        user.id,
+        customerPhone,
+        customerName,
+        customerAddress
+      );
+
       const now = new Date().toISOString();
 
       const { data: order, error } = await supabase
         .from("delivery_orders")
         .insert([{
           user_id: user.id,
+          customer_id: customerId,
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_address: customerAddress,
@@ -724,7 +833,7 @@ serve(async (req) => {
           driver_id: driverId,
           status: "picked_up",
           garment_summary: garmentSummary.slice(0, 2000),
-          service_cost: 0,
+          service_cost: serviceCost,
           delivery_fee: Math.max(0, deliveryFee),
           pickup_evidence_path: evidencePath || null,
           payment_preference: paymentPreference,
@@ -778,10 +887,11 @@ serve(async (req) => {
           }
         }
         if (folioNum && Number.isFinite(folioNum) && folioNum > 0) {
+          const posTotal = serviceCost + deliveryFee;
           const posPayload: Record<string, unknown> = {
             user_id: user.id,
-            customer_id: null,
-            total: deliveryFee,
+            customer_id: customerId || null,
+            total: posTotal,
             paid_amount: 0,
             discount: 0,
             status: "received",
@@ -829,24 +939,48 @@ serve(async (req) => {
                     .update({ pos_order_id: posOrder.id })
                     .eq("id", order.id)
                     .eq("user_id", user.id);
-                  const { error: retryItemError } = await supabase
-                    .from("order_items")
-                    .insert([{
+
+                  // Crear order_items desde los servicios seleccionados
+                  if (orderItems.length > 0) {
+                    const itemsToInsert = orderItems.map((item: any) => ({
                       order_id: posOrder.id,
                       user_id: user.id,
-                      product_id: null,
-                      product_name: `Servicio de lavandería - ${customerName}`,
-                      quantity: 1,
-                      price: deliveryFee,
-                      pricing_type: "unit",
-                      total: deliveryFee,
-                      cost_price: null,
-                      category: null,
+                      product_id: item.product_id || null,
+                      product_name: item.product_name || "Servicio",
+                      quantity: Number(item.quantity) || 1,
+                      price: Number(item.price) || 0,
+                      pricing_type: item.pricing_type || "unit",
+                      total: (Number(item.quantity) || 1) * (Number(item.price) || 0),
+                      cost_price: item.cost_price || null,
+                      category: item.category || null,
                       staff_id: null,
-                    }]);
-                  if (retryItemError) {
-                    console.error("[create_express_pickup] Error creando order_item (retry):", JSON.stringify(retryItemError));
-                    throw new Error(`Error creando item de orden (retry): ${retryItemError.message}`);
+                    }));
+                    const { error: retryItemError } = await supabase
+                      .from("order_items")
+                      .insert(itemsToInsert);
+                    if (retryItemError) {
+                      console.error("[create_express_pickup] Error creando order_items (retry):", JSON.stringify(retryItemError));
+                    }
+                  } else {
+                    // Fallback: crear item genérico
+                    const { error: retryItemError } = await supabase
+                      .from("order_items")
+                      .insert([{
+                        order_id: posOrder.id,
+                        user_id: user.id,
+                        product_id: null,
+                        product_name: `Servicio de lavandería - ${customerName}`,
+                        quantity: 1,
+                        price: posTotal,
+                        pricing_type: "unit",
+                        total: posTotal,
+                        cost_price: null,
+                        category: null,
+                        staff_id: null,
+                      }]);
+                    if (retryItemError) {
+                      console.error("[create_express_pickup] Error creando order_item (retry):", JSON.stringify(retryItemError));
+                    }
                   }
                   order.pos_order_id = posOrder.id;
                 } else {
@@ -866,25 +1000,47 @@ serve(async (req) => {
               .eq("id", order.id)
               .eq("user_id", user.id);
 
-            // Create order item for the service
-            const { error: itemInsertError } = await supabase
-              .from("order_items")
-              .insert([{
+            // Crear order_items desde los servicios seleccionados
+            if (orderItems.length > 0) {
+              const itemsToInsert = orderItems.map((item: any) => ({
                 order_id: posOrder.id,
                 user_id: user.id,
-                product_id: null,
-                product_name: `Servicio de lavandería - ${customerName}`,
-                quantity: 1,
-                price: deliveryFee,
-                pricing_type: "unit",
-                total: deliveryFee,
-                cost_price: null,
-                category: null,
+                product_id: item.product_id || null,
+                product_name: item.product_name || "Servicio",
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.price) || 0,
+                pricing_type: item.pricing_type || "unit",
+                total: (Number(item.quantity) || 1) * (Number(item.price) || 0),
+                cost_price: item.cost_price || null,
+                category: item.category || null,
                 staff_id: null,
-              }]);
-            if (itemInsertError) {
-              console.error("[create_express_pickup] Error creando order_item:", JSON.stringify(itemInsertError));
-              throw new Error(`Error creando item de orden: ${itemInsertError.message}`);
+              }));
+              const { error: itemInsertError } = await supabase
+                .from("order_items")
+                .insert(itemsToInsert);
+              if (itemInsertError) {
+                console.error("[create_express_pickup] Error creando order_items:", JSON.stringify(itemInsertError));
+              }
+            } else {
+              // Fallback: crear item genérico
+              const { error: itemInsertError } = await supabase
+                .from("order_items")
+                .insert([{
+                  order_id: posOrder.id,
+                  user_id: user.id,
+                  product_id: null,
+                  product_name: `Servicio de lavandería - ${customerName}`,
+                  quantity: 1,
+                  price: posTotal,
+                  pricing_type: "unit",
+                  total: posTotal,
+                  cost_price: null,
+                  category: null,
+                  staff_id: null,
+                }]);
+              if (itemInsertError) {
+                console.error("[create_express_pickup] Error creando order_item:", JSON.stringify(itemInsertError));
+              }
             }
 
             order.pos_order_id = posOrder.id;
@@ -999,6 +1155,17 @@ serve(async (req) => {
         },
         orders: todayOrders || [],
       });
+    }
+
+    // Buscar clientes por nombre o teléfono (autocomplete del chofer)
+    if (action === "search_customers") {
+      const query = String(payload.query || "").trim();
+      if (query.length < 2) {
+        return jsonResponse({ customers: [] });
+      }
+
+      const customers = await searchCustomers(supabase, user.id, query);
+      return jsonResponse({ customers });
     }
 
     if (action === "get_pickup_evidence_url") {

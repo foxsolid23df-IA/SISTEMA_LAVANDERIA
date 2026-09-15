@@ -914,6 +914,194 @@
     gap: 0.65rem;
 }
 
+/* ─── TABS ──────────────────────────────────────────────────────── */
+
+.delivery-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0;
+}
+
+.delivery-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.delivery-tab:hover {
+    color: #0f172a;
+    background: #f8fafc;
+}
+
+.delivery-tab.active {
+    color: #0891b2;
+    border-bottom-color: #0891b2;
+}
+
+/* ─── CUSTOMERS TAB ─────────────────────────────────────────────── */
+
+.delivery-customers-tab {
+    display: grid;
+    gap: 1rem;
+}
+
+.customers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.customers-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.customers-filters {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.customers-filters .text-input {
+    min-width: 250px;
+}
+
+.customers-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.customer-stat-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.customer-stat-box strong {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.customer-stat-box small {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.customers-table-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.customers-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.customers-table th {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.customers-table td {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.customers-table tr:hover {
+    background: #f8fafc;
+}
+
+.customers-table tr:last-child td {
+    border-bottom: none;
+}
+
+.customer-name-cell {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.customer-address-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.customer-amount-cell {
+    font-weight: 700;
+    color: #059669;
+}
+
+.visit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 6px;
+    background: #0891b2;
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.origin-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.origin-badge.driver {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.origin-badge.whatsapp {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.origin-badge.pos {
+    background: #e0f2fe;
+    color: #075985;
+}
+
 /* ─── RESPONSIVIDAD ────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -945,5 +1133,35 @@
 
     .modal-body-scroll {
         max-height: 80vh;
+    }
+
+    .customers-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .customers-filters {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .customers-filters .text-input {
+        min-width: 100%;
+    }
+
+    .customers-stats-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .customers-table-container {
+        overflow-x: auto;
+    }
+
+    .customers-table {
+        min-width: 700px;
+    }
+
+    .delivery-tabs {
+        overflow-x: auto;
     }
 }

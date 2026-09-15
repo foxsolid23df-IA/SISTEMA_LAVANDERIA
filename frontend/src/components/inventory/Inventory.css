@@ -212,14 +212,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .control-btn.primary {
-  background-color: var(--admin-accent);
+  background-color: var(--admin-accent, #10b981);
   color: #ffffff;
-  border-color: var(--admin-accent);
+  border-color: var(--admin-accent, #10b981);
   font-weight: 600;
 }
 
 .control-btn.primary:hover {
-  background-color: var(--admin-accent-hover);
+  background-color: var(--admin-accent-hover, #059669);
+  border-color: var(--admin-accent-hover, #059669);
+}
+
+/* Tema blanco (modo claro): garantiza que el botón '+ Nuevo Producto' sea 100% visible con contraste y fondo esmeralda */
+html:not(.dark) .control-btn.primary,
+body:not(.dark) .control-btn.primary {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+}
+
+html:not(.dark) .control-btn.primary:hover,
+body:not(.dark) .control-btn.primary:hover {
+  background-color: #059669 !important;
+  border-color: #059669 !important;
+}
+
+html:not(.dark) .control-btn.primary .btn-icon,
+body:not(.dark) .control-btn.primary .btn-icon {
+  color: #ffffff !important;
 }
 
 .control-btn.has-filters {

@@ -23,6 +23,7 @@ import {
 import Swal from "sweetalert2";
 import { DELIVERY_PAYMENT_METHODS, DELIVERY_PAYMENT_PREFERENCES, deliveryService } from "../../services/deliveryService";
 import { printerService } from "../../services/printerService";
+import { simpleCatalogService } from "../../services/simpleCatalogService";
 import { supabase } from "../../supabase";
 import { App } from "@capacitor/app";
 import "./DriverPortal.css";
@@ -87,6 +88,11 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
     const [expressLoading, setExpressLoading] = useState(false);
     const [stats, setStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(false);
+    const [availableServices, setAvailableServices] = useState([]);
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [foundCustomer, setFoundCustomer] = useState(null);
+    const [customerLookupLoading, setCustomerLookupLoading] = useState(false);
+    const [customerCandidates, setCustomerCandidates] = useState([]);
 
     const selectedOrder = useMemo(
         () => orders.find((order) => order.id === selectedOrderId) || null,
@@ -123,6 +129,69 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
         }
     };
 
+    const loadAvailableServices = async () => {
+        try {
+            const services = await simpleCatalogService.getAll();
+            setAvailableServices(services);
+        } catch (err) {
+            console.error("Error al cargar servicios:", err);
+        }
+    };
+
+    const addServiceToSelection = (service) => {
+        setSelectedItems(prev => {
+            const existing = prev.find(item => item.service.id === service.id);
+            if (existing) {
+                return prev.map(item =>
+                    item.service.id === service.id
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
+                );
+            }
+            return [...prev, { service, quantity: 1 }];
+        });
+    };
+
+    const updateItemQuantity = (serviceId, delta) => {
+        setSelectedItems(prev => {
+            return prev.map(item => {
+                if (item.service.id === serviceId) {
+                    const newQty = item.quantity + delta;
+                    return newQty > 0 ? { ...item, quantity: newQty } : item;
+                }
+                return item;
+            }).filter(item => item.quantity > 0);
+        });
+    };
+
+    const removeItemFromSelection = (serviceId) => {
+        setSelectedItems(prev => prev.filter(item => item.service.id !== serviceId));
+    };
+
+    const generateGarmentSummary = () => {
+        if (selectedItems.length === 0) return "";
+        return selectedItems.map(item => {
+            const unit = item.service.pricing_type === 'kg' ? 'kg' : 'pza';
+            return `${item.quantity}x ${item.service.name} ($${(item.service.price * item.quantity).toFixed(2)})`;
+        }).join(", ");
+    };
+
+    const calculateServiceCost = () => {
+        return selectedItems.reduce((sum, item) => {
+            return sum + (item.service.price * item.quantity);
+        }, 0);
+    };
+
+    const getServicesByCategory = () => {
+        const categories = {};
+        availableServices.forEach(service => {
+            const cat = service.category || "General";
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(service);
+        });
+        return categories;
+    };
+
     const handleLogin = async (event) => {
         if (event) event.preventDefault();
         if (pin.length < 4) {
@@ -145,6 +214,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             await storage.setObject("driver_session", verifiedDriver);
             await loadDriverOrders(verifiedDriver.id, verifiedDriver.session_token);
             await loadStats();
+            await loadAvailableServices();
             setPin("");
         } catch (err) {
             console.error("Error al validar PIN:", err);
@@ -165,6 +235,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                 setAuthenticated(true);
                 loadDriverOrders(savedSession.id, savedSession.session_token);
                 loadStats();
+                loadAvailableServices();
             }
         });
     }, []);
@@ -217,6 +288,73 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
         return () => handler.remove();
     }, [showExpressForm, selectedOrderId, authenticated]);
+
+    // Seleccionar un cliente de la lista de candidatos
+    const selectCustomer = (customer) => {
+        setFoundCustomer(customer);
+        setCustomerCandidates([]);
+        handleExpressFormChange('customer_name', customer.name || '');
+        handleExpressFormChange('customer_phone', customer.phone || '');
+        handleExpressFormChange('customer_address', customer.address || '');
+    };
+
+    // Buscar cliente por nombre o teléfono con debounce
+    useEffect(() => {
+        const name = expressForm.customer_name || "";
+        const phone = expressForm.customer_phone || "";
+        
+        // Determinar qué buscar: teléfono (10+) o nombre (2+)
+        const searchQuery = phone.length >= 10 ? phone : name;
+        
+        if (searchQuery.length < 2) {
+            setFoundCustomer(null);
+            setCustomerCandidates([]);
+            return;
+        }
+
+        let cancelled = false;
+        setCustomerLookupLoading(true);
+
+        const timer = setTimeout(async () => {
+            try {
+                const results = await deliveryService.searchCustomers(searchQuery, driver);
+                
+                if (!cancelled) {
+                    if (results.length === 0) {
+                        setFoundCustomer(null);
+                        setCustomerCandidates([]);
+                    } else if (results.length === 1) {
+                        // Un solo resultado → autocompletar
+                        setFoundCustomer(results[0]);
+                        setCustomerCandidates([]);
+                        // Autocompletar si los campos están vacíos
+                        if (!name || name === results[0].name) {
+                            handleExpressFormChange('customer_name', results[0].name || '');
+                        }
+                        if (results[0].phone) handleExpressFormChange('customer_phone', results[0].phone);
+                        if (results[0].address) handleExpressFormChange('customer_address', results[0].address);
+                    } else {
+                        // Múltiples resultados → mostrar lista de selección
+                        setFoundCustomer(null);
+                        setCustomerCandidates(results);
+                    }
+                }
+            } catch (err) {
+                console.error("Error buscando cliente:", err);
+                if (!cancelled) {
+                    setFoundCustomer(null);
+                    setCustomerCandidates([]);
+                }
+            } finally {
+                if (!cancelled) setCustomerLookupLoading(false);
+            }
+        }, 500);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [expressForm.customer_name, expressForm.customer_phone, driver]);
 
     const handleLogout = () => {
         storage.remove("driver_session");
@@ -468,22 +606,35 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
             Swal.fire("Campos obligatorios", "Nombre, telefono y direccion del cliente son requeridos.", "warning");
             return;
         }
-        if (!f.garment_summary.trim()) {
-            Swal.fire("Describe las prendas", "Indica que recogiste del cliente.", "warning");
+        if (selectedItems.length === 0) {
+            Swal.fire("Selecciona servicios", "Agrega al menos un servicio recolectado.", "warning");
             return;
         }
 
+        const garmentSummary = generateGarmentSummary();
+        const serviceCost = calculateServiceCost();
+        const orderItems = selectedItems.map(item => ({
+            product_id: item.service.id,
+            product_name: item.service.name,
+            quantity: item.quantity,
+            price: item.service.price,
+            pricing_type: item.service.pricing_type || 'unit',
+            category: item.service.category || null,
+            cost_price: item.service.cost_price || null
+        }));
+
         setExpressLoading(true);
         try {
-            // 1. Create express pickup first (without evidence)
             const result = await deliveryService.createExpressPickup({
                 driver: driver,
                 customer_name: f.customer_name.trim(),
                 customer_phone: f.customer_phone.trim(),
                 customer_address: f.customer_address.trim(),
-                garment_summary: f.garment_summary.trim(),
+                garment_summary: garmentSummary,
                 notes: f.notes.trim(),
                 delivery_fee: Number(f.delivery_fee) || 0,
+                service_cost: serviceCost,
+                order_items: orderItems,
                 payment_preference: f.payment_preference,
                 pickup_evidence_path: null,
                 create_pos_order: true,
@@ -513,6 +664,7 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
 
             setShowExpressForm(false);
             setExpressForm(initialExpressForm);
+            setSelectedItems([]);
 
             // Verificar si la orden POS se creó correctamente
             const posOrderCreated = result.pos_order != null;
@@ -769,6 +921,68 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                                 value={expressForm.customer_phone}
                                 onChange={(e) => handleExpressFormChange("customer_phone", e.target.value)}
                                 disabled={expressLoading} />
+                            
+                            {/* Indicador de carga */}
+                            {customerLookupLoading && (
+                                <div className="driver-customer-lookup-loading">
+                                    <span className="driver-lookup-spinner" /> Buscando cliente...
+                                </div>
+                            )}
+
+                            {/* Cliente encontrado (único) */}
+                            {!customerLookupLoading && foundCustomer && (
+                                <div className="driver-customer-found">
+                                    <span className="driver-customer-found-icon">✓</span>
+                                    <div className="driver-customer-found-info">
+                                        <span className="driver-customer-found-name">Cliente: {foundCustomer.name}</span>
+                                        <span className="driver-customer-found-visits">
+                                            {foundCustomer.delivery_visit_count || 0} visita{(foundCustomer.delivery_visit_count || 0) !== 1 ? 's' : ''} previa{(foundCustomer.delivery_visit_count || 0) !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Múltiples candidatos - lista de selección */}
+                            {!customerLookupLoading && customerCandidates.length > 0 && (
+                                <div className="driver-customer-candidates">
+                                    <span className="driver-candidates-label">
+                                        Selecciona un cliente ({customerCandidates.length} encontrado{customerCandidates.length !== 1 ? 's' : ''}):
+                                    </span>
+                                    <div className="driver-candidates-list">
+                                        {customerCandidates.map(customer => (
+                                            <button
+                                                key={customer.id}
+                                                type="button"
+                                                className="driver-candidate-item"
+                                                onClick={() => selectCustomer(customer)}
+                                                disabled={expressLoading}
+                                            >
+                                                <div className="driver-candidate-main">
+                                                    <span className="driver-candidate-name">{customer.name}</span>
+                                                    <span className="driver-candidate-phone">{customer.phone || 'Sin teléfono'}</span>
+                                                </div>
+                                                <div className="driver-candidate-meta">
+                                                    <span className="driver-candidate-visits">
+                                                        {customer.delivery_visit_count || 0} visita{(customer.delivery_visit_count || 0) !== 1 ? 's' : ''}
+                                                    </span>
+                                                    {customer.address && (
+                                                        <span className="driver-candidate-address">{customer.address}</span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Nuevo cliente */}
+                            {!customerLookupLoading && !foundCustomer && customerCandidates.length === 0 && 
+                             (expressForm.customer_name.length >= 2 || expressForm.customer_phone.length >= 10) && (
+                                <div className="driver-customer-new">
+                                    <span className="driver-customer-new-icon">+</span>
+                                    <span>Nuevo cliente</span>
+                                </div>
+                            )}
 
                             <label className="driver-form-label">Direccion *</label>
                             <input className="driver-form-input" type="text" placeholder="Calle, colonia, numero"
@@ -776,13 +990,71 @@ export const DriverPortal = ({ desktopPreview = false, onExitPreview }) => {
                                 onChange={(e) => handleExpressFormChange("customer_address", e.target.value)}
                                 disabled={expressLoading} />
 
-                            <label className="driver-form-label">Prendas recolectadas *</label>
-                            <textarea className="driver-form-textarea" rows="3" placeholder="Ej. 2 bolsas negras, 1 cobertor matrimonial"
-                                value={expressForm.garment_summary}
-                                onChange={(e) => handleExpressFormChange("garment_summary", e.target.value)}
-                                disabled={expressLoading} />
+                            <label className="driver-form-label">Servicios recolectados *</label>
+                            
+                            {/* Resumen de servicios seleccionados */}
+                            {selectedItems.length > 0 && (
+                                <div className="driver-selected-items">
+                                    {selectedItems.map(item => (
+                                        <div key={item.service.id} className="driver-selected-item">
+                                            <div className="driver-selected-item-info">
+                                                <span className="driver-selected-item-name">{item.service.name}</span>
+                                                <span className="driver-selected-item-price">${(item.service.price * item.quantity).toFixed(2)}</span>
+                                            </div>
+                                            <div className="driver-selected-item-controls">
+                                                <button type="button" className="driver-qty-btn" 
+                                                    onClick={() => updateItemQuantity(item.service.id, -1)}
+                                                    disabled={expressLoading}>-</button>
+                                                <span className="driver-qty-value">{item.quantity} {item.service.pricing_type === 'kg' ? 'kg' : 'pza'}</span>
+                                                <button type="button" className="driver-qty-btn"
+                                                    onClick={() => updateItemQuantity(item.service.id, 1)}
+                                                    disabled={expressLoading}>+</button>
+                                                <button type="button" className="driver-remove-item-btn"
+                                                    onClick={() => removeItemFromSelection(item.service.id)}
+                                                    disabled={expressLoading}>
+                                                    <FiX size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="driver-selected-total">
+                                        <span>Servicio total:</span>
+                                        <strong>${calculateServiceCost().toFixed(2)}</strong>
+                                    </div>
+                                </div>
+                            )}
 
-                            <label className="driver-form-label">Notas (opcional)</label>
+                            <div className="driver-form-divider" />
+
+                            {/* Lista de servicios disponibles */}
+                            <div className="driver-services-header">
+                                <span className="driver-services-count">{availableServices.length} servicios disponibles</span>
+                            </div>
+                            {availableServices.length > 0 ? (
+                                <div className="driver-services-grid">
+                                    {Object.entries(getServicesByCategory()).map(([category, services]) => (
+                                        <div key={category} className="driver-service-category">
+                                            <span className="driver-category-label">{category}</span>
+                                            <div className="driver-service-chips">
+                                                {services.map(service => (
+                                                    <button key={service.id} type="button" className="driver-service-chip"
+                                                        onClick={() => addServiceToSelection(service)}
+                                                        disabled={expressLoading}>
+                                                        <span className="driver-chip-name">{service.name}</span>
+                                                        <span className="driver-chip-price">${service.price.toFixed(2)} / {service.pricing_type === 'kg' ? 'kg' : 'pza'}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="driver-no-services">
+                                    <p>No hay servicios configurados en el sistema.</p>
+                                </div>
+                            )}
+
+                            <label className="driver-form-label">Notas adicionales (opcional)</label>
                             <input className="driver-form-input" type="text" placeholder="Indicaciones adicionales"
                                 value={expressForm.notes}
                                 onChange={(e) => handleExpressFormChange("notes", e.target.value)}

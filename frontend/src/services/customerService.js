@@ -1,5 +1,10 @@
 import { supabase } from "../supabase";
 
+const normalizePhone = (phone) => {
+  if (!phone) return phone;
+  return phone.replace(/\D/g, "");
+};
+
 export const customerService = {
   // Obtener todos los clientes del usuario actual
   async getCustomers() {
@@ -29,7 +34,7 @@ export const customerService = {
       .from("customers")
       .select("*")
       .eq("user_id", user.id)
-      .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+      .or(`name.ilike.%${query}%,phone.ilike.%${query}%,address.ilike.%${query}%`)
       .limit(10);
 
     if (error) throw error;
@@ -48,6 +53,7 @@ export const customerService = {
       .insert([
         {
           ...customerData,
+          phone: normalizePhone(customerData.phone),
           user_id: user.id,
         },
       ])
@@ -60,9 +66,13 @@ export const customerService = {
 
   // Actualizar un cliente existente
   async updateCustomer(id, customerData) {
+    const normalizedData = { ...customerData };
+    if (normalizedData.phone) {
+      normalizedData.phone = normalizePhone(normalizedData.phone);
+    }
     const { data, error } = await supabase
       .from("customers")
-      .update(customerData)
+      .update(normalizedData)
       .eq("id", id)
       .select()
       .single();
@@ -89,9 +99,10 @@ export const customerService = {
     } = await supabase.auth.getUser();
     if (!user) throw new Error("No authenticated user");
 
-    // Preparar datos con el user_id
+    // Preparar datos con el user_id y teléfono normalizado
     const customersWithUser = customers.map(c => ({
       ...c,
+      phone: normalizePhone(c.phone),
       user_id: user.id
     }));
 

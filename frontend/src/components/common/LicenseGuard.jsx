@@ -1,39 +1,89 @@
 import React, { useEffect, useState } from "react";
 import { licenseService } from "../../services/licenseService";
 
+const MAX_RETRIES = 5;
+
 /**
- * Componente para bloquear la app si la licencia no es válida
+ * Componente para bloquear la app si la licencia no es válida.
+ * Incluye reintentos con backoff exponencial para tolerar
+ * lentitud en Supabase o en el backend local al arrancar.
  */
 export const LicenseGuard = ({ children }) => {
   const [status, setStatus] = useState({
     loading: true,
     isValid: true,
     message: "",
+    retryAttempt: 0,
   });
 
   useEffect(() => {
-    const validate = async () => {
-      // Si hay internet, forzamos sincronizar primero para descargar la licencia actualizada si es que ya se pagó y el local está expirado
+    let cancelled = false;
+
+    const attempt = async (retryNumber = 1) => {
+      if (cancelled) return;
+
       if (navigator.onLine) {
         await licenseService.syncLicenseWithLocal();
       }
 
-      // Luego verificamos la licencia
       const result = await licenseService.checkLicense();
+
+      if (cancelled) return;
+
+      if (result.isValid) {
+        setStatus({
+          loading: false,
+          isValid: true,
+          message: result.message,
+          expiresAt: result.expiresAt,
+          retryAttempt: 0,
+        });
+        return;
+      }
+
+      if (retryNumber < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, retryNumber - 1), 16000);
+        setStatus({
+          loading: true,
+          isValid: false,
+          message: result.message,
+          expiresAt: result.expiresAt,
+          retryAttempt: retryNumber,
+        });
+        setTimeout(() => attempt(retryNumber + 1), delay);
+        return;
+      }
 
       setStatus({
         loading: false,
-        isValid: result.isValid,
+        isValid: false,
         message: result.message,
         expiresAt: result.expiresAt,
+        retryAttempt: 0,
       });
     };
 
-    validate();
+    attempt();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (status.loading) {
-    return <div className="loading-screen">Validando Licencia...</div>;
+    return (
+      <div className="loading-screen">
+        <div className="flex flex-col items-center gap-2">
+          <div className="spinner" />
+          <p className="text-white text-lg font-medium">Validando Licencia...</p>
+          {status.retryAttempt > 0 && (
+            <p className="text-slate-400 text-sm">
+              Intento {status.retryAttempt} de {MAX_RETRIES}
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (!status.isValid) {
