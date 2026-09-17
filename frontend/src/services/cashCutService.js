@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { supabase } from '../supabase';
 import { salesService } from './salesService';
 import { terminalService } from './terminalService';
@@ -53,7 +54,29 @@ export const cashCutService = {
 
     // Crear un corte de caja
     createCashCut: async (cutData) => {
-        const { data: userData } = await supabase.auth.getUser();
+        // VALIDACIÓN CRÍTICA: Verificar que el usuario está autenticado
+        const { data: userData, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !userData?.user) {
+            const errMsg = 'Sesión de autenticación inválida. Por favor cierra sesión y vuelve a iniciar.';
+            console.error('[CashCutService] Error de autenticación:', authError || 'userData.user es null');
+            Sentry.captureException(new Error(errMsg), {
+                extra: {
+                    authError: authError?.message || null,
+                    hasUser: !!userData?.user,
+                    cutType: cutData?.cutType,
+                    staffName: cutData?.staffName,
+                }
+            });
+            throw new Error(errMsg);
+        }
+
+        // Validar datos mínimos requeridos
+        if (!cutData?.cutType || !cutData?.staffName) {
+            throw new Error('Faltan datos requeridos para el corte: cutType y staffName son obligatorios.');
+        }
+
+        const terminalId = terminalService.getTerminalId();
 
         const { data, error } = await supabase
             .from('cash_cuts')
@@ -76,7 +99,7 @@ export const cashCutService = {
                 transfer_total: cutData.transferTotal || 0,
                 notes: cutData.notes || null,
                 user_id: userData.user.id,
-                terminal_id: terminalService.getTerminalId(),
+                terminal_id: terminalId,
                 // Datos de cancelaciones
                 cancelled_count: cutData.cancelledCount || 0,
                 cancelled_total: cutData.cancelledTotal || 0,
@@ -87,7 +110,20 @@ export const cashCutService = {
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            const detailedMsg = `Error al guardar corte: ${error.message} (code: ${error.code || 'unknown'}, hint: ${error.hint || 'none'})`;
+            console.error('[CashCutService] Error de Supabase:', error);
+            Sentry.captureException(new Error(detailedMsg), {
+                extra: {
+                    supabaseError: { message: error.message, code: error.code, details: error.details, hint: error.hint },
+                    userId: userData.user.id,
+                    terminalId,
+                    cutType: cutData.cutType,
+                    staffName: cutData.staffName,
+                }
+            });
+            throw new Error(detailedMsg);
+        }
         return data;
     },
 
@@ -236,6 +272,12 @@ export const cashCutService = {
 
     // Calcular resumen de turno actual o día
     getCurrentShiftSummary: async (cutType = 'turno') => {
+        // VALIDACIÓN: Verificar autenticación antes de cargar el resumen
+        const { data: authCheck } = await supabase.auth.getUser();
+        if (!authCheck?.user) {
+            throw new Error('Sesión expirada. Recarga la página o inicia sesión nuevamente.');
+        }
+
         let startTime = null;
         let sales = [];
         let withdrawals = { totalMXN: 0, totalUSD: 0, count: 0 };

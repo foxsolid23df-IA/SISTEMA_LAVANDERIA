@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from "react";
+import * as Sentry from "@sentry/react";
 import { useAuth } from "../../hooks/useAuth";
 import { cashCutService } from "../../services/cashCutService";
 import { salesService } from "../../services/salesService";
@@ -186,6 +187,28 @@ export const CashCut = ({ onClose }) => {
   const executeCut = async (typeToExecute) => {
     if (submitting) return;
 
+    // === VALIDACIONES PREVIAS ===
+    if (!cashSession) {
+      Swal.fire("Error", "No hay sesión de caja activa. Abre la caja primero.", "error");
+      return;
+    }
+
+    const terminalId = terminalService.getTerminalId();
+    if (!terminalId || terminalId === "undefined" || terminalId === "null") {
+      Swal.fire({
+        icon: "error",
+        title: "Terminal No Configurada",
+        text: "Esta computadora no tiene una terminal asignada. Ve a Configuración > Terminales y registra una.",
+        confirmButtonColor: "#10b981",
+      });
+      return;
+    }
+
+    if (!activeStaff) {
+      Swal.fire("Error", "No hay empleado activo. Verifica la sesión.", "error");
+      return;
+    }
+
     let currentSummary = typeToExecute === "dia" ? daySummary : shiftSummary;
 
     const diffMXN =
@@ -273,7 +296,34 @@ export const CashCut = ({ onClose }) => {
       setShowTicket(true);
     } catch (error) {
       console.error("Error al crear corte:", error);
-      Swal.fire("Error", "No se pudo realizar el corte", "error");
+
+      // Reportar a Sentry con contexto completo
+      Sentry.captureException(error, {
+        extra: {
+          cutType: typeToExecute,
+          staffName: activeStaff?.name,
+          staffRole: activeRole,
+          terminalId: terminalService.getTerminalId(),
+          cashSessionId: cashSession?.id,
+          salesCount: currentSummary?.salesCount,
+          salesTotal: currentSummary?.salesTotal,
+          expectedMXN: currentSummary?.expectedMXN,
+        },
+      });
+
+      // Mostrar error DETALLADO al usuario
+      const errorMsg = error?.message || "Error desconocido al realizar el corte";
+      Swal.fire({
+        icon: "error",
+        title: "No se pudo realizar el corte",
+        html: `<div style="text-align:left;font-size:0.85em;">
+          <p style="color:#333;margin-bottom:8px;">${errorMsg}</p>
+          <p style="color:#999;font-size:0.85em;border-top:1px solid #eee;padding-top:8px;">
+          Si el problema persiste, comparte este mensaje con soporte técnico.</p>
+        </div>`,
+        confirmButtonColor: "#10b981",
+        width: 500,
+      });
     } finally {
       setSubmitting(false);
     }
